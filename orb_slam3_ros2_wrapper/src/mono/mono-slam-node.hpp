@@ -67,7 +67,7 @@ namespace ORB_SLAM3_Wrapper
         void saveCurrentMapPointCloud();
         // void savePointCloudToPLY(const sensor_msgs::msg::PointCloud2 &msg, const std::string &filename); 
         void savePointsToPLY(const std::vector<Eigen::Vector3f> &points, const std::string &filename);
-        
+        void changeMode(bool activate);
         /**
          * Member variables
          */

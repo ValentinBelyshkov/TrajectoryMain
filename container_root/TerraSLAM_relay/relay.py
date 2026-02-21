@@ -77,6 +77,7 @@ class ImageRelay(Node):
         with self.pose_lock:
             self.current_pose = msg
             self.get_logger().info('Received new pose')
+            self.get_logger().info(str(msg)) 
 
     def send_pose(self, client_socket):
         with self.pose_lock:

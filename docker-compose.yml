@@ -1,7 +1,7 @@
 version: "3"
 services:
   TerraSLAM:
-    image: terraslam:latest
+    image: orb-slam3-humble:22.04
     volumes:
       #full dev
       - /dev:/dev:rw
@@ -17,15 +17,26 @@ services:
       # - ./ORB_SLAM3/:/home/orb/ORB_SLAM3/
       # X11 forwarding
       - ${XAUTHORITY}:/tmp/.Xauthority:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
     privileged: true
     network_mode: host
     ipc: host
     stdin_open: true
     tty: true
     environment:
-      - DISPLAY
+      - DISPLAY=$DISPLAY
       - XAUTHORITY=/tmp/.Xauthority
-    entrypoint: /bin/bash
+      - QT_X11_NO_MITSHM=1
+    entrypoint: ""
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /root/colcon_ws/install/setup.bash &&
+        cd /root &&
+        python3 server.py
+      "
     ports:
       - "11223:22"
+      - "5000:5000"
+      - "9090:9090"
     container_name: TerraSLAM
