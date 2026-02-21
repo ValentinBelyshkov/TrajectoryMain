@@ -1,0 +1,120 @@
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import NavSatFix
+import math
+import numpy as np  # Предполагаем, что numpy установлен в твоей ROS2 среде
+
+class FlightLogPublisher(Node):
+    def __init__(self):
+        super().__init__('flight_log_publisher')
+        self.publisher_ = self.create_publisher(NavSatFix, 'gps_flight_log', 10)
+        self.timer = self.create_timer(1.0, self.publish_logs)  # Публикуем каждую секунду
+        self.logs = self.parse_logs()
+        self.index = 0
+
+        # Твои GCPs в UTM (easting, northing) — только координаты, без пикселей и изображений
+        self.eastings = [476900.02, 476902.35, 476896.00, 476855.52, 476901.47, 476915.26, 476882.75, 476897.65, 476870.07]
+        self.northings = [6149546.86, 6149554.46, 6149556.61, 6149593.18, 6149564.70, 6149576.80, 6149647.32, 6149676.83, 6149619.48]
+
+        # Вычисление средней UTM
+        avg_easting = np.mean(self.eastings)
+        avg_northing = np.mean(self.northings)
+
+        # Преобразование средней UTM в base_lat, base_lon с помощью формулы
+        self.base_lat, self.base_lon = self.utm_to_latlon(avg_easting, avg_northing, zone=37, northern=True)
+        self.base_alt = 0.0  # Предполагаем, что высота относительная
+
+        # Константы для преобразования метров в градусы (аппроксимация)
+        self.meter_to_deg_lat = 1 / 111111.0
+        self.meter_to_deg_lon = 1 / (111111.0 * math.cos(math.radians(self.base_lat)))
+
+        self.get_logger().info(f'Базовая GPS из GCPs: lat={self.base_lat:.8f}, lon={self.base_lon:.8f}')
+
+    def utm_to_latlon(self, easting, northing, zone, northern=True):
+        # Параметры WGS84
+        a = 6378137.0
+        f = 1 / 298.257223563
+        b = a * (1 - f)
+        e2 = 1 - (b**2 / a**2)
+        e = math.sqrt(e2)
+        e1 = (1 - math.sqrt(1 - e2)) / (1 + math.sqrt(1 - e2))
+        k0 = 0.9996
+
+        # Central meridian
+        lon0 = 6 * zone - 183  # 39 для zone 37
+
+        x = easting - 500000
+        y = northing if northern else northing - 10000000
+
+        M = y / k0
+        mu = M / (a * (1 - e2/4 - 3*e2**2/64 - 5*e2**3/256))
+
+        phi1 = mu + (3*e1/2 - 27*e1**3/32)*math.sin(2*mu) + (21*e1**2/16 - 55*e1**4/32)*math.sin(4*mu) + (151*e1**3/96)*math.sin(6*mu) + (1097*e1**4/512)*math.sin(8*mu)
+
+        e_prime2 = e2 / (1 - e2)
+        C1 = e_prime2 * math.cos(phi1)**2
+        T1 = math.tan(phi1)**2
+        N1 = a / math.sqrt(1 - e2 * math.sin(phi1)**2)
+        R1 = a * (1 - e2) / (1 - e2 * math.sin(phi1)**2)**1.5
+        D = x / (N1 * k0)
+
+        lat_rad = phi1 - (N1 * math.tan(phi1) / R1) * (D**2/2 - (5 + 3*T1 + 10*C1 - 4*C1**2 - 9*e_prime2)*D**4/24 + (61 + 90*T1 + 298*C1 + 45*T1**2 - 252*e_prime2 - 3*C1**2)*D**6/720)
+        lat_deg = math.degrees(lat_rad)
+
+        delta_lon_rad = (D - (1 + 2*T1 + C1)*D**3/6 + (5 - 2*C1 + 28*T1 - 3*C1**2 + 8*e_prime2 + 24*T1**2)*D**5/120) / math.cos(phi1)
+        lon_deg = lon0 + math.degrees(delta_lon_rad)
+
+        return lat_deg, lon_deg
+
+    def parse_logs(self):
+        # Твои логи (position x, y, z)
+        logs = [
+            {'x': -4.858016490936279, 'y': -4.307590007781982, 'z': 2.1660401821136475},
+            {'x': -4.857544898986816, 'y': -4.287431716918945, 'z': 2.1591691970825195},
+            {'x': -4.858475685119629, 'y': -4.254061222076416, 'z': 2.1605427265167236},
+            {'x': -4.857089996337891, 'y': -4.217307090759277, 'z': 2.159238576889038},
+            {'x': -4.858378887176514, 'y': -4.208808422088623, 'z': 2.1700968742370605},
+            {'x': -4.858938217163086, 'y': -4.1656494140625, 'z': 2.157806158065796},
+            {'x': -4.85751485824585, 'y': -4.130916595458984, 'z': 2.157731294631958},
+            {'x': -4.8571038246154785, 'y': -4.1199750900268555, 'z': 2.169238567352295},
+            {'x': -4.856339454650879, 'y': -4.088136196136475, 'z': 2.177913188934326},
+            {'x': -4.856316566467285, 'y': -4.055697441101074, 'z': 2.1965582370758057},
+            {'x': -4.857912540435791, 'y': -4.038920879364014, 'z': 2.2041385173797607},
+            {'x': -4.857174396514893, 'y': -4.013225555419922, 'z': 2.2129011154174805},
+        ]
+        return logs
+
+    def publish_logs(self):
+        if self.index >= len(self.logs):
+            self.get_logger().info('Все логи опубликованы.')
+            self.timer.cancel()
+            return
+
+        log = self.logs[self.index]
+
+        # Преобразование: предполагаем local y - north, x - east, z - up
+        lat = self.base_lat + log['y'] * self.meter_to_deg_lat
+        lon = self.base_lon + log['x'] * self.meter_to_deg_lon
+        alt = self.base_alt + log['z']
+
+        msg = NavSatFix()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'gps'
+        msg.latitude = lat
+        msg.longitude = lon
+        msg.altitude = alt
+        msg.position_covariance_type = NavSatFix.COVARIANCE_TYPE_UNKNOWN
+
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Опубликовано GPS: lat={lat:.8f}, lon={lon:.8f}, alt={alt:.2f}')
+        self.index += 1
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = FlightLogPublisher()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

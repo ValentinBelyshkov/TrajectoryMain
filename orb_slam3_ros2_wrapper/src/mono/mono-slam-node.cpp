@@ -34,7 +34,7 @@ namespace ORB_SLAM3_Wrapper
         // tfListener_ = std::make_shared<tf2_ros::TransformListener>(*tfBuffer_);
 
         bool bUseViewer;
-        this->declare_parameter("visualization", rclcpp::ParameterValue(false));
+        this->declare_parameter("visualization", rclcpp::ParameterValue(true));
         this->get_parameter("visualization", bUseViewer);
 
         this->declare_parameter("ros_visualization", rclcpp::ParameterValue(false));
@@ -69,6 +69,7 @@ namespace ORB_SLAM3_Wrapper
         
         //mapCurrentPointsTimer_ = this->create_wall_timer(std::chrono::milliseconds(100 * landmark_publish_frequency_), std::bind(&MonoSlamNode::publishCurrentMapPointCloud, this));
         mapCurrentPointsTimer_ = this->create_wall_timer(std::chrono::milliseconds(5 * landmark_publish_frequency_), std::bind(&MonoSlamNode::saveCurrentMapPointCloud, this));
+        RCLCPP_INFO(this->get_logger(), "Time is %d",landmark_publish_frequency_);
         
         //mapPointsTimer_ = this->create_wall_timer(std::chrono::milliseconds(landmark_publish_frequency_), std::bind(&MonoSlamNode::combinedPublishCallback, this));
 
@@ -84,11 +85,11 @@ namespace ORB_SLAM3_Wrapper
 
     MonoSlamNode::~MonoSlamNode()
     {
-        //saveCurrentMapPointCloud();
         rgbSub_.reset();
         imuSub_.reset();
         odomSub_.reset();
         interface_.reset();
+        saveCurrentMapPointCloud();
         RCLCPP_INFO(this->get_logger(), "DESTRUCTOR!");
     }
 
@@ -210,7 +211,7 @@ namespace ORB_SLAM3_Wrapper
 
     void MonoSlamNode::saveCurrentMapPointCloud()
     {
-        if (interface_->checkSLAMShutdown() && !isMapPointsSaved)
+        if (false)//(interface_->checkSLAMShutdown() && !isMapPointsSaved)
         {
             if (isTracked_)
             {
@@ -235,6 +236,10 @@ namespace ORB_SLAM3_Wrapper
                 RCLCPP_INFO_STREAM(this->get_logger(), "=======================");
                 isMapPointsSaved = true;
             }
+        }
+        else
+        {
+        	RCLCPP_INFO_STREAM(this->get_logger(), "saveCurrentMapPointCloud() state  " << interface_->checkSLAMShutdown() <<" and next bool " << !isMapPointsSaved );
         }
     }
 
@@ -299,6 +304,27 @@ namespace ORB_SLAM3_Wrapper
 
             // Print the time taken for each line
         }
+    }
+    
+    void ORB_SLAM3_Wrapper::MonoSlamNode::changeMode(bool activate)
+    {
+    /*
+	    if (!interface_)
+	    {
+		RCLCPP_ERROR(this->get_logger(), "ORB-SLAM3 interface is not initialized. Cannot change mode.");
+		return;
+	    }
+
+	    if (activate)
+	    {
+		RCLCPP_INFO(this->get_logger(), "Activating localization-only mode (tracking only, no mapping).");
+		interface_->ActivateLocalizationMode();
+	    }
+	    else
+	    {
+		RCLCPP_INFO(this->get_logger(), "Deactivating localization-only mode (returning to full SLAM mode).");
+		interface_->DeactivateLocalizationMode();
+	    }*/
     }
 
     void MonoSlamNode::combinedPublishCallback() 

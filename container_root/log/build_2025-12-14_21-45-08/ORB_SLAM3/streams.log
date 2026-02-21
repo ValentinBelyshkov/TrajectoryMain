@@ -1,0 +1,31 @@
+[0.027s] Invoking command in '/root/build/ORB_SLAM3': /usr/bin/cmake /root/ORB_SLAM3 -DCMAKE_INSTALL_PREFIX=/root/install/ORB_SLAM3
+[0.036s] [0mCMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+[0.036s]   Compatibility with CMake < 2.8.12 will be removed from a future version of
+[0.037s]   CMake.
+[0.037s] 
+[0.037s]   Update the VERSION argument <min> value or use a ...<max> suffix to tell
+[0.037s]   CMake that the project does not need compatibility with older versions.
+[0.037s] 
+[0.037s] [0m
+[0.849s] -- The C compiler identification is GNU 11.4.0
+[1.499s] -- The CXX compiler identification is GNU 11.4.0
+[1.529s] -- Detecting C compiler ABI info
+[1.692s] -- Detecting C compiler ABI info - done
+[1.703s] -- Check for working C compiler: /usr/bin/cc - skipped
+[1.703s] -- Detecting C compile features
+[1.704s] -- Detecting C compile features - done
+[1.711s] -- Detecting CXX compiler ABI info
+[1.895s] -- Detecting CXX compiler ABI info - done
+[1.909s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[1.909s] -- Detecting CXX compile features
+[1.910s] -- Detecting CXX compile features - done
+[1.913s] [0mBuild type: Release[0m
+[1.923s] -- Performing Test COMPILER_SUPPORTS_CXX11
+[2.163s] -- Performing Test COMPILER_SUPPORTS_CXX11 - Success
+[2.164s] -- Performing Test COMPILER_SUPPORTS_CXX0X
+[2.337s] -- Performing Test COMPILER_SUPPORTS_CXX0X - Success
+[2.338s] -- Using flag -std=c++11.
+[2.354s] -- Found OpenCV: /usr/local (found suitable version "4.4.0", minimum required is "4.4") 
+[2.355s] [0mOPENCV VERSION:[0m
+[2.355s] [0m4.4.0[0m
+[2.400s] -- Looking for pthread.h

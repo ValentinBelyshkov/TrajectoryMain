@@ -23,6 +23,8 @@ RUN apt-get install -y \
     libeigen3-dev \
     apt-transport-https \
     ca-certificates\
+    flask \
+    pymap3d \
     software-properties-common
 
 RUN apt update
@@ -59,6 +61,7 @@ RUN . /opt/ros/humble/setup.sh && cd /home/orb/ORB_SLAM3 && mkdir build && ./bui
 
 RUN sudo apt-get install -y ros-humble-rmw-cyclonedds-cpp
 
+RUN pip install flask pymap3d
 RUN mkdir -p /root/colcon_ws/
 RUN cd /root/colcon_ws/
 RUN export ROBOT_NAMESPACE="" && export ROBOT_Y="1.0" && export ROBOT_X="1.0"

@@ -1,0 +1,1 @@
+Invoking command in '/root/build/ORB_SLAM3': /usr/bin/cmake /root/ORB_SLAM3 -DCMAKE_INSTALL_PREFIX=/root/install/ORB_SLAM3
