@@ -51,11 +51,31 @@ sudo chmod +x container_root/shell_scripts/docker_install.sh
 
 ### Build the image with ORB_SLAM3
 
-* Build the image: 
+* Build the image using the provided build script (recommended):
+    ```
+    ./build_docker.sh
+    ```
+  This script automatically detects your platform and builds accordingly.
+
+* For specific platforms, use:
+    ```
+    ./build_docker.sh --amd64      # Build for x86_64 (Intel/AMD)
+    ./build_docker.sh --arm64      # Build for ARM64 (Jetson Orin)
+    ./build_docker.sh --platform linux/amd64   # Specify platform explicitly
+    ```
+
+* Or build manually using docker build:
     ```
     sudo docker build -t orb-slam3-humble:22.04 .
     ```
-* You can see the built images on your machine by running 
+
+* For cross-compilation or specific platform builds:
+    ```
+    sudo docker buildx build --platform linux/amd64 -t orb-slam3-humble:22.04 .
+    sudo docker buildx build --platform linux/arm64 -t orb-slam3-humble:22.04 .
+    ```
+
+* You can see the built images on your machine by running
     ```
     sudo docker images | grep orb-slam3-humble
     ```
@@ -234,4 +254,52 @@ Because the mono type assume the depth based on the computer version so if you f
 
 ### Potential issues you may face.
 The simulation and the wrapper both have their ```ROS_DOMAIN_ID``` set to 55 so they are meant to work out of the box. However, you may face issues if this environment variable is not set properly. Before you start the wrapper, run ```ros2 topic list``` and make sure the topics namespaced with ```scout_2``` are visible inside the ORB-SLAM3 container provided the simulation is running along the side.
+
+## Troubleshooting Docker Build Issues
+
+### Platform-specific build errors
+
+If you encounter a "no match for platform in manifest: not found" error when building the Docker image, it's likely a platform mismatch. Use the provided build script with the appropriate platform flag:
+
+```bash
+# For x86_64 systems (Intel/AMD)
+./build_docker.sh --amd64
+
+# For ARM64 systems (Jetson Orin)
+./build_docker.sh --arm64
+```
+
+Or manually specify the platform:
+
+```bash
+# For x86_64
+sudo docker buildx build --platform linux/amd64 -t orb-slam3-humble:22.04 .
+
+# For ARM64
+sudo docker buildx build --platform linux/arm64 -t orb-slam3-humble:22.04 .
+```
+
+### Docker buildx requirements
+
+For multi-platform builds, ensure you have Docker buildx enabled:
+
+```bash
+docker buildx version
+docker buildx create --use
+```
+
+### Cross-compilation
+
+If you need to build for ARM64 on an x86_64 machine (or vice versa), you'll need QEMU support:
+
+```bash
+docker run --privileged --rm tonistiigi/binfmt --install all
+```
+
+Then build with the target platform:
+
+```bash
+sudo docker buildx build --platform linux/arm64 -t orb-slam3-humble:22.04 .
+```
+
 

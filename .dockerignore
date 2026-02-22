@@ -1,0 +1,64 @@
+# Git files
+.git
+.gitignore
+.gitmodules
+
+# Documentation
+README.md
+LICENSE
+*.md
+
+# Docker files
+docker-compose.yml
+docker-compose.yml~
+.dockerignore
+
+# Large files and data
+*.tgz
+*.tar.gz
+*.zip
+*.osa
+*.ply
+*.gif
+*.png
+*.jpg
+
+# Build artifacts
+build/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.venv/
+venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data files
+Database/
+Map/
+Trajectory/
+
+# Temporary files
+*.log
+*.tmp
+coords
+
+# Development files
+showgit.py
