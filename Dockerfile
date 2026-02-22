@@ -1,12 +1,16 @@
 # Image taken from https://github.com/turlucode/ros-docker-gui
 # For Jetson Orin (ARM64), use the appropriate base image
 # If building on x86_64 for ARM64 cross-compilation, use multi-arch or QEMU
-FROM osrf/ros:humble-desktop-full-jammy
+ARG BUILDPLATFORM=linux/amd64
+ARG TARGETPLATFORM=linux/amd64
+FROM --platform=$BUILDPLATFORM osrf/ros:humble-desktop-full-jammy
 
 # Detect architecture
-ARG TARGET_ARCH
-RUN if [ "$(uname -m)" = "aarch64" ] || [ "$TARGET_ARCH" = "arm64" ]; then \
+RUN echo "Building for platform: $TARGETPLATFORM" && \
+    if [ "$(uname -m)" = "aarch64" ]; then \
       echo "Building for ARM64 (Jetson Orin)"; \
+    else \
+      echo "Building for x86_64 (amd64)"; \
     fi
 
 RUN apt-get update
