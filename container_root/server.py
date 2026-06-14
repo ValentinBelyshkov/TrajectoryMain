@@ -297,7 +297,8 @@ if __name__ == '__main__':
     register_shutdown_handlers()
     
     # Убедись, что нужные папки существуют
-    os.makedirs("/root/Database", exist_ok=True)
-    os.makedirs("/root/TerraSLAM_relay", exist_ok=True)
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.makedirs(os.path.join(base, "Database"), exist_ok=True)
+    os.makedirs(os.path.join(base, "TerraSLAM_relay"), exist_ok=True)
 
     app.run(host='0.0.0.0', port=5000, threaded=True)
