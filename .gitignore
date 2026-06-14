@@ -35,6 +35,7 @@ Database/new_frames
 last_src/
 Trajectory/
 orb_slam3.tar.gz
+mill-video.tgz 
 **.vscode**
 showgit.py
 !colcon_ws/.vscode
@@ -42,10 +43,11 @@ orb_slam3_ros2_wrapper/config
 .DS_Store
 *.osa
 orb_slam3_ros2_wrapper/params/olympe.yaml
+ORB_SLAM3/Vocabulary/ORBvoc.txt
 
 build/
 
-
+*.mp4
 # Prerequisites
 *.d
 
