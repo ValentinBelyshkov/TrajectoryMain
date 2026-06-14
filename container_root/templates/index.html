@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraSLAM Control Panel</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --green: #3fb950;
+  --red: #f85149;
+  --yellow: #d29922;
+  --blue: #58a6ff;
+  --purple: #bc8cff;
+  --orange: #ffa657;
+  --cyan: #39d353;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--blue);
+  letter-spacing: 0.5px;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-ok { background: rgba(63,185,80,.15); color: var(--green); border: 1px solid rgba(63,185,80,.3); }
+.badge-warn { background: rgba(210,153,34,.15); color: var(--yellow); border: 1px solid rgba(210,153,34,.3); }
+.badge-err { background: rgba(248,81,73,.15); color: var(--red); border: 1px solid rgba(248,81,73,.3); }
+
+#gw-badge { margin-left: auto; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 0;
+  height: calc(100vh - 49px);
+}
+
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nav-section { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 8px 6px 4px; }
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+  transition: background .15s;
+}
+.nav-btn:hover { background: var(--surface2); }
+.nav-btn.active { background: rgba(88,166,255,.1); color: var(--blue); }
+.nav-btn .icon { font-size: 15px; width: 20px; text-align: center; }
+
+.main {
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+.panel.active { display: flex; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.card-body { padding: 14px; }
+
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 10px; }
+
+/* Buttons */
+.btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--blue); color: var(--blue); }
+.btn:active { opacity: .7; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.btn-green { border-color: rgba(63,185,80,.4); color: var(--green); }
+.btn-green:hover { background: rgba(63,185,80,.1); border-color: var(--green); color: var(--green); }
+.btn-red { border-color: rgba(248,81,73,.4); color: var(--red); }
+.btn-red:hover { background: rgba(248,81,73,.1); border-color: var(--red); color: var(--red); }
+.btn-blue { border-color: rgba(88,166,255,.4); color: var(--blue); }
+.btn-blue:hover { background: rgba(88,166,255,.1); border-color: var(--blue); color: var(--blue); }
+.btn-orange { border-color: rgba(255,166,87,.4); color: var(--orange); }
+.btn-orange:hover { background: rgba(255,166,87,.1); border-color: var(--orange); color: var(--orange); }
+.btn-purple { border-color: rgba(188,140,255,.4); color: var(--purple); }
+.btn-purple:hover { background: rgba(188,140,255,.1); border-color: var(--purple); color: var(--purple); }
+
+.btn-lg { padding: 9px 20px; font-size: 13px; }
+.btn-sm { padding: 3px 9px; font-size: 11px; }
+
+/* Mode toggle */
+.toggle-group { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.toggle-opt {
+  flex: 1;
+  padding: 6px 12px;
+  background: var(--surface2);
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all .2s;
+  text-align: center;
+}
+.toggle-opt.active { background: rgba(88,166,255,.15); color: var(--blue); font-weight: 600; }
+.toggle-opt:not(.active):hover { background: var(--border); }
+
+/* Inputs */
+input[type="text"] {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12px;
+  outline: none;
+  flex: 1;
+  min-width: 160px;
+}
+input[type="text"]:focus { border-color: var(--blue); }
+
+/* Output area */
+.output {
+  background: #010409;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  min-height: 60px;
+  max-height: 260px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--cyan);
+}
+.output.err { color: var(--red); }
+
+/* Component grid */
+.comp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.comp-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.comp-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.comp-status {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot-warn { background: var(--yellow); }
+.dot-err { background: var(--red); }
+
+.comp-actions { display: flex; gap: 5px; }
+
+/* Slam state strip */
+.slam-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.slam-kv { display: flex; flex-direction: column; gap: 1px; }
+.slam-kv span:first-child { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.slam-kv span:last-child { font-weight: 600; }
+
+/* Log area */
+#log-output {
+  background: #010409;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+  font-size: 11px;
+  line-height: 1.65;
+  padding: 10px 12px;
+  height: 460px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-info { color: #58a6ff; }
+.log-warn { color: #d29922; }
+.log-error { color: #f85149; }
+.log-debug { color: #8b949e; }
+.log-line { display: block; }
+
+/* Data display */
+.data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.data-field { background: var(--surface2); border-radius: 6px; padding: 10px 12px; }
+.data-field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.data-field .val { font-size: 13px; font-weight: 600; font-family: monospace; }
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  max-width: 340px;
+  z-index: 9999;
+  transition: opacity .3s;
+  opacity: 0;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; }
+#toast.ok { border-color: var(--green); color: var(--green); }
+#toast.err { border-color: var(--red); color: var(--red); }
+#toast.info { border-color: var(--blue); color: var(--blue); }
+
+.sep { color: var(--border); margin: 0 4px; }
+.full-width { width: 100%; }
+
+@media (max-width: 700px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .data-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span>🛰️</span>
+  <h1>TerraSLAM Control Panel</h1>
+  <span id="gw-badge" class="badge badge-ok">Gateway OK</span>
+  <span id="sm-badge" class="badge badge-warn">SM …</span>
+</header>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="nav-section">SLAM</div>
+    <button class="nav-btn active" onclick="show('slam')">
+      <span class="icon">🚀</span> ORB-SLAM3
+    </button>
+    <button class="nav-btn" onclick="show('map')">
+      <span class="icon">🗺️</span> Map Control
+    </button>
+    <button class="nav-btn" onclick="show('mode')">
+      <span class="icon">⚙️</span> SLAM Mode
+    </button>
+
+    <div class="nav-section">SENSORS</div>
+    <button class="nav-btn" onclick="show('covariance')">
+      <span class="icon">📐</span> Covariance
+    </button>
+    <button class="nav-btn" onclick="show('camera_pose')">
+      <span class="icon">📷</span> Camera Pose
+    </button>
+    <button class="nav-btn" onclick="show('imu')">
+      <span class="icon">🔄</span> IMU
+    </button>
+
+    <div class="nav-section">NAVIGATION</div>
+    <button class="nav-btn" onclick="show('mavros')">
+      <span class="icon">🛩️</span> Mavros
+    </button>
+
+    <div class="nav-section">SYSTEM</div>
+    <button class="nav-btn" onclick="show('components')">
+      <span class="icon">🔧</span> Components
+    </button>
+    <button class="nav-btn" onclick="show('logs')">
+      <span class="icon">📋</span> Logs
+    </button>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ───── SLAM Panel ───── -->
+    <section id="panel-slam" class="panel active">
+      <div class="card">
+        <div class="card-header">🚀 ORB-SLAM3 — Launch &amp; Control</div>
+        <div id="slam-state-bar" class="slam-state">
+          <div class="slam-kv"><span>State</span><span id="ss-state">—</span></div>
+          <span class="sep">|</span>
+          <div class="slam-kv"><span>Drone Mode</span><span id="ss-mode">—</span></div>
+          <span class="sep">|</span>
+          <div class="slam-kv"><span>Initialized</span><span id="ss-init">—</span></div>
+          <span class="sep">|</span>
+          <div class="slam-kv"><span>Updated</span><span id="ss-ts">—</span></div>
+          <button class="btn btn-sm" style="margin-left:auto" onclick="refreshSlamStatus()">↻ Refresh</button>
+        </div>
+        <div class="card-body col">
+          <p style="color:var(--muted);font-size:12px">
+            Start/stop ORB-SLAM3 via <strong>system_manager</strong> (inside Docker) or via the <strong>legacy ROS2 task</strong> (direct launch).
+          </p>
+
+          <div class="row">
+            <button class="btn btn-green btn-lg" onclick="smAction('slam','start')">▶ Start (SM)</button>
+            <button class="btn btn-red btn-lg" onclick="smAction('slam','stop')">■ Stop (SM)</button>
+            <button class="btn btn-orange" onclick="smAction('slam','restart')">↻ Restart (SM)</button>
+          </div>
+
+          <div style="border-top:1px solid var(--border); padding-top:10px;">
+            <div class="row">
+              <button class="btn btn-blue" onclick="ros2SlamStart()">▶ Start (ROS2 direct)</button>
+              <button class="btn btn-sm btn-red" onclick="stopLegacy('slam')">■ Stop (legacy)</button>
+            </div>
+          </div>
+
+          <div id="slam-out" class="output" style="display:none"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Map Panel ───── -->
+    <section id="panel-map" class="panel">
+      <div class="card">
+        <div class="card-header">🗺️ Map Control</div>
+        <div class="card-body col">
+
+          <!-- Reset -->
+          <div class="card" style="border-color:rgba(248,81,73,.3)">
+            <div class="card-header" style="font-size:12px">🗑️ Reset Map</div>
+            <div class="card-body">
+              <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Clears the current SLAM map and restarts tracking from scratch.</p>
+              <button class="btn btn-red btn-lg" onclick="slamCmd('reset', '')">Reset Map</button>
+              <div id="reset-out" class="output" style="display:none;margin-top:10px"></div>
+            </div>
+          </div>
+
+          <!-- Save -->
+          <div class="card" style="border-color:rgba(63,185,80,.3)">
+            <div class="card-header" style="font-size:12px">💾 Save Map</div>
+            <div class="card-body col">
+              <div class="row">
+                <input type="text" id="save-path" placeholder="/home/orb/Database/map.osa" value="/home/orb/Database/map.osa">
+                <button class="btn btn-green btn-lg" onclick="slamCmdWithPath('save_map','save-path')">Save Map</button>
+              </div>
+              <div id="save-out" class="output" style="display:none"></div>
+            </div>
+          </div>
+
+          <!-- Load -->
+          <div class="card" style="border-color:rgba(88,166,255,.3)">
+            <div class="card-header" style="font-size:12px">📂 Load Map</div>
+            <div class="card-body col">
+              <div class="row">
+                <input type="text" id="load-path" placeholder="/home/orb/Database/map.osa" value="/home/orb/Database/map.osa">
+                <button class="btn btn-blue btn-lg" onclick="slamCmdWithPath('load_map','load-path')">Load Map</button>
+              </div>
+              <div id="load-out" class="output" style="display:none"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Mode Panel ───── -->
+    <section id="panel-mode" class="panel">
+      <div class="card">
+        <div class="card-header">⚙️ SLAM Mode</div>
+        <div id="slam-state-bar2" class="slam-state">
+          <div class="slam-kv"><span>Current Mode</span><span id="sm2-mode" style="color:var(--blue)">—</span></div>
+          <span class="sep">|</span>
+          <div class="slam-kv"><span>SLAM State</span><span id="sm2-state">—</span></div>
+          <button class="btn btn-sm" style="margin-left:auto" onclick="refreshSlamStatus2()">↻ Refresh</button>
+        </div>
+        <div class="card-body col">
+          <p style="color:var(--muted);font-size:12px">
+            Switch between <strong>Localization Only</strong> (uses existing map, no new features added)
+            and <strong>SLAM + Mapping</strong> (builds / expands the map).
+          </p>
+
+          <div class="toggle-group" style="max-width:400px">
+            <button id="mode-loc" class="toggle-opt active" onclick="setSlamMode('LOCALIZATION_ONLY')">🔒 Localization Only</button>
+            <button id="mode-map" class="toggle-opt" onclick="setSlamMode('SLAM_MAPPING')">🗺️ SLAM + Mapping</button>
+          </div>
+
+          <div id="mode-out" class="output" style="display:none"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Covariance Panel ───── -->
+    <section id="panel-covariance" class="panel">
+      <div class="card">
+        <div class="card-header">📐 Covariance <span style="color:var(--muted);font-weight:400;font-size:12px">— /orb_slam3/covariance</span></div>
+        <div class="card-body col">
+          <div class="row">
+            <button class="btn btn-blue btn-lg" onclick="echoTopic('covariance','cov-out')">Echo Once</button>
+            <button class="btn btn-sm" id="cov-poll-btn" onclick="togglePoll('covariance','cov-out','cov-poll-btn')">▶ Live Poll (2s)</button>
+          </div>
+          <div class="data-grid" id="cov-parsed" style="display:none"></div>
+          <div id="cov-out" class="output">Waiting for data…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Camera Pose Panel ───── -->
+    <section id="panel-camera_pose" class="panel">
+      <div class="card">
+        <div class="card-header">📷 Camera Pose <span style="color:var(--muted);font-weight:400;font-size:12px">— /orb_slam3/camera_pose</span></div>
+        <div class="card-body col">
+          <div class="row">
+            <button class="btn btn-blue btn-lg" onclick="echoTopic('camera_pose','pose-out')">Echo Once</button>
+            <button class="btn btn-sm" id="pose-poll-btn" onclick="togglePoll('camera_pose','pose-out','pose-poll-btn')">▶ Live Poll (2s)</button>
+          </div>
+          <div class="data-grid" id="pose-parsed" style="display:none">
+            <div class="data-field"><label>Position X</label><div class="val" id="pose-px">—</div></div>
+            <div class="data-field"><label>Position Y</label><div class="val" id="pose-py">—</div></div>
+            <div class="data-field"><label>Position Z</label><div class="val" id="pose-pz">—</div></div>
+            <div class="data-field"><label>Orientation W</label><div class="val" id="pose-ow">—</div></div>
+          </div>
+          <div id="pose-out" class="output">Waiting for data…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── IMU Panel ───── -->
+    <section id="panel-imu" class="panel">
+      <div class="card">
+        <div class="card-header">🔄 IMU <span style="color:var(--muted);font-weight:400;font-size:12px">— /imu/data</span></div>
+        <div class="card-body col">
+          <div class="row">
+            <button class="btn btn-blue btn-lg" onclick="echoTopic('imu','imu-out')">Echo Once</button>
+            <button class="btn btn-sm" id="imu-poll-btn" onclick="togglePoll('imu','imu-out','imu-poll-btn')">▶ Live Poll (2s)</button>
+          </div>
+          <div class="data-grid" id="imu-parsed" style="display:none">
+            <div class="data-field"><label>Angular Vel X</label><div class="val" id="imu-avx">—</div></div>
+            <div class="data-field"><label>Angular Vel Y</label><div class="val" id="imu-avy">—</div></div>
+            <div class="data-field"><label>Angular Vel Z</label><div class="val" id="imu-avz">—</div></div>
+            <div class="data-field"><label>Linear Accel X</label><div class="val" id="imu-lax">—</div></div>
+            <div class="data-field"><label>Linear Accel Y</label><div class="val" id="imu-lay">—</div></div>
+            <div class="data-field"><label>Linear Accel Z</label><div class="val" id="imu-laz">—</div></div>
+          </div>
+          <div id="imu-out" class="output">Waiting for data…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Mavros Panel ───── -->
+    <section id="panel-mavros" class="panel">
+      <div class="card">
+        <div class="card-header">🛩️ Mavros</div>
+        <div class="card-body col">
+
+          <!-- State -->
+          <div class="card" style="border-color:rgba(88,166,255,.3)">
+            <div class="card-header" style="font-size:12px">📡 Flight State</div>
+            <div class="card-body col">
+              <div class="row">
+                <button class="btn btn-blue" onclick="echoTopic('mavros_state','mav-state-out')">Echo /mavros/state</button>
+                <button class="btn btn-sm" id="mavs-poll-btn" onclick="togglePoll('mavros_state','mav-state-out','mavs-poll-btn')">▶ Live Poll</button>
+              </div>
+              <div class="data-grid" id="mav-state-parsed" style="display:none">
+                <div class="data-field"><label>Armed</label><div class="val" id="mav-armed">—</div></div>
+                <div class="data-field"><label>Mode</label><div class="val" id="mav-mode">—</div></div>
+                <div class="data-field"><label>Connected</label><div class="val" id="mav-conn">—</div></div>
+                <div class="data-field"><label>System Status</label><div class="val" id="mav-sys">—</div></div>
+              </div>
+              <div id="mav-state-out" class="output" style="max-height:160px">Waiting for data…</div>
+            </div>
+          </div>
+
+          <!-- IMU -->
+          <div class="card" style="border-color:rgba(188,140,255,.3)">
+            <div class="card-header" style="font-size:12px">🔄 Mavros IMU</div>
+            <div class="card-body col">
+              <div class="row">
+                <button class="btn btn-purple" onclick="echoTopic('mavros_imu','mav-imu-out')">Echo /mavros/imu/data</button>
+                <button class="btn btn-sm" id="mavimu-poll-btn" onclick="togglePoll('mavros_imu','mav-imu-out','mavimu-poll-btn')">▶ Live Poll</button>
+              </div>
+              <div id="mav-imu-out" class="output" style="max-height:160px">Waiting for data…</div>
+            </div>
+          </div>
+
+          <!-- Pose -->
+          <div class="card" style="border-color:rgba(255,166,87,.3)">
+            <div class="card-header" style="font-size:12px">📍 Local Position</div>
+            <div class="card-body col">
+              <div class="row">
+                <button class="btn btn-orange" onclick="echoTopic('mavros_pose','mav-pose-out')">Echo /mavros/local_position/pose</button>
+                <button class="btn btn-sm" id="mavpose-poll-btn" onclick="togglePoll('mavros_pose','mav-pose-out','mavpose-poll-btn')">▶ Live Poll</button>
+              </div>
+              <div id="mav-pose-out" class="output" style="max-height:160px">Waiting for data…</div>
+            </div>
+          </div>
+
+          <!-- ARM / Mode commands -->
+          <div class="card" style="border-color:rgba(248,81,73,.3)">
+            <div class="card-header" style="font-size:12px">🎮 Commands</div>
+            <div class="card-body col">
+              <div class="row">
+                <button class="btn btn-green" onclick="mavArm(true)">ARM</button>
+                <button class="btn btn-red" onclick="mavArm(false)">DISARM</button>
+              </div>
+              <div class="row">
+                <input type="text" id="mav-mode-input" placeholder="GUIDED / LOITER / AUTO …" value="GUIDED" style="max-width:200px">
+                <button class="btn btn-blue" onclick="mavSetMode()">Set Mode</button>
+              </div>
+              <div id="mav-cmd-out" class="output" style="display:none;max-height:120px"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Components Panel ───── -->
+    <section id="panel-components" class="panel">
+      <div class="card">
+        <div class="card-header">
+          🔧 System Components
+          <button class="btn btn-sm" style="margin-left:auto" onclick="loadComponents()">↻ Refresh</button>
+        </div>
+        <div class="card-body">
+          <div id="comp-grid" class="comp-grid"><div style="color:var(--muted)">Loading…</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Logs Panel ───── -->
+    <section id="panel-logs" class="panel">
+      <div class="card">
+        <div class="card-header">
+          📋 System Logs
+          <div class="row" style="margin-left:auto; gap:6px">
+            <select id="log-comp" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 6px;font-size:12px">
+              <option value="">All</option>
+              <option value="slam">slam</option>
+              <option value="relay">relay</option>
+              <option value="rosbridge">rosbridge</option>
+              <option value="gps_bridge">gps_bridge</option>
+              <option value="slam_mode_manager">slam_mode_manager</option>
+            </select>
+            <button class="btn btn-sm" onclick="loadLogs()">↻ Fetch</button>
+            <button class="btn btn-sm" id="log-follow-btn" onclick="toggleLogFollow()">▶ Follow</button>
+            <button class="btn btn-sm" onclick="clearLogs()">✕ Clear</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="log-output"><span style="color:var(--muted)">Click Fetch or enable Follow…</span></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ─── Navigation ──────────────────────────────────────────────────────────────
+let currentPanel = 'slam';
+function show(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  currentPanel = name;
+  if (name === 'components') loadComponents();
+  if (name === 'logs') loadLogs();
+  if (name === 'slam' || name === 'mode') refreshSlamStatus();
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3500);
+}
+
+// ─── API helpers ─────────────────────────────────────────────────────────────
+async function api(path, opts={}) {
+  try {
+    const r = await fetch(path, opts);
+    const d = await r.json();
+    return { ok: r.ok, status: r.status, data: d };
+  } catch(e) {
+    return { ok: false, status: 0, data: { error: String(e) } };
+  }
+}
+
+function jpost(path, body) {
+  return api(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+function showOut(id, text, isErr=false) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.className = 'output' + (isErr ? ' err' : '');
+  el.textContent = text;
+  el.scrollTop = el.scrollHeight;
+}
+
+function fmtResult(d) {
+  if (typeof d === 'string') return d;
+  return JSON.stringify(d, null, 2);
+}
+
+// ─── Health check ────────────────────────────────────────────────────────────
+async function checkHealth() {
+  const r = await api('/health');
+  const smBadge = document.getElementById('sm-badge');
+  if (r.ok && r.data.system_manager === 'ok') {
+    smBadge.textContent = 'SM OK';
+    smBadge.className = 'badge badge-ok';
+  } else if (r.ok) {
+    smBadge.textContent = 'SM unavailable';
+    smBadge.className = 'badge badge-warn';
+  } else {
+    smBadge.textContent = 'SM offline';
+    smBadge.className = 'badge badge-err';
+  }
+}
+checkHealth();
+setInterval(checkHealth, 10000);
+
+// ─── SLAM status ─────────────────────────────────────────────────────────────
+async function refreshSlamStatus() {
+  const r = await api('/api/sm/slam/status');
+  if (!r.ok) return;
+  const s = r.data.status || {};
+  document.getElementById('ss-state').textContent = s.slam_state_name || '—';
+  document.getElementById('ss-mode').textContent = s.drone_mode || '—';
+  document.getElementById('ss-init').textContent = s.initialized ? '✅ Yes' : '❌ No';
+  const ts = s.timestamp ? new Date(s.timestamp * 1000).toLocaleTimeString() : '—';
+  document.getElementById('ss-ts').textContent = ts;
+}
+
+async function refreshSlamStatus2() {
+  const r = await api('/api/sm/slam/status');
+  if (!r.ok) return;
+  const s = r.data.status || {};
+  document.getElementById('sm2-mode').textContent = s.drone_mode || '—';
+  document.getElementById('sm2-state').textContent = s.slam_state_name || '—';
+  const m = s.drone_mode || '';
+  document.getElementById('mode-loc').classList.toggle('active', m === 'LOCALIZATION_ONLY');
+  document.getElementById('mode-map').classList.toggle('active', m === 'SLAM_MAPPING');
+}
+
+// ─── SM component actions ────────────────────────────────────────────────────
+async function smAction(comp, action) {
+  toast(`Sending ${action} → ${comp}…`, 'info');
+  const r = await jpost(`/api/sm/components/${comp}/${action}`, {});
+  if (r.ok) {
+    toast(`${comp}: ${action} OK`, 'ok');
+    showOut('slam-out', fmtResult(r.data));
+  } else {
+    toast(`Error: ${r.data.error || r.status}`, 'err');
+    showOut('slam-out', fmtResult(r.data), true);
+  }
+}
+
+async function ros2SlamStart() {
+  toast('Starting SLAM via ROS2 direct…', 'info');
+  const r = await jpost('/api/ros2/slam/start', {});
+  showOut('slam-out', fmtResult(r.data), !r.ok);
+  if (r.ok) toast('SLAM task started (legacy)', 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+async function stopLegacy(type) {
+  toast(`Stopping ${type} (legacy)…`, 'info');
+  const r = await api('/stop/' + type, { method: 'POST' });
+  showOut('slam-out', fmtResult(r.data), !r.ok);
+}
+
+// ─── Map commands ────────────────────────────────────────────────────────────
+async function slamCmd(cmd, path, outId) {
+  if (!outId) outId = cmd === 'reset' ? 'reset-out' : 'save-out';
+  toast(`Executing: ${cmd}…`, 'info');
+  const r = await jpost('/api/sm/slam/command', { value: cmd });
+  showOut(outId, fmtResult(r.data), !r.ok);
+  if (r.ok) toast(`${cmd} sent ✓`, 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+async function slamCmdWithPath(cmd, inputId) {
+  const path = document.getElementById(inputId).value.trim();
+  const outId = cmd === 'save_map' ? 'save-out' : 'load-out';
+  toast(`Executing: ${cmd} → ${path}`, 'info');
+  const r = await jpost('/api/sm/slam/command', { value: cmd + '|' + path });
+  showOut(outId, fmtResult(r.data), !r.ok);
+  if (r.ok) toast(`${cmd} sent ✓`, 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+// ─── SLAM Mode ────────────────────────────────────────────────────────────────
+async function setSlamMode(mode) {
+  toast(`Setting mode: ${mode}…`, 'info');
+  const r = await jpost('/api/sm/slam/mode', { mode });
+  showOut('mode-out', fmtResult(r.data), !r.ok);
+  if (r.ok) {
+    toast(`Mode → ${mode}`, 'ok');
+    document.getElementById('mode-loc').classList.toggle('active', mode === 'LOCALIZATION_ONLY');
+    document.getElementById('mode-map').classList.toggle('active', mode === 'SLAM_MAPPING');
+  } else {
+    toast('Error: ' + (r.data.error || r.status), 'err');
+  }
+}
+
+// ─── ROS2 topic echo ─────────────────────────────────────────────────────────
+const _polls = {};
+
+async function echoTopic(name, outId) {
+  document.getElementById(outId).textContent = 'Fetching…';
+  const r = await api('/api/ros2/topic/' + name);
+  const d = r.data;
+  const text = d.error ? `⚠ ${d.error}` : (d.output || '(no data)');
+  document.getElementById(outId).textContent = text;
+  parseTopic(name, d.output || '');
+}
+
+function parseTopic(name, raw) {
+  if (name === 'camera_pose') {
+    const px = raw.match(/x:\s*([\d\.\-e]+)/);
+    const py = raw.match(/y:\s*([\d\.\-e]+)/);
+    const pz = raw.match(/z:\s*([\d\.\-e]+)/);
+    const ow = raw.match(/w:\s*([\d\.\-e]+)/);
+    if (px) {
+      document.getElementById('pose-parsed').style.display = 'grid';
+      ['px','py','pz','ow'].forEach((id,i) => {
+        const m = [px,py,pz,ow][i];
+        if (m) document.getElementById('pose-'+id).textContent = parseFloat(m[1]).toFixed(4);
+      });
+    }
+  }
+  if (name === 'imu') {
+    const avx = raw.match(/angular_velocity[\s\S]*?x:\s*([\d\.\-e]+)/);
+    const avy = raw.match(/angular_velocity[\s\S]*?y:\s*([\d\.\-e]+)/);
+    const avz = raw.match(/angular_velocity[\s\S]*?z:\s*([\d\.\-e]+)/);
+    const lax = raw.match(/linear_acceleration[\s\S]*?x:\s*([\d\.\-e]+)/);
+    const lay = raw.match(/linear_acceleration[\s\S]*?y:\s*([\d\.\-e]+)/);
+    const laz = raw.match(/linear_acceleration[\s\S]*?z:\s*([\d\.\-e]+)/);
+    if (avx) {
+      document.getElementById('imu-parsed').style.display = 'grid';
+      [['avx',avx],['avy',avy],['avz',avz],['lax',lax],['lay',lay],['laz',laz]].forEach(([k,m]) => {
+        if (m) document.getElementById('imu-'+k).textContent = parseFloat(m[1]).toFixed(5);
+      });
+    }
+  }
+  if (name === 'mavros_state') {
+    const armed = raw.match(/armed:\s*(\w+)/);
+    const mode = raw.match(/mode:\s*(\S+)/);
+    const conn = raw.match(/connected:\s*(\w+)/);
+    const sys = raw.match(/system_status:\s*(\d+)/);
+    if (armed) {
+      document.getElementById('mav-state-parsed').style.display = 'grid';
+      if (armed) { const v=armed[1]; document.getElementById('mav-armed').textContent=v; document.getElementById('mav-armed').style.color=v==='True'?'var(--green)':'var(--muted)'; }
+      if (mode) document.getElementById('mav-mode').textContent = mode[1];
+      if (conn) document.getElementById('mav-conn').textContent = conn[1];
+      if (sys) document.getElementById('mav-sys').textContent = sys[1];
+    }
+  }
+}
+
+function togglePoll(name, outId, btnId) {
+  const key = name + '_' + outId;
+  if (_polls[key]) {
+    clearInterval(_polls[key]);
+    delete _polls[key];
+    document.getElementById(btnId).textContent = '▶ Live Poll (2s)';
+  } else {
+    echoTopic(name, outId);
+    _polls[key] = setInterval(() => echoTopic(name, outId), 2000);
+    document.getElementById(btnId).textContent = '■ Stop Poll';
+    document.getElementById(btnId).style.color = 'var(--red)';
+  }
+}
+
+// ─── Mavros commands ──────────────────────────────────────────────────────────
+async function mavArm(arm) {
+  toast(arm ? 'Sending ARM…' : 'Sending DISARM…', 'info');
+  const r = await jpost('/api/ros2/mavros/arm', { arm });
+  showOut('mav-cmd-out', fmtResult(r.data), !r.ok);
+  if (r.ok) toast(arm ? 'ARM sent ✓' : 'DISARM sent ✓', 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+async function mavSetMode() {
+  const mode = document.getElementById('mav-mode-input').value.trim();
+  if (!mode) { toast('Enter a mode', 'err'); return; }
+  toast(`Setting mode: ${mode}…`, 'info');
+  const r = await jpost('/api/ros2/mavros/set_mode', { mode });
+  showOut('mav-cmd-out', fmtResult(r.data), !r.ok);
+  if (r.ok) toast(`Mode ${mode} sent ✓`, 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+// ─── Components ───────────────────────────────────────────────────────────────
+async function loadComponents() {
+  const grid = document.getElementById('comp-grid');
+  grid.innerHTML = '<div style="color:var(--muted)">Loading…</div>';
+  const r = await api('/api/sm/status');
+  if (!r.ok) {
+    grid.innerHTML = `<div style="color:var(--red)">system_manager unavailable: ${r.data.error || r.status}</div>`;
+    return;
+  }
+  const comps = r.data.components || [];
+  if (!comps.length) { grid.innerHTML = '<div style="color:var(--muted)">No components</div>'; return; }
+
+  grid.innerHTML = '';
+  comps.forEach(c => {
+    const name = c.name.replace('terraslam/', '');
+    const dotClass = c.level === 0 ? 'dot-ok' : (c.level === 1 ? 'dot-warn' : 'dot-err');
+    const pid = c.values?.pid ? ` · pid ${c.values.pid}` : '';
+    const div = document.createElement('div');
+    div.className = 'comp-card';
+    div.innerHTML = `
+      <div class="comp-name">${name}</div>
+      <div class="comp-status">
+        <span class="dot ${dotClass}"></span>
+        ${c.message}${pid}
+      </div>
+      <div class="comp-actions">
+        <button class="btn btn-sm btn-green" onclick="smCompAction('${name}','start')">Start</button>
+        <button class="btn btn-sm btn-red" onclick="smCompAction('${name}','stop')">Stop</button>
+        <button class="btn btn-sm btn-orange" onclick="smCompAction('${name}','restart')">↻</button>
+      </div>`;
+    grid.appendChild(div);
+  });
+}
+
+async function smCompAction(comp, action) {
+  toast(`${action} → ${comp}…`, 'info');
+  const r = await jpost(`/api/sm/components/${comp}/${action}`, {});
+  if (r.ok) { toast(`${comp}: ${action} OK`, 'ok'); loadComponents(); }
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+// ─── Logs ──────────────────────────────────────────────────────────────────────
+let logFollowInterval = null;
+let lastLogTs = null;
+
+function clearLogs() {
+  document.getElementById('log-output').innerHTML = '';
+  lastLogTs = null;
+}
+
+function colorLevel(lvl) {
+  if (lvl === 'ERROR') return 'log-error';
+  if (lvl === 'WARN') return 'log-warn';
+  if (lvl === 'DEBUG') return 'log-debug';
+  return 'log-info';
+}
+
+function appendLogs(logs) {
+  const el = document.getElementById('log-output');
+  logs.forEach(l => {
+    const ts = new Date(l.timestamp * 1000).toLocaleTimeString();
+    const cls = colorLevel(l.level);
+    const span = document.createElement('span');
+    span.className = 'log-line ' + cls;
+    span.textContent = `[${ts}][${(l.level||'INFO').padEnd(5)}][${(l.component||'?').padEnd(16)}] ${l.message}`;
+    el.appendChild(span);
+  });
+  el.scrollTop = el.scrollHeight;
+  if (logs.length) lastLogTs = logs[logs.length - 1].timestamp;
+}
+
+async function loadLogs() {
+  clearLogs();
+  const comp = document.getElementById('log-comp').value;
+  const params = new URLSearchParams({ limit: 100 });
+  if (comp) params.set('component', comp);
+  const r = await api('/api/sm/logs?' + params);
+  if (!r.ok) {
+    document.getElementById('log-output').innerHTML = `<span style="color:var(--red)">SM unavailable: ${r.data.error || r.status}</span>`;
+    return;
+  }
+  appendLogs(r.data.logs || []);
+}
+
+async function fetchNewLogs() {
+  const comp = document.getElementById('log-comp').value;
+  const params = new URLSearchParams({ limit: 50 });
+  if (comp) params.set('component', comp);
+  if (lastLogTs) params.set('since', lastLogTs);
+  const r = await api('/api/sm/logs?' + params);
+  if (r.ok) appendLogs(r.data.logs || []);
+}
+
+function toggleLogFollow() {
+  const btn = document.getElementById('log-follow-btn');
+  if (logFollowInterval) {
+    clearInterval(logFollowInterval);
+    logFollowInterval = null;
+    btn.textContent = '▶ Follow';
+    btn.style.color = '';
+  } else {
+    loadLogs();
+    logFollowInterval = setInterval(fetchNewLogs, 2000);
+    btn.textContent = '■ Stop Follow';
+    btn.style.color = 'var(--red)';
+  }
+}
+
+// ─── Auto-refresh slam status in background ───────────────────────────────────
+setInterval(() => {
+  if (currentPanel === 'slam') refreshSlamStatus();
+  if (currentPanel === 'mode') refreshSlamStatus2();
+  if (currentPanel === 'components') loadComponents();
+}, 8000);
+</script>
+</body>
+</html>
