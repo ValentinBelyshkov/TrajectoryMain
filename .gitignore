@@ -34,7 +34,7 @@ Database/new_frames
 **/procframe/
 last_src/
 Trajectory/
-
+orb_slam3.tar.gz
 **.vscode**
 showgit.py
 !colcon_ws/.vscode
