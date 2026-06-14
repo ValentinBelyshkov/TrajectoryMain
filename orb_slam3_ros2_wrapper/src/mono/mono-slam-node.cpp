@@ -3,6 +3,9 @@
  * @brief Implementation of the MonoSlamNode Wrapper class.
  * @author Suchetan R S (rssuchetan@gmail.com)
  */
+ #include <thread>
+#include <future>
+#include <chrono>
 #include "mono-slam-node.hpp"
 
 #include <opencv2/core/core.hpp>
@@ -19,6 +22,8 @@ namespace ORB_SLAM3_Wrapper
         									    	    this,std::placeholders::_1));
 
         imuSub_ = this->create_subscription<sensor_msgs::msg::Imu>("imu", 1000, std::bind(&MonoSlamNode::ImuCallback, this, std::placeholders::_1));
+        
+        
         // odomSub_ = this->create_subscription<nav_msgs::msg::Odometry>("odom", 1000, std::bind(&MonoSlamNode::OdomCallback, this, std::placeholders::_1));
         // ROS Publishers 
         // mapPointsPub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("mono_map_points", 10);
@@ -27,13 +32,14 @@ namespace ORB_SLAM3_Wrapper
 
         // referenceMapPointsPub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("mono_reference_map_points", 10);
         cameraPosePub_ = this->create_publisher<geometry_msgs::msg::Pose>("camera_pose", 10);
-        
+        // После cameraPosePub_ = ...
+        trackingStatePub_ = this->create_publisher<std_msgs::msg::Int8>("orb_slam3/tracking_state", 10);
         // TF
         // tfBroadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
         // tfBuffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
         // tfListener_ = std::make_shared<tf2_ros::TransformListener>(*tfBuffer_);
 
-        bool bUseViewer;
+        bool bUseViewer =false;
         this->declare_parameter("visualization", rclcpp::ParameterValue(true));
         this->get_parameter("visualization", bUseViewer);
 
@@ -77,8 +83,17 @@ namespace ORB_SLAM3_Wrapper
         interface_ = std::make_shared<ORB_SLAM3_Wrapper::ORBSLAM3Interface>(strVocFile, strSettingsFile,
                                                                             sensor, bUseViewer, rosViz_, robot_x_,
                                                                             robot_y_, global_frame_, odom_frame_id_, robot_base_frame_id_);
+        map_control_srv_ = this->create_service<orb_slam3_ros2_wrapper::srv::MapControl>(
+            "orb_slam3/map_control",
+            std::bind(&MonoSlamNode::handleMapControl, this, std::placeholders::_1, std::placeholders::_2));
+        RCLCPP_INFO(this->get_logger(), "✅ Map control service registered: /orb_slam3/map_control");
+        
         frequency_tracker_count_ = 0;
         frequency_tracker_clock_ = std::chrono::high_resolution_clock::now();
+
+
+worker_thread_ = std::thread(&MonoSlamNode::workerLoop, this);
+RCLCPP_INFO(this->get_logger(), "🔧 Worker thread started");
 
         RCLCPP_INFO(this->get_logger(), "CONSTRUCTOR END!");
     }
@@ -90,6 +105,10 @@ namespace ORB_SLAM3_Wrapper
         odomSub_.reset();
         interface_.reset();
         saveCurrentMapPointCloud();
+worker_running_ = false;
+cmd_cv_.notify_one();
+if (worker_thread_.joinable()) worker_thread_.join();
+RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
         RCLCPP_INFO(this->get_logger(), "DESTRUCTOR!");
     }
 
@@ -114,6 +133,11 @@ namespace ORB_SLAM3_Wrapper
     {
         Sophus::SE3f Tcw;
         int trackingState = interface_->trackMONO(msgRGB, Tcw);
+        
+        // === ПУБЛИКУЕМ СОСТОЯНИЕ ТРЕКИНГА ===
+        std_msgs::msg::Int8 stateMsg;
+        stateMsg.data = trackingState;
+        trackingStatePub_->publish(stateMsg);
         
         // Create pose message
         auto camPose = typeConversion_.se3ToPoseMsg(Tcw);
@@ -339,6 +363,106 @@ namespace ORB_SLAM3_Wrapper
     //     pcl::fromROSMsg(msg, *cloud);  // Convert from ROS msg to PCL cloud
     //     pcl::io::savePLYFileASCII(filename, *cloud);  // Save as PLY file
     // }
+ void MonoSlamNode::handleMapControl(
+    const std::shared_ptr<orb_slam3_ros2_wrapper::srv::MapControl::Request> req,
+    std::shared_ptr<orb_slam3_ros2_wrapper::srv::MapControl::Response> res)
+{
+    RCLCPP_INFO(this->get_logger(), "⚡ Queuing command: %d", req->command);
+    
+    MapControlCmd cmd;
+    cmd.command = req->command;
+    cmd.filepath = req->filepath;
+    
+    // Сохраняем future для возврата результата
+    auto future = cmd.promise.get_future();
+    
+    // Кладём в очередь
+    {
+        std::lock_guard<std::mutex> lock(cmd_queue_mutex_);
+        cmd_queue_.push(std::move(cmd));
+    }
+    cmd_cv_.notify_one();
+    
+    // Ждём результат с таймаутом 120с (но не блокируем ROS-исполнитель надолго)
+    auto status = future.wait_for(std::chrono::seconds(120));
+    if (status == std::future_status::ready) {
+        auto [success, message] = future.get();
+        res->success = success;
+        res->message = message;
+        RCLCPP_INFO(this->get_logger(), "✅ Command finished: %s", message.c_str());
+    } else {
+        res->success = false;
+        res->message = "Command timed out (>120s)";
+        RCLCPP_WARN(this->get_logger(), "⏳ Command timed out");
+    }
+}
 
+// === Поток-обработчик (выполняет команды в безопасном контексте) ===
+void MonoSlamNode::workerLoop()
+{
+    while (worker_running_ || !cmd_queue_.empty()) {
+        MapControlCmd cmd;
+        
+        // Ждём команду
+        {
+            std::unique_lock<std::mutex> lock(cmd_queue_mutex_);
+            cmd_cv_.wait_for(lock, std::chrono::milliseconds(100), [this] {
+                return !cmd_queue_.empty() || !worker_running_;
+            });
+            
+            if (cmd_queue_.empty()) continue;
+            cmd = std::move(cmd_queue_.front());
+            cmd_queue_.pop();
+        }
+        auto cmd_start = std::chrono::high_resolution_clock::now();
+        RCLCPP_INFO(this->get_logger(), "🔧 Executing command: %d", cmd.command);
+        
+        try {
+            std::pair<bool, std::string> result;
+            
+            switch (cmd.command) {
+                case 0: // Reset — самый критичный
+                    // Безопасный сброс: останавливаем трекинг на время
+                    {
+                        // Здесь можно добавить флаг pause_tracking_, который проверяется в trackMONO
+                        // Для простоты: просто вызываем resetMap (он уже имеет свои мьютексы)
+                        bool ok = interface_->resetMap();
+                        result = {ok, ok ? "Map reset" : "Reset failed"};
+                    }
+                    break;
+                case 1:{ // Save
+                    result = {interface_->saveMap(cmd.filepath), 
+                              "Saved to " + cmd.filepath};
+                    break;}
+                case 2: {// Load
+                    result = {interface_->loadMap(cmd.filepath), 
+                              "Loaded from " + cmd.filepath};
+                    break;
+                    }
+                    case 3: { // Enable Localization Mode
+                    interface_->enableLocalizationMode();
+                    result = {true, "Localization mode enabled"};
+                    break;
+                }
+                case 4: { // Disable Localization Mode
+                    interface_->disableLocalizationMode();
+                    result = {true, "Localization mode disabled"};
+                    break;
+                }
+                default:
+                    result = {false, "Unknown command"};
+            }
+            
+            // Возвращаем результат
+            cmd.promise.set_value(result);
+            
+        } catch (const std::exception& e) {
+            cmd.promise.set_value({false, std::string("Exception: ") + e.what()});
+        }
+    auto cmd_end = std::chrono::high_resolution_clock::now();
+auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(cmd_end - cmd_start).count();
+RCLCPP_INFO(rclcpp::get_logger("Worker"), "⏱️ Command %d finished in %ld ms", cmd.command, duration);        
+    }
+    }
 
 }

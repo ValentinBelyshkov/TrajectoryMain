@@ -1,42 +1,76 @@
-version: "3"
+version: "3.8"
+
 services:
   TerraSLAM:
-    image: orb-slam3-humble:22.04
-    volumes:
-      #full dev
-      - /dev:/dev:rw
-      #full media
-      - /media:/media:rw
-      #Time
-      - /etc/timezone:/etc/timezone:rw
-      - /etc/localtime:/etc/localtime:rw
-      #ros-workspaces
-      - ./container_root/:/root/
-      - ./orb_slam3_ros2_wrapper/:/root/colcon_ws/src/orb_slam3_ros2_wrapper/
-      - ./slam_msgs/:/root/colcon_ws/src/slam_msgs/
-      # - ./ORB_SLAM3/:/home/orb/ORB_SLAM3/
-      # X11 forwarding
-      - ${XAUTHORITY}:/tmp/.Xauthority:ro
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    privileged: true
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - UID=1000
+        - GID=1000
+    image: trajectory-main:prod
+    container_name: TerraSLAM
+    # Auto-restart container if it crashes
+    restart: unless-stopped
+    
+    runtime: nvidia
+    cap_add:
+      - SYS_PTRACE #for debug
+
+    # Networking for ROS2
     network_mode: host
     ipc: host
-    stdin_open: true
-    tty: true
+    
+    devices:
+      - "/dev/video0:/dev/video0"      # USB-камера
+      - "/dev/i2c-1:/dev/i2c-1"        # I2C
+      
+
+    # Volumes: Persist data, NOT code
+    volumes:
+      # Time sync
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      # Media input (read-only if possible)
+      - /media:/media:ro
+      # Persist maps, configs, logs
+      - terra_data:/home/orb/.ros
+      - terra_logs:/var/log/supervisor
+      # X11 for GUI (optional)
+      - ${XAUTHORITY:-/dev/null}:/tmp/.Xauthority:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/runtime-orb:/tmp/runtime-orb:rw 
+      - ./Database:/home/orb/Database:rw
+      - ./TerraSLAM_relay:/home/orb/TerraSLAM_relay:rw
+      - ./ORB_SLAM3:/home/orb/ORB_SLAM3:rw
+    
     environment:
-      - DISPLAY=$DISPLAY
+      - DISPLAY=${DISPLAY}
       - XAUTHORITY=/tmp/.Xauthority
+      - XDG_RUNTIME_DIR=/tmp/runtime-orb
       - QT_X11_NO_MITSHM=1
-    entrypoint: ""
-    command: >
-      bash -c "
-        source /opt/ros/humble/setup.bash &&
-        source /root/colcon_ws/install/setup.bash &&
-        cd /root &&
-        python3 server.py
-      "
-    ports:
-      - "11223:22"
-      - "5000:5000"
-      - "9090:9090"
-    container_name: TerraSLAM
+      - ROS_DOMAIN_ID=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - ROSBRIDGE_PORT=9091
+    
+    # Health check: Verify ROS2 is responsive
+    healthcheck:
+      test: ["CMD", "ros2", "topic", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Resource limits (adjust for Jetson)
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 2G
+
+volumes:
+  terra_data:
+  terra_logs:
+ 

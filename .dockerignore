@@ -51,9 +51,9 @@ venv/
 Thumbs.db
 
 # Data files
-Database/
-Map/
-Trajectory/
+#Database/
+#Map/
+#Trajectory/
 
 # Temporary files
 *.log

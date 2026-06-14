@@ -11,6 +11,9 @@
 #include <algorithm>
 #include <fstream>
 #include <chrono>
+#include <queue>
+#include <condition_variable>
+#include <atomic>
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -33,15 +36,22 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
-
+#include <std_msgs/msg/int8.hpp>
 #include <slam_msgs/msg/map_data.hpp>
 #include <slam_msgs/srv/get_map.hpp>
-
+#include "orb_slam3_ros2_wrapper/srv/map_control.hpp"
 #include "orb_slam3_ros2_wrapper/type_conversion.hpp"
 #include "orb_slam3_ros2_wrapper/orb_slam3_interface.hpp"
 
 namespace ORB_SLAM3_Wrapper
 {
+struct MapControlCmd {
+    uint8_t command;  // 0=reset, 1=save, 2=load
+    std::string filepath;
+    std::promise<std::pair<bool, std::string>> promise;  // для возврата результата
+};
+
+// =====================================================
     class MonoSlamNode : public rclcpp::Node
     {
     public:
@@ -55,6 +65,21 @@ namespace ORB_SLAM3_Wrapper
         void ImuCallback(const sensor_msgs::msg::Imu::SharedPtr msgIMU);
         void OdomCallback(const nav_msgs::msg::Odometry::SharedPtr msgOdom);
         void MONOCallback(const sensor_msgs::msg::Image::SharedPtr msgRGB);
+        
+        
+std::queue<MapControlCmd> cmd_queue_;
+std::mutex cmd_queue_mutex_;
+std::condition_variable cmd_cv_;
+std::thread worker_thread_;
+std::atomic<bool> worker_running_{true};
+
+void workerLoop();  // поток-обработчик команд
+void pushCommand(MapControlCmd&& cmd);  // добавление команды в очередь
+        
+        // Map control service
+rclcpp::Service<orb_slam3_ros2_wrapper::srv::MapControl>::SharedPtr map_control_srv_;
+void handleMapControl(const std::shared_ptr<orb_slam3_ros2_wrapper::srv::MapControl::Request> req,
+                      std::shared_ptr<orb_slam3_ros2_wrapper::srv::MapControl::Response> res);
 
         /**
          * @brief Publishes map data. (Keyframes and all poses in the current active map.)
@@ -76,6 +101,7 @@ namespace ORB_SLAM3_Wrapper
         rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imuSub_;
         // ROS Publishers and Subscribers
         rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odomSub_;
+        rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr trackingStatePub_;
         //rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr mapPointsPub_;
         rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr currentMapPointsPub_;
         rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr referenceMapPointsPub_;

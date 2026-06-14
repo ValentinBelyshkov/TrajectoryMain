@@ -1,0 +1,6 @@
+# 0=reset, 1=save, 2=load
+uint8 command
+string filepath
+---
+bool success
+string message

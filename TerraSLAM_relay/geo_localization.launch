@@ -1,0 +1,21 @@
+<!-- geo_localization.launch -->
+<launch>
+  <!-- 1. ORB-SLAM3 (уже запущен у вас) -->
+  <!-- <include file="$(find orb_slam3_ros)/launch/mono.launch"/> -->
+
+  <!-- 2. Geo Matcher -->
+  <node name="geo_matcher" pkg="your_pkg" type="geo_matcher_node.py" output="screen">
+    <param name="map_path" value="$(find your_pkg)/maps/map_data.pkl"/>
+    <param name="altitude" value="1000.0"/>
+    <param name="focal_length_mm" value="24.0"/>
+    <param name="sensor_width_mm" value="13.2"/>
+    <param name="image_width_px" value="1920"/>
+    <param name="image_height_px" value="1080"/>
+  </node>
+
+  <!-- 3. Sim3 Aligner -->
+  <node name="sim3_aligner" pkg="your_pkg" type="sim3_aligner.py" output="screen"/>
+
+  <!-- 4. RViz -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find your_pkg)/config/geo.rviz"/>
+</launch>

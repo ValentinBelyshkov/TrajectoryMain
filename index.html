@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head><title>ROS Bridge - MAX DEBUG</title><base target="_blank">
+</head>
+<body>
+  <h3>🔍 ROS Bridge MAX DEBUG MODE</h3>
+  <div>
+    <input id="ws" value="ws://localhost:9091" size="40">
+    <input id="topic" value="/camera/image_raw" size="30">
+    <button onclick="go()">CONNECT</button>
+    <button onclick="stop()">DISCONNECT</button>
+    <button onclick="testPublish()">TEST PUB</button>
+    <button onclick="clearLog()">CLEAR LOG</button>
+  </div>
+  <div style="margin:10px 0">
+    <img id="img" style="border:2px solid #f00;background:#000" width="640" height="480">
+    <div id="stats" style="font-weight:bold;color:#0f0"></div>
+    <div id="connectionStatus" style="font-weight:bold;color:#orange">DISCONNECTED</div>
+  </div>
+  <pre id="log" style="background:#000;color:#0f0;font:10px monospace;max-height:500px;overflow:auto;text-align:left"></pre>
+
+  <script>
+    let ws = null;
+    let frames = 0;
+    let msgCount = 0;
+    let fragmentBuffers = {};
+    let startTime = null;
+    let lastMessageTime = null;
+    let bytesReceived = 0;
+    let connectionAttempts = 0;
+
+    const LOG_LEVELS = {
+      ERROR: '❌ ERROR',
+      WARN: '⚠️ WARN',
+      SUCCESS: '✅ SUCCESS',
+      DATA: '📦 DATA',
+      FRAGMENT: '🧩 FRAGMENT',
+      RENDER: '🎨 RENDER',
+      INFO: 'ℹ️ INFO',
+      NETWORK: '🌐 NETWORK',
+      RAW: '📝 RAW',
+      TIMING: '⏱️ TIMING',
+      BINARY: '💾 BINARY'
+    };
+
+    const log = (msg, level='INFO') => {
+      const t = new Date().toLocaleTimeString();
+      const prefix = LOG_LEVELS[level] || '•';
+      const line = `[${t}] ${prefix} ${msg}`;
+      const logEl = document.getElementById('log');
+      logEl.innerText = line + '\n' + logEl.innerText;
+      console.log(line);
+    };
+
+    const clearLog = () => {
+      document.getElementById('log').innerText = '';
+      log('Logs cleared', 'INFO');
+    };
+
+    const updateStatus = (status, color) => {
+      const el = document.getElementById('connectionStatus');
+      el.innerText = status;
+      el.style.color = color;
+    };
+
+    function go() {
+      connectionAttempts++;
+      const url = document.getElementById('ws').value;
+      const topic = document.getElementById('topic').value;
+      startTime = Date.now();
+
+      log(`=== CONNECTION ATTEMPT #${connectionAttempts} ===`, 'NETWORK');
+      log(`URL: ${url}`, 'NETWORK');
+      log(`Topic: ${topic}`, 'NETWORK');
+      log(`Browser: ${navigator.userAgent}`, 'INFO');
+      log(`Screen: ${window.innerWidth}x${window.innerHeight}`, 'INFO');
+
+      if (ws) {
+        log('Closing existing WebSocket...', 'WARN');
+        ws.close();
+        ws = null;
+      }
+
+      try {
+        log('Creating WebSocket object...', 'NETWORK');
+        ws = new WebSocket(url);
+        log(`WebSocket created. ReadyState: ${ws.readyState} (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)`, 'SUCCESS');
+      } catch(e) {
+        log(`FAILED to create WebSocket: ${e.message}`, 'ERROR');
+        log(`Stack: ${e.stack}`, 'ERROR');
+        updateStatus('CONNECTION FAILED', 'red');
+        return;
+      }
+
+      // Connection timeout check
+      setTimeout(() => {
+        if (ws && ws.readyState !== 1) {
+          log(`⚠️ Connection timeout! ReadyState: ${ws.readyState}`, 'WARN');
+        }
+      }, 5000);
+
+      ws.onopen = (event) => {
+        const elapsed = Date.now() - startTime;
+        log(`WebSocket OPENED after ${elapsed}ms`, 'SUCCESS');
+        log(`Protocol: ${ws.protocol || 'none'}`, 'NETWORK');
+        log(`Extensions: ${ws.extensions || 'none'}`, 'NETWORK');
+        log(`BufferedAmount: ${ws.bufferedAmount}`, 'NETWORK');
+        updateStatus('CONNECTED', 'green');
+
+        // Send subscription with full parameters
+        const subMsg = {
+          op: 'subscribe',
+          topic: topic,
+          type: 'sensor_msgs/msg/Image',
+          queue_length: 1,
+          compression: 'none'
+        };
+
+        const subJson = JSON.stringify(subMsg);
+        log(`Sending subscription: ${subJson}`, 'DATA');
+
+        try {
+          ws.send(subJson);
+          log(`Subscription sent. BufferedAmount: ${ws.bufferedAmount}`, 'SUCCESS');
+        } catch(e) {
+          log(`Send FAILED: ${e.message}`, 'ERROR');
+        }
+      };
+
+      ws.onmessage = (e) => {
+        msgCount++;
+        lastMessageTime = Date.now();
+        const dataType = typeof e.data;
+        const dataSize = dataType === 'string' ? e.data.length : e.data.size;
+        bytesReceived += dataSize || 0;
+
+        log(`=== MESSAGE #${msgCount} ===`, 'NETWORK');
+        log(`Type: ${dataType}`, 'DATA');
+        log(`Size: ${dataSize} bytes`, 'DATA');
+        log(`Total bytes received: ${bytesReceived}`, 'DATA');
+        log(`Data instanceof Blob: ${e.data instanceof Blob}`, 'BINARY');
+        log(`Data instanceof ArrayBuffer: ${e.data instanceof ArrayBuffer}`, 'BINARY');
+
+        // Log first 500 chars of raw data
+        if (dataType === 'string') {
+          const preview = e.data.substring(0, 500);
+          log(`RAW DATA (first 500 chars):\n${preview}`, 'RAW');
+
+          // Check if it looks like JSON
+          if (e.data.trim().startsWith('{') || e.data.trim().startsWith('[')) {
+            log('Data appears to be JSON', 'DATA');
+          } else if (e.data.match(/^[A-Za-z0-9+/=]+$/)) {
+            log('Data appears to be base64', 'DATA');
+          } else {
+            log('Data format UNKNOWN', 'WARN');
+          }
+        } else if (e.data instanceof Blob) {
+          log(`Blob type: ${e.data.type}`, 'BINARY');
+          // Read blob as text for preview
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const text = event.target.result.substring(0, 500);
+            log(`Blob content preview: ${text}`, 'BINARY');
+          };
+          reader.readAsText(e.data);
+        }
+
+        try {
+          const msg = JSON.parse(e.data);
+          log(`JSON parse SUCCESS`, 'SUCCESS');
+          log(`Message keys: ${Object.keys(msg).join(', ')}`, 'DATA');
+          log(`Message type (op): ${msg.op || 'N/A'}`, 'DATA');
+
+          if (msg.op === 'fragment') {
+            log(`FRAGMENT: id=${msg.id}, num=${msg.num}, total=${msg.total}, data_len=${msg.data ? msg.data.length : 0}`, 'FRAGMENT');
+            handleFragment(msg);
+            return;
+          }
+
+          if (msg.op === 'advertise') {
+            log(`ADVERTISE: topic=${msg.topic}, type=${msg.type}`, 'INFO');
+            return;
+          }
+
+          if (msg.op === 'status') {
+            log(`STATUS: level=${msg.level}, msg=${msg.msg}`, msg.level === 'error' ? 'ERROR' : 'INFO');
+            return;
+          }
+
+          // Check for image message
+          log(`Checking for image...`, 'INFO');
+          log(`msg.topic: "${msg.topic}" vs expected: "${topic}"`, 'DATA');
+          log(`msg.msg exists: ${!!msg.msg}`, 'DATA');
+
+          if (msg.topic === topic && msg.msg) {
+            log(`✓ TOPIC MATCH!`, 'SUCCESS');
+
+            const m = msg.msg;
+            log(`Image width: ${m.width}`, 'DATA');
+            log(`Image height: ${m.height}`, 'DATA');
+            log(`Encoding: ${m.encoding}`, 'DATA');
+            log(`Step: ${m.step}`, 'DATA');
+            log(`Is_bigendian: ${m.is_bigendian}`, 'DATA');
+
+            if (m.data) {
+              const dataType = typeof m.data;
+              const dataLen = Array.isArray(m.data) ? m.data.length : m.data.length;
+              log(`Data type: ${dataType}`, 'DATA');
+              log(`Data length: ${dataLen}`, 'DATA');
+              log(`Expected size (w*h*3): ${m.width * m.height * 3}`, 'DATA');
+
+              // Check first few bytes
+              if (Array.isArray(m.data)) {
+                log(`First 10 bytes: ${m.data.slice(0, 10).join(', ')}`, 'RAW');
+              } else if (typeof m.data === 'string') {
+                log(`First 100 chars of data: ${m.data.substring(0, 100)}`, 'RAW');
+              }
+
+              render(m.data, m.width, m.height, m.encoding);
+            } else {
+              log(`ERROR: msg.data is NULL/undefined!`, 'ERROR');
+            }
+          } else {
+            log(`Topic mismatch or no msg object`, 'WARN');
+          }
+
+        } catch(err) {
+          log(`JSON parse FAILED: ${err.message}`, 'ERROR');
+          log(`Failed at position: ${err.message.match(/position (\d+)/)?.[1] || 'unknown'}`, 'ERROR');
+        }
+      };
+
+      ws.onclose = (e) => {
+        const elapsed = Date.now() - startTime;
+        log(`=== WebSocket CLOSED ===`, 'WARN');
+        log(`Code: ${e.code}`, 'NETWORK');
+        log(`Reason: "${e.reason || 'No reason provided'}"`, 'NETWORK');
+        log(`Was Clean: ${e.wasClean}`, 'NETWORK');
+        log(`Duration: ${elapsed}ms`, 'TIMING');
+        log(`Messages received: ${msgCount}`, 'DATA');
+        log(`Bytes received: ${bytesReceived}`, 'DATA');
+        updateStatus('DISCONNECTED', 'red');
+        ws = null;
+
+        // Auto-reconnect logic
+        if (msgCount === 0) {
+          log(`No messages received before close. Possible causes:`, 'ERROR');
+          log(`1. Topic doesn't exist or has no publisher`, 'ERROR');
+          log(`2. Message too large for rosbridge`, 'ERROR');
+          log(`3. ROS2 node not running`, 'ERROR');
+          log(`4. CORS/security issues`, 'ERROR');
+        }
+      };
+
+      ws.onerror = (e) => {
+        log(`=== WebSocket ERROR ===`, 'ERROR');
+        log(`Error object: ${JSON.stringify(e)}`, 'ERROR');
+        updateStatus('ERROR', 'red');
+      };
+    }
+
+    function handleFragment(frag) {
+      const id = frag.id;
+      const num = frag.num;
+      const total = frag.total;
+      const data = frag.data;
+
+      log(`Processing fragment: id=${id}, num=${num}, total=${total}`, 'FRAGMENT');
+
+      if (!fragmentBuffers[id]) {
+        fragmentBuffers[id] = { parts: new Array(total), total: total, received: 0, startTime: Date.now() };
+        log(`Created new buffer for id=${id}, expecting ${total} fragments`, 'FRAGMENT');
+      }
+
+      const buf = fragmentBuffers[id];
+      const index = num;
+
+      if (buf.parts[index] === undefined) {
+        buf.parts[index] = data;
+        buf.received++;
+        log(`Stored fragment ${index}, received ${buf.received}/${total}`, 'FRAGMENT');
+      } else {
+        log(`Duplicate fragment ${index} ignored`, 'WARN');
+      }
+
+      if (buf.received >= total) {
+        const assemblyTime = Date.now() - buf.startTime;
+        log(`All fragments received in ${assemblyTime}ms! Assembling...`, 'FRAGMENT');
+
+        const fullJson = buf.parts.join('');
+        log(`Reassembled JSON size: ${fullJson.length} bytes`, 'DATA');
+
+        delete fragmentBuffers[id];
+
+        try {
+          const fullMsg = JSON.parse(fullJson);
+          log(`Reassembled JSON parsed successfully`, 'SUCCESS');
+
+          if (fullMsg.topic === document.getElementById('topic').value && fullMsg.msg) {
+            render(fullMsg.msg.data, fullMsg.msg.width, fullMsg.msg.height, fullMsg.msg.encoding);
+          }
+        } catch(e) {
+          log(`Reassembled JSON parse FAILED: ${e.message}`, 'ERROR');
+        }
+      }
+    }
+
+    function stop() {
+      if (ws) {
+        log('Closing WebSocket manually...', 'INFO');
+        ws.close(1000, 'User requested disconnect');
+      }
+    }
+
+    function testPublish() {
+      if (!ws || ws.readyState !== 1) {
+        log('Not connected! Cannot test publish.', 'ERROR');
+        return;
+      }
+
+      const testMsg = {
+        op: 'publish',
+        topic: '/test_topic',
+        msg: { data: 'test' }
+      };
+
+      log(`Sending test publish: ${JSON.stringify(testMsg)}`, 'DATA');
+      ws.send(JSON.stringify(testMsg));
+    }
+
+    function render(data, w, h, enc) {
+      log(`=== RENDER START ===`, 'RENDER');
+      log(`Dimensions: ${w}x${h}, Encoding: ${enc}`, 'RENDER');
+
+      const startRender = Date.now();
+
+      try {
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext('2d');
+        const img = ctx.createImageData(w, h);
+
+        log(`Canvas created: ${w}x${h}`, 'RENDER');
+
+        let pixels;
+        if (typeof data === 'string') {
+          log(`Data is string, length=${data.length}`, 'RENDER');
+
+          if (data.length > 100 && /^[A-Za-z0-9+/=]+$/.test(data.substring(0, 100))) {
+            log('Decoding base64...', 'RENDER');
+            const bin = atob(data);
+            pixels = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) {
+              pixels[i] = bin.charCodeAt(i);
+            }
+            log(`Base64 decoded: ${bin.length} bytes`, 'RENDER');
+          } else {
+            log('Data does NOT look like base64!', 'ERROR');
+            return;
+          }
+        } else if (Array.isArray(data)) {
+          log(`Data is array, length=${data.length}`, 'RENDER');
+          pixels = new Uint8Array(data);
+        } else {
+          log(`Unknown data type: ${typeof data}`, 'ERROR');
+          return;
+        }
+
+        log(`Pixel array: ${pixels.length} bytes`, 'RENDER');
+        log(`Expected: ${w * h * 3} for ${enc}`, 'RENDER');
+
+        if (enc === 'bgr8') {
+          log('Converting BGR8→RGBA...', 'RENDER');
+          for (let i = 0, j = 0; i < pixels.length && j < img.data.length; i += 3, j += 4) {
+            img.data[j] = pixels[i + 2];
+            img.data[j + 1] = pixels[i + 1];
+            img.data[j + 2] = pixels[i];
+            img.data[j + 3] = 255;
+          }
+        } else if (enc === 'rgb8') {
+          log('Converting RGB8→RGBA...', 'RENDER');
+          for (let i = 0, j = 0; i < pixels.length && j < img.data.length; i += 3, j += 4) {
+            img.data[j] = pixels[i];
+            img.data[j + 1] = pixels[i + 1];
+            img.data[j + 2] = pixels[i + 2];
+            img.data[j + 3] = 255;
+          }
+        } else if (enc === 'mono8') {
+          log('Converting MONO8→RGBA...', 'RENDER');
+          for (let i = 0, j = 0; i < pixels.length && j < img.data.length; i++, j += 4) {
+            img.data[j] = img.data[j + 1] = img.data[j + 2] = pixels[i];
+            img.data[j + 3] = 255;
+          }
+        } else if (enc === 'bgra8') {
+          log('Converting BGRA8→RGBA...', 'RENDER');
+          for (let i = 0, j = 0; i < pixels.length && j < img.data.length; i += 4, j += 4) {
+            img.data[j] = pixels[i + 2];
+            img.data[j + 1] = pixels[i + 1];
+            img.data[j + 2] = pixels[i];
+            img.data[j + 3] = pixels[i + 3];
+          }
+        } else {
+          log(`Unsupported encoding: ${enc}`, 'ERROR');
+          return;
+        }
+
+        ctx.putImageData(img, 0, 0);
+        const dataUrl = c.toDataURL('image/jpeg', 0.9);
+
+        document.getElementById('img').src = dataUrl;
+
+        frames++;
+        const renderTime = Date.now() - startRender;
+        document.getElementById('stats').innerText = `✅ Frame #${frames} | ${w}x${h} ${enc} | Render: ${renderTime}ms`;
+        log(`✅ Frame #${frames} rendered in ${renderTime}ms`, 'SUCCESS');
+
+      } catch(e) {
+        log(`Render FAILED: ${e.message}`, 'ERROR');
+        log(`Stack: ${e.stack}`, 'ERROR');
+      }
+    }
+
+    // Heartbeat checker
+    setInterval(() => {
+      if (ws && ws.readyState === 1 && lastMessageTime) {
+        const silence = Date.now() - lastMessageTime;
+        if (silence > 10000) {  // 10 seconds silence
+          log(`⚠️ No messages for ${silence}ms`, 'WARN');
+        }
+      }
+    }, 5000);
+
+    log('Page loaded. Ready to connect.', 'INFO');
+    log(`ROS Bridge MAX DEBUG v2.0`, 'INFO');
+  </script>
+</body>
+</html>

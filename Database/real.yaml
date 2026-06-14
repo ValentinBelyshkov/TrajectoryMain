@@ -1,0 +1,65 @@
+%YAML:1.0
+
+# #System.LoadAtlasFromFile: "mapc"
+
+System.SaveAtlasToFile: "/home/orb/Database/projects/99114589-0369-4d26-a26b-74ee3c53f6fe/calibrations/map"
+#------------------------------------------------------
+# Camera Parameters
+#-----------------------------------------------------------------------------
+
+Camera.type: "PinHole"
+
+Camera.fx: 600.0
+Camera.fy: 600.0
+Camera.cx: 320.0
+Camera.cy: 240.0
+
+Camera.k1: 0.0
+Camera.k2: 0.0
+Camera.p1: 0.0
+Camera.p2: 0.0
+Camera.p3: 0.0
+
+Camera.fps: 15.0
+Camera.RGB: 0
+Camera.bf: 0.0
+
+Camera.width: 640
+Camera.height: 480
+
+#-----------------------------------------------------------------------------
+# ORB Parameters
+#-----------------------------------------------------------------------------
+
+ORBextractor.nFeatures: 1000
+ORBextractor.scaleFactor: 1.2
+ORBextractor.nLevels: 10
+ORBextractor.iniThFAST: 15
+ORBextractor.minThFAST: 5
+
+#-----------------------------------------------------------------------------
+# Viewer Parameters
+#-----------------------------------------------------------------------------
+
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500.0
+
+#-----------------------------------------------------------------------------
+# Other Parameters
+#-----------------------------------------------------------------------------
+
+ThDepth: 35.0
+DepthMapFactor: 1.0
+
+System.SaveAtlas: true
+System.LoadAtlas: false
+System.AtlasLoadPath: ""
+System.AtlasSavePath: "/home/orb/Database/projects/99114589-0369-4d26-a26b-74ee3c53f6fe/calibrations/map"

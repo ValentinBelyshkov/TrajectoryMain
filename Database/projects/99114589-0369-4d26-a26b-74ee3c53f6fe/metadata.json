@@ -1,0 +1,9 @@
+{
+  "name": "1233232",
+  "type": "симуляция",
+  "id": "99114589-0369-4d26-a26b-74ee3c53f6fe",
+  "created_at": "2026-06-01T13:09:11.192305",
+  "video_filename": "/app/trajectory-db/projects/99114589-0369-4d26-a26b-74ee3c53f6fe/videos/ebal2.mp4",
+  "frames_path": "/app/trajectory-db/projects/99114589-0369-4d26-a26b-74ee3c53f6fe/frames",
+  "calibration_status": "calibrated"
+}

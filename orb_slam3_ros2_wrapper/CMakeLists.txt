@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(orb_slam3_ros2_wrapper)
 
 # You should set the PYTHONPATH to your own python site-packages path
-set(ENV{PYTHONPATH} "/opt/ros/humble/lib/python3.10/site-packages/")
+#set(ENV{PYTHONPATH} "/opt/ros/humble/lib/python3.10/site-packages/")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
@@ -15,6 +15,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+find_package(rosidl_default_generators REQUIRED)
 find_package(ament_cmake_auto REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -37,19 +38,35 @@ include_directories(
   include
   ${ORB_SLAM3_ROOT_DIR}/include
   ${ORB_SLAM3_ROOT_DIR}/include/CameraModels
+  ${ORB_SLAM3_ROOT_DIR}/Thirdparty/Sophus
 )
 
-link_directories(
-  include
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "srv/Save.srv"
+  "srv/MapControl.srv"
+  DEPENDENCIES std_msgs geometry_msgs builtin_interfaces
 )
 
-# add_executable(rgbd
-#   src/type_conversion.cpp
-#   src/orb_slam3_interface.cpp
-#   src/rgbd/rgbd-slam-node.cpp
-#   src/rgbd/rgbd.cpp
-# )
-# ament_target_dependencies(rgbd rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs)
+ament_export_dependencies(rosidl_default_runtime)
+rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+
+if(NOT WIN32)
+  ament_environment_hooks(
+    "${ament_cmake_package_templates_ENVIRONMENT_HOOK_LIBRARY_PATH}"
+  )
+endif()
+#link_directories(
+#  include
+#)
+
+add_executable(rgbd
+   src/type_conversion.cpp
+   src/orb_slam3_interface.cpp
+   src/rgbd/rgbd-slam-node.cpp
+   src/rgbd/rgbd.cpp
+)
+ament_target_dependencies(rgbd rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs)
 
 # # add_executable(test1
 # #   src/ft.cpp
@@ -58,9 +75,9 @@ link_directories(
 # ament_target_dependencies(rgbd rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs)
 # # ament_target_dependencies(test1 rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs)
 # # test1
-# target_link_libraries(rgbd ${PCL_LIBRARIES})
-# install(TARGETS rgbd
-#   DESTINATION lib/${PROJECT_NAME})
+target_link_libraries(rgbd ${PCL_LIBRARIES} "${cpp_typesupport_target}" )
+install(TARGETS rgbd
+   DESTINATION lib/${PROJECT_NAME})
   
 add_executable(mono
   src/type_conversion.cpp
@@ -70,9 +87,8 @@ add_executable(mono
 )
 ament_target_dependencies(mono rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs)
 
-ament_target_dependencies(mono rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs)
 
-target_link_libraries(mono ${PCL_LIBRARIES})
+target_link_libraries(mono ${PCL_LIBRARIES} "${cpp_typesupport_target}")
 install(TARGETS mono
   DESTINATION lib/${PROJECT_NAME})
 

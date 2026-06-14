@@ -5,8 +5,14 @@
  */
 #include "orb_slam3_ros2_wrapper/orb_slam3_interface.hpp"
 
+
 namespace ORB_SLAM3_Wrapper
 {
+
+// В начало файла, после #include:
+inline bool ORBSLAM3Interface::isMapValid() const {
+    return orbAtlas_ && orbAtlas_->GetCurrentMap();
+}
     ORBSLAM3Interface::ORBSLAM3Interface(const std::string &strVocFile,
                                          const std::string &strSettingsFile,
                                          ORB_SLAM3::System::eSensor sensor,
@@ -29,9 +35,14 @@ namespace ORB_SLAM3_Wrapper
           robotFrame_(robotFrame)
     {
         std::cout << "Interface constructor started" << endl;
+        
         // std::cout << robotX_ << robotY_ << endl;
         mSLAM_ = std::make_shared<ORB_SLAM3::System>(strVocFile_, strSettingsFile_, sensor_, bUseViewer_);
         typeConversions_ = std::make_shared<WrapperTypeConversions>();
+        orbAtlas_ = mSLAM_->GetAtlas();  // ✅ Гарантируем, что не nullptr
+if (!orbAtlas_) {
+    std::cerr << "[ERROR] Failed to get Atlas from ORB-SLAM3!" << std::endl;
+}
         std::cout << "Interface constructor complete" << endl;
     }
 
@@ -514,6 +525,10 @@ namespace ORB_SLAM3_Wrapper
     
     int ORBSLAM3Interface::trackMONO(const sensor_msgs::msg::Image::SharedPtr msgRGB, Sophus::SE3f &Tcw)
     {
+    if (tracking_paused_.load()) {
+        // Возвращаем "нет трекинга", пока идёт сброс
+        return 0;  // или 3 (LOST), как вам удобнее
+    }
         orbAtlas_ = mSLAM_->GetAtlas();
         cv_bridge::CvImageConstPtr cvRGB;
         // Copy the ros rgb image message to cv::Mat.
@@ -613,4 +628,112 @@ namespace ORB_SLAM3_Wrapper
                 << msg->position.z << "\n";
         csvFile_.flush();
     }
+    
+bool ORBSLAM3Interface::resetMap()
+{
+    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "🔄 Reset requested, pausing tracking...");
+    
+    // 1. Сигнализируем трекингу остановиться
+    tracking_paused_ = true;
+    
+    // 2. Ждём, пока текущий кадр завершится (макс. 500мс)
+    for (int i = 0; i < 50 && tracking_paused_; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    
+    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "⏸️ Tracking paused, calling Reset()...");
+    auto reset_start = std::chrono::high_resolution_clock::now();
+    
+    try {
+        if (mSLAM_) {
+            mSLAM_->Reset();  // ← Здесь может быть задержка 10-30с, это нормально
+            
+            // Очистка локальных кэшей
+            {
+                std::lock_guard<std::mutex> lock(mapReferencesMutex_);
+                mapReferencePoses_.clear();
+                allKFs_.clear();
+                hasTracked_ = false;
+            }
+            {
+                std::lock_guard<std::mutex> lock(bufMutex_);
+                while (!imuBuf_.empty()) imuBuf_.pop();
+            }
+            
+            auto reset_end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(reset_end - reset_start).count();
+            RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "✅ Reset completed in %ld ms", duration);
+            
+            tracking_paused_ = false;
+            return true;
+        }
+    } catch (const std::exception& e) {
+        RCLCPP_ERROR(rclcpp::get_logger("ORBSLAM3Interface"), "Reset exception: %s", e.what());
+        tracking_paused_ = false;
+        return false;
+    }
+    
+    tracking_paused_ = false;
+    return false;
+}
+
+bool ORBSLAM3Interface::saveMap(const std::string& filepath, bool binary)
+{
+    if (!mSLAM_ || filepath.empty()) {
+        RCLCPP_ERROR(rclcpp::get_logger("ORBSLAM3Interface"), "Invalid args");
+        return false;
+    }
+    
+    // Диагностика директории
+    std::string dir = "/home/orb";  // или извлеките из filepath
+    if (access(dir.c_str(), W_OK) != 0) {
+        RCLCPP_ERROR(rclcpp::get_logger("ORBSLAM3Interface"), 
+                     "No write permission in %s (errno %d)", dir.c_str(), errno);
+    }
+    
+    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
+                "Calling SaveAtlasToFile(%s, binary=%d)...", filepath.c_str(), binary);
+    
+    bool result = mSLAM_->SaveAtlasToFile(filepath, binary);
+    
+    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
+                "SaveAtlasToFile returned: %s", result ? "true" : "false");
+    
+    return result;
+}
+
+bool ORBSLAM3Interface::loadMap(const std::string& filepath, bool binary)
+{
+    if (!mSLAM_ || filepath.empty()) return false;
+    
+    try {
+        bool result = mSLAM_->LoadAtlasFromFile(filepath, binary);
+        
+        if (result) {
+            orbAtlas_ = mSLAM_->GetAtlas();
+            calculateReferencePoses();
+            RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
+                        "✅ Map loaded from: %s", filepath.c_str());
+        }
+        return result;
+    } catch (const std::exception& e) {
+        RCLCPP_ERROR(rclcpp::get_logger("ORBSLAM3Interface"), 
+                     "Load exception: %s", e.what());
+        return false;
+    }
+}
+
+void ORBSLAM3Interface::enableLocalizationMode()
+{
+    if (!mSLAM_) return;
+    mSLAM_->ActivateLocalizationMode();
+    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "📍 Localization mode ENABLED (tracking only, no new mapping)");
+}
+
+void ORBSLAM3Interface::disableLocalizationMode()
+{
+    if (!mSLAM_) return;
+    mSLAM_->DeactivateLocalizationMode();
+    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "🗺️ Localization mode DISABLED (full SLAM resumed)");
+}
 }

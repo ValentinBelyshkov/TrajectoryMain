@@ -48,7 +48,7 @@ namespace ORB_SLAM3_Wrapper
                           std::string robotFrame);
 
         ~ORBSLAM3Interface();
-
+        bool isMapValid() const;
         /**
          * @brief Generates a map of KeyFrame IDs and their pointers.
          * @param mapsList List of Map pointers.
@@ -60,6 +60,8 @@ namespace ORB_SLAM3_Wrapper
          * @brief Calculates reference poses for each map.
          */
         void calculateReferencePoses();
+        void enableLocalizationMode();
+void disableLocalizationMode();
 
         /**
          * @brief Converts the entire map data into a ROS Message.
@@ -103,6 +105,11 @@ namespace ORB_SLAM3_Wrapper
 
         // Setup camera pose subscriber
         void setupCameraPoseSubscriber(rclcpp::Node::SharedPtr node);
+        
+        // Map control methods
+bool resetMap();
+bool saveMap(const std::string& filepath, bool binary = true);
+bool loadMap(const std::string& filepath, bool binary = true);
 
     private:
         std::shared_ptr<ORB_SLAM3::System> mSLAM_;
@@ -113,7 +120,7 @@ namespace ORB_SLAM3_Wrapper
         ORB_SLAM3::System::eSensor sensor_;
         bool bUseViewer_;
         bool rosViz_;
-
+        std::atomic<bool> tracking_paused_{false};
         queue<sensor_msgs::msg::Imu::SharedPtr> imuBuf_;
         std::mutex bufMutex_;
         std::mutex mapDataMutex_;
