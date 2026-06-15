@@ -5,6 +5,7 @@ Runs inside TerraSLAM container. Direct process control via asyncio.
 """
 import asyncio
 import glob
+import json
 import os
 import shlex
 import signal
@@ -634,6 +635,40 @@ _slam_status = {
 @app.get("/api/v1/slam/status")
 def get_slam_status():
     """Получить текущий статус SLAM (который приходит из ROS2 по /slam/mode_status)"""
+    global _slam_status
+    
+    # Сначала пытаемся прочитать из файла /tmp/terraslam_slam_status (это быстро и надёжно)
+    status_file = "/tmp/terraslam_slam_status"
+    if os.path.exists(status_file):
+        try:
+            with open(status_file, "r") as f:
+                content = f.read().strip()
+            if content:
+                parsed = json.loads(content)
+                _slam_status.update(parsed)
+                return {
+                    "success": True,
+                    "status": _slam_status,
+                    "manager_time": time.time()
+                }
+        except Exception as e:
+            print(f"[get_slam_status] Error reading status file: {e}")
+            
+    # Если файла нет, пробуем динамически опросить топик (fallback)
+    stdout, stderr, rc = _ros2_run(["topic", "echo", "--once", "/slam/mode_status"], timeout=2)
+    if rc == 0 and stdout:
+        try:
+            content = stdout.strip()
+            if content.startswith("data:"):
+                data_str = content[5:].strip()
+                if (data_str.startswith("'") and data_str.endswith("'")) or (data_str.startswith('"') and data_str.endswith('"')):
+                    data_str = data_str[1:-1]
+                data_str = data_str.replace("\\'", "'").replace('\\"', '"')
+                parsed = json.loads(data_str)
+                _slam_status.update(parsed)
+        except Exception as e:
+            print(f"[get_slam_status] Error parsing: {e}. Raw stdout: {stdout}")
+            
     return {
         "success": True,
         "status": _slam_status,
@@ -712,7 +747,7 @@ async def slam_command(req: ValueReq):
 #  DASHBOARD  — serve HTML at GET /
 # ═══════════════════════════════════════════════════════════════════════════════
 
-_DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard.html")
+_DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard():
@@ -720,7 +755,7 @@ def dashboard():
         with open(_DASHBOARD_PATH, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
-        return HTMLResponse(content="<h1>dashboard.html not found</h1>", status_code=404)
+        return HTMLResponse(content="<h1>index.html not found</h1>", status_code=404)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -801,6 +836,68 @@ def ros2_mavros_set_mode(req: FlightModeReq):
          "mavros_msgs/srv/SetMode", f'{{custom_mode: "{req.mode}"}}'], timeout=8
     )
     return {"output": stdout, "error": stderr, "returncode": rc}
+
+
+# --- Compatibility Aliases for Dashboard (index.html) ---
+
+@app.get("/api/sm/status")
+def sm_status_alias():
+    return get_status()
+
+@app.post("/api/sm/components/{component}/{action}")
+async def sm_component_action_alias(component: str, action: str, req: Optional[ValueReq] = None):
+    return await component_action(component, action, req)
+
+@app.get("/api/sm/slam/status")
+def sm_slam_status_alias():
+    return get_slam_status()
+
+@app.post("/api/sm/slam/mode")
+async def sm_slam_mode_alias(req: ModeReq):
+    return await set_slam_mode(req)
+
+@app.post("/api/sm/slam/command")
+async def sm_slam_command_alias(req: ValueReq):
+    return await slam_command(req)
+
+@app.post("/api/sm/publisher/mode")
+async def sm_publisher_mode_alias(req: ModeReq):
+    return await pub_mode(req)
+
+@app.post("/api/sm/publisher/path")
+async def sm_publisher_path_alias(req: PathReq):
+    return await pub_path(req)
+
+@app.get("/api/sm/logs")
+def sm_logs_alias(
+    component: Optional[str] = None,
+    limit: int = 100,
+    since: Optional[float] = None
+):
+    return get_logs(component, limit, since)
+
+@app.get("/api/ros2/topic/{name}")
+def ros2_topic_echo_alias(name: str):
+    return ros2_topic_echo(name)
+
+@app.post("/api/ros2/mavros/arm")
+def ros2_mavros_arm_alias(req: ArmReq):
+    return ros2_mavros_arm(req)
+
+@app.post("/api/ros2/mavros/set_mode")
+def ros2_mavros_set_mode_alias(req: FlightModeReq):
+    return ros2_mavros_set_mode(req)
+
+@app.post("/api/ros2/slam/start")
+async def ros2_slam_start_alias():
+    # To launch ORB-SLAM3 in direct compatibility with the dashboard's "Start (ROS2 direct)"
+    out = await manager.start("slam")
+    return {"success": True, "message": out}
+
+@app.post("/stop/slam")
+async def stop_slam_legacy_alias():
+    out = await manager.stop("slam")
+    return {"success": True, "message": out}
 
 
 if __name__ == "__main__":

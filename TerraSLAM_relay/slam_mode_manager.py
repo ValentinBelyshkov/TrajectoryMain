@@ -149,9 +149,17 @@ class SlamModeManager(Node):
         if event:
             payload["event"] = event
         
+        payload_str = json.dumps(payload)
         msg = String()
-        msg.data = json.dumps(payload)
+        msg.data = payload_str
         self.status_pub.publish(msg)
+        
+        # Also write to file for system_manager
+        try:
+            with open("/tmp/terraslam_slam_status", "w") as f:
+                f.write(payload_str)
+        except Exception as e:
+            self.get_logger().error(f"Failed to write status to file: {e}")
 
 def main():
     rclpy.init()

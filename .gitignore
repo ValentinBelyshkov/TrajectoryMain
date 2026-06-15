@@ -80,3 +80,8 @@ build/
 *.exe
 *.out
 *.app
+
+# Python virtualenv and cache
+.venv/
+__pycache__/
+*.pyc
