@@ -12,8 +12,10 @@ import time
 from collections import deque
 from typing import Optional, Dict, Any, List
 
+import subprocess
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import uvicorn
 
@@ -673,36 +675,135 @@ async def slam_command(req: ValueReq):
     - "load_map" (команда 2) — требует filepath в req.value
     """
     if not req.value:
-        raise HTTPException(400, detail="value required: reset | save_map | load_map")
-    
-    cmd = req.value.lower()
+        raise HTTPException(400, detail="value required: reset | save_map | save_map|/path | load_map|/path")
+
+    # Support "cmd|/optional/path" format sent from the dashboard
+    parts = req.value.split("|", 1)
+    cmd = parts[0].strip().lower()
+    filepath = parts[1].strip() if len(parts) > 1 else "/home/orb/Database/map.osa"
+
     valid = ["reset", "save_map", "load_map"]
-    
     if cmd not in valid:
         raise HTTPException(400, detail=f"Command must be one of: {valid}")
-    
-    # Пишем команду в файл-флаг
+
     try:
         cmd_file = "/tmp/terraslam_slam_cmd"
         with open(cmd_file, "w") as f:
             f.write(f"{cmd}\n")
-        
-        # Для save/load дополнительно пишем путь
+
         if cmd in ["save_map", "load_map"]:
             path_file = "/tmp/terraslam_slam_path"
-            # Для save используем путь из проекта или дефолтный
-            filepath = req.value if req.value and req.value != cmd else "/home/orb/Database/map.osa"
             with open(path_file, "w") as f:
                 f.write(filepath)
-        
+
         return {
             "success": True,
             "command": cmd,
-            "message": f"Command written to {cmd_file}"
+            "filepath": filepath if cmd != "reset" else None,
+            "message": f"Command '{cmd}' written to {cmd_file}",
         }
     except Exception as e:
         raise HTTPException(500, detail=f"Failed to write command: {e}")
         
-        
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  DASHBOARD  — serve HTML at GET /
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard.html")
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard():
+    try:
+        with open(_DASHBOARD_PATH, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>dashboard.html not found</h1>", status_code=404)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ROS2 DIRECT COMMANDS  /api/v1/ros/…
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ROS2_TOPICS = {
+    "covariance":   "/orb_slam3/covariance",
+    "camera_pose":  "/orb_slam3/camera_pose",
+    "imu":          "/imu/data",
+    "mavros_state": "/mavros/state",
+    "mavros_imu":   "/mavros/imu/data",
+    "mavros_pose":  "/mavros/local_position/pose",
+    "tracking":     "/orb_slam3/tracking_state",
+}
+
+
+def _ros2_run(ros2_args: list, timeout: int = 5):
+    cmd = ["ros2"] + ros2_args
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout,
+            env={**os.environ, "ROS_DOMAIN_ID": "0"},
+        )
+        return proc.stdout.strip(), proc.stderr.strip(), proc.returncode
+    except FileNotFoundError:
+        return "", "ros2 not found — run inside the Docker container", 127
+    except subprocess.TimeoutExpired:
+        return "", f"Timeout after {timeout}s", 1
+    except Exception as e:
+        return "", str(e), 1
+
+
+@app.get("/api/v1/ros/topics")
+def ros2_topic_list():
+    stdout, stderr, rc = _ros2_run(["topic", "list"])
+    topics = [t.strip() for t in stdout.splitlines() if t.strip()] if rc == 0 else []
+    return {"topics": topics, "error": stderr, "returncode": rc}
+
+
+@app.get("/api/v1/ros/nodes")
+def ros2_node_list():
+    stdout, stderr, rc = _ros2_run(["node", "list"])
+    nodes = [n.strip() for n in stdout.splitlines() if n.strip()] if rc == 0 else []
+    return {"nodes": nodes, "error": stderr, "returncode": rc}
+
+
+@app.get("/api/v1/ros/topic/{name}")
+def ros2_topic_echo(name: str):
+    topic = ROS2_TOPICS.get(name)
+    if not topic:
+        raise HTTPException(400, detail=f"Unknown topic '{name}'. Known: {list(ROS2_TOPICS.keys())}")
+    stdout, stderr, rc = _ros2_run(["topic", "echo", "--once", topic], timeout=5)
+    return {"topic": topic, "output": stdout, "error": stderr, "returncode": rc}
+
+
+class ArmReq(BaseModel):
+    arm: bool = True
+
+class FlightModeReq(BaseModel):
+    mode: str
+
+
+@app.post("/api/v1/ros/mavros/arm")
+def ros2_mavros_arm(req: ArmReq):
+    val = "true" if req.arm else "false"
+    stdout, stderr, rc = _ros2_run(
+        ["service", "call", "/mavros/cmd/arming",
+         "mavros_msgs/srv/CommandBool", f"{{value: {val}}}"], timeout=8
+    )
+    return {"output": stdout, "error": stderr, "returncode": rc}
+
+
+@app.post("/api/v1/ros/mavros/set_mode")
+def ros2_mavros_set_mode(req: FlightModeReq):
+    stdout, stderr, rc = _ros2_run(
+        ["service", "call", "/mavros/set_mode",
+         "mavros_msgs/srv/SetMode", f'{{custom_mode: "{req.mode}"}}'], timeout=8
+    )
+    return {"output": stdout, "error": stderr, "returncode": rc}
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=9000)
+    port = int(os.environ.get("TERRASLAM_PORT", "5000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
