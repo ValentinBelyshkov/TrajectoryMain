@@ -46,6 +46,12 @@ COMPONENT_CONFIG = {
         "autorestart": False,
         "max_restarts": 0,
     },
+    "relay": {
+        "cwd": "/home/orb/TerraSLAM_relay",
+        "env": {"ROS_DOMAIN_ID": "0"},
+        "autorestart": False,
+        "max_restarts": 0,
+    },
     "publisher_realsense": {
         "cmd": [
             "bash", "-lc",
@@ -106,6 +112,9 @@ class ModeReq(BaseModel):
 
 class PathReq(BaseModel):
     path: str
+
+class CalibPathReq(BaseModel):
+    calib_path: str
 
 class RunReq(BaseModel):
     project_id: str
@@ -219,6 +228,17 @@ class ProcessManager:
                 "bash", "-lc",
                 f"source /opt/ros/humble/setup.bash && source /home/orb/colcon_ws/install/setup.bash && "
                 f"cd /home/orb/Database && exec python3 image_publish.py {shlex.quote(path)}"
+            ]
+        if name == "relay":
+            calib_path = (extra or {}).get("calib_path", "")
+            if not calib_path:
+                raise ValueError("relay requires calib_path")
+            return [
+                "bash", "-lc",
+                f"source /opt/ros/humble/setup.bash && "
+                f"source /home/orb/colcon_ws/install/setup.bash && "
+                f"cd /home/orb/TerraSLAM_relay && "
+                f"exec python3 gps_client.py {shlex.quote(calib_path)}"
             ]
         return list(cfg["cmd"])
 
@@ -408,6 +428,10 @@ class ProcessManager:
 
 manager = ProcessManager()
 
+# Пути, которые передаются отдельным запросом до старта компонента
+_relay_calib_path: Optional[str] = None
+_publisher_folder_path: Optional[str] = None
+
 
 # --- FastAPI ---
 app = FastAPI(title="TerraSLAM System Manager")
@@ -455,13 +479,27 @@ async def component_action(component: str, action: str, req: Optional[ValueReq] 
                 out = await manager.stop(comp)
             elif action == "start":
                 extra = None
-                if comp == "publisher_folder" and req and req.value:
-                    extra = {"path": req.value}
+                if comp == "publisher_folder":
+                    path = (req.value if req and req.value else None) or _publisher_folder_path
+                    if not path:
+                        raise ValueError("publisher_folder requires path — call POST /api/v1/publisher/path first")
+                    extra = {"path": path}
+                elif comp == "relay":
+                    if not _relay_calib_path:
+                        raise ValueError("relay calib_path not set — call POST /api/v1/relay/path first")
+                    extra = {"calib_path": _relay_calib_path}
                 out = await manager.start(comp, extra)
             elif action == "restart":
                 extra = None
-                if comp == "publisher_folder" and req and req.value:
-                    extra = {"path": req.value}
+                if comp == "publisher_folder":
+                    path = (req.value if req and req.value else None) or _publisher_folder_path
+                    if not path:
+                        raise ValueError("publisher_folder requires path — call POST /api/v1/publisher/path first")
+                    extra = {"path": path}
+                elif comp == "relay":
+                    if not _relay_calib_path:
+                        raise ValueError("relay calib_path not set — call POST /api/v1/relay/path first")
+                    extra = {"calib_path": _relay_calib_path}
                 out = await manager.restart(comp, extra)
             results.append(f"{comp}: {out}")
         except Exception as e:
@@ -492,10 +530,23 @@ async def pub_mode(req: ModeReq):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/v1/relay/path")
+async def relay_path(req: CalibPathReq):
+    global _relay_calib_path
+    if not os.path.isfile(req.calib_path):
+        raise HTTPException(status_code=400, detail=f"File does not exist: {req.calib_path}")
+    _relay_calib_path = req.calib_path
+    return {"success": True, "calib_path": req.calib_path}
+
+
 @app.post("/api/v1/publisher/path")
 async def pub_path(req: PathReq):
+    global _publisher_folder_path
     if not os.path.isdir(req.path):
         raise HTTPException(status_code=400, detail=f"Directory does not exist: {req.path}")
+
+    _publisher_folder_path = req.path
+    print(f"[pub_path] Stored publisher path: {req.path}", flush=True)
 
     with open(PUBLISHER_MODE_FILE, "w") as f:
         f.write("folder")
@@ -505,12 +556,14 @@ async def pub_path(req: PathReq):
     except Exception:
         pass
 
-    await asyncio.sleep(1)
+    await asyncio.sleep(0.5)
 
     try:
         out = await manager.start("publisher_folder", extra={"path": req.path})
+        print(f"[pub_path] Started publisher_folder: {out}", flush=True)
         return {"success": True, "message": f"VIDEO_FOLDER updated and started: {out}"}
     except Exception as e:
+        print(f"[pub_path] ERROR starting publisher_folder: {e}", flush=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/v1/logs")
@@ -636,7 +689,7 @@ _slam_status = {
 def get_slam_status():
     """Получить текущий статус SLAM (который приходит из ROS2 по /slam/mode_status)"""
     global _slam_status
-    
+
     # Сначала пытаемся прочитать из файла /tmp/terraslam_slam_status (это быстро и надёжно)
     status_file = "/tmp/terraslam_slam_status"
     if os.path.exists(status_file):
@@ -653,7 +706,7 @@ def get_slam_status():
                 }
         except Exception as e:
             print(f"[get_slam_status] Error reading status file: {e}")
-            
+
     # Если файла нет, пробуем динамически опросить топик (fallback)
     stdout, stderr, rc = _ros2_run(["topic", "echo", "--once", "/slam/mode_status"], timeout=2)
     if rc == 0 and stdout:
@@ -668,7 +721,7 @@ def get_slam_status():
                 _slam_status.update(parsed)
         except Exception as e:
             print(f"[get_slam_status] Error parsing: {e}. Raw stdout: {stdout}")
-            
+
     return {
         "success": True,
         "status": _slam_status,
@@ -684,7 +737,7 @@ async def set_slam_mode(req: ModeReq):
     valid_modes = ["LOCALIZATION_ONLY", "SLAM_MAPPING"]
     if req.mode not in valid_modes:
         raise HTTPException(400, detail=f"Mode must be one of: {valid_modes}")
-    
+
     # Публикуем в ROS2 топик /slam/mode_command
     # Этот топик читает slam_mode_manager (ROS2 нод), который вызывает MapControl сервис
     try:
@@ -692,7 +745,7 @@ async def set_slam_mode(req: ModeReq):
         mode_file = "/tmp/terraslam_slam_mode"
         with open(mode_file, "w") as f:
             f.write(req.mode)
-        
+
         return {
             "success": True,
             "mode": req.mode,
@@ -739,7 +792,7 @@ async def slam_command(req: ValueReq):
         }
     except Exception as e:
         raise HTTPException(500, detail=f"Failed to write command: {e}")
-        
+
 
 
 
@@ -901,6 +954,6 @@ async def stop_slam_legacy_alias():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("TERRASLAM_PORT", "5000"))
+    port = int(os.environ.get("TERRASLAM_PORT", "9000"))
     uvicorn.run(app, host="0.0.0.0", port=port)
 

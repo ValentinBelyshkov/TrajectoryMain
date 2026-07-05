@@ -1,8 +1,8 @@
 %YAML:1.0
 
 # #System.LoadAtlasFromFile: "mapc"
-
-System.SaveAtlasToFile: "/home/orb/Database/projects/99114589-0369-4d26-a26b-74ee3c53f6fe/calibrations/map"
+#System.SaveAtlasToFile: "/home/orb/Database/projects/ce00d49e-1b99-40c0-a30c-e4b4e34214f7/calibrations/map"
+#System.LoadAtlasFromFile: "/home/orb/Database/projects/ce00d49e-1b99-40c0-a30c-e4b4e34214f7/calibrations/map"
 #------------------------------------------------------
 # Camera Parameters
 #-----------------------------------------------------------------------------
@@ -62,4 +62,4 @@ DepthMapFactor: 1.0
 System.SaveAtlas: true
 System.LoadAtlas: false
 System.AtlasLoadPath: ""
-System.AtlasSavePath: "/home/orb/Database/projects/99114589-0369-4d26-a26b-74ee3c53f6fe/calibrations/map"
+System.AtlasSavePath: "/home/orb/Database/projects/ce00d49e-1b99-40c0-a30c-e4b4e34214f7/calibrations/map"

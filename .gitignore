@@ -29,6 +29,7 @@ container_root/TerraSLAM_relay/transform_*.json
 sim/
 Database/Mill-video
 Database/new_frames
+**/host_colcon_ws/
 **/videos/
 **/frames/
 **/procframe/

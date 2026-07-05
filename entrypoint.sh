@@ -53,4 +53,5 @@ mkdir -p /home/orb/Database
 chmod -R 777 /home/orb/Database
 chown -R orb:orb /home/orb/Database 2>/dev/null || true
 tail -f /dev/null
+source /opt/ros/humble/setup.bash
 #exec python3 /home/orb/TerraSLAM_relay/system_manager.py

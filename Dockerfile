@@ -120,7 +120,9 @@ RUN cd /tmp/Sophus && \
     make -j$(nproc) && \
     make install && \
     cd / && rm -rf /tmp/Sophus && ldconfig
-    
+
+
+RUN pip install --no-cache-dir pyrealsense2    
 # =========== ORB-SLAM3 Build ===========
 COPY ORB_SLAM3 /home/orb/ORB_SLAM3
 RUN cd /home/orb/ORB_SLAM3 && \
@@ -177,8 +179,8 @@ RUN echo "/home/orb/ORB_SLAM3/lib" > /etc/ld.so.conf.d/orb_slam3.conf && \
     echo "/home/orb/colcon_ws/install/orb_slam3_ros2_wrapper/lib" > /etc/ld.so.conf.d/orb_slam3_wrapper.conf && \
     ldconfig
 
-RUN apt-get update && apt-get install -y python3-pip && \
-    pip install --no-cache-dir fastapi uvicorn serial pyyaml requests pymap3d && \
+RUN apt-get update && apt-get install -y python3-pip python3-smbus && \
+    pip install --no-cache-dir fastapi uvicorn serial pyyaml requests pymap3d smbus2 && \
     rm -rf /var/lib/apt/lists/*
         
 COPY entrypoint.sh /entrypoint.sh

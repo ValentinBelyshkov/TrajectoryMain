@@ -46,10 +46,10 @@ def generate_launch_description():
 
     def all_nodes_launch(context):
         params_file = LaunchConfiguration('params_file')
-        vocabulary_file_path = "/home/orb/ORB_SLAM3/Vocabulary/ORBvoc.bin"
+        vocabulary_file_path = "/opt/main/Trajectory/ORB_SLAM3/Vocabulary/ORBvoc.bin"
         # config_file_path = "/root/colcon_ws/src/orb_slam3_ros2_wrapper/params/EuRoC.yaml" #EuRoC.yaml
         # config_file_path = "/root/colcon_ws/src/orb_slam3_ros2_wrapper/params/olympe.yaml" #olympe.yaml
-        config_file_path = "/home/orb/Database/real.yaml"
+        config_file_path = "/opt/main/Trajectory/Database/real.yaml"
         # config_file_path = "/root/colcon_ws/src/orb_slam3_ros2_wrapper/params/dji_phantom4.yaml" #dji.yaml
         # config_file_path = "/root/colcon_ws/src/orb_slam3_ros2_wrapper/params/essential_phone480.yaml" #phone.yaml
         # config_file_path = "/root/colcon_ws/src/orb_slam3_ros2_wrapper/params/scout_v2_mono.yaml"#scout_v2_rgbd.yaml
