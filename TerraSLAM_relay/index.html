@@ -419,6 +419,35 @@ input[type="text"]:focus { border-color: var(--blue); }
           <div id="slam-out" class="output" style="display:none"></div>
         </div>
       </div>
+
+      <!-- ───── Pose / Fallback live status (WebSocket) ───── -->
+      <div class="card">
+        <div class="card-header">
+          📡 Pose Liveness &amp; Fallback (live)
+          <span id="ws-badge" class="badge badge-warn" style="margin-left:auto">WS …</span>
+        </div>
+        <div class="card-body col">
+          <div id="pose-state-bar" class="slam-state">
+            <div class="slam-kv"><span>Pose</span><span id="ps-state">—</span></div>
+            <span class="sep">|</span>
+            <div class="slam-kv"><span>Tracking lost</span><span id="ps-tracking-lost">—</span></div>
+            <span class="sep">|</span>
+            <div class="slam-kv"><span>Fallback active</span><span id="ps-fallback-active">—</span></div>
+            <span class="sep">|</span>
+            <div class="slam-kv"><span>Age (s)</span><span id="ps-age">—</span></div>
+          </div>
+          <p style="color:var(--muted);font-size:12px">
+            Fallback method on tracking loss / pose staleness:
+            <select id="fallback-method-select" onchange="setFallbackMethod()">
+              <option value="POSHOLD">PosHold</option>
+              <option value="RTL">RTL</option>
+              <option value="LAND">Land</option>
+            </select>
+            <button class="btn btn-sm btn-orange" onclick="triggerFallbackNow()">⚠ Trigger now</button>
+          </p>
+          <div id="fallback-out" class="output" style="display:none"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ───── Map Panel ───── -->
@@ -756,6 +785,91 @@ async function refreshSlamStatus2() {
   document.getElementById('mode-loc').classList.toggle('active', m === 'LOCALIZATION_ONLY');
   document.getElementById('mode-map').classList.toggle('active', m === 'SLAM_MAPPING');
 }
+
+// ─── Pose / fallback live status (WebSocket) ──────────────────────────────────
+let poseWs = null;
+let poseWsReconnectTimer = null;
+
+function wsBaseUrl() {
+  // system_manager (FastAPI, port 9000) is reverse-proxied by the Flask
+  // gateway on the same host; connect to the same origin the page was
+  // served from, over ws:// or wss:// to match http/https.
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${location.host}`;
+}
+
+function setWsBadge(state) {
+  const el = document.getElementById('ws-badge');
+  if (!el) return;
+  if (state === 'ok') { el.textContent = 'WS live'; el.className = 'badge badge-ok'; }
+  else if (state === 'connecting') { el.textContent = 'WS …'; el.className = 'badge badge-warn'; }
+  else { el.textContent = 'WS offline'; el.className = 'badge badge-err'; }
+}
+
+function renderPoseStatus(s) {
+  if (!s) return;
+  const stateLabels = { fallback: '⚠ FALLBACK', alive: '✅ alive', unknown: '❓ unknown' };
+  document.getElementById('ps-state').textContent = stateLabels[s.state] || s.state || '—';
+  document.getElementById('ps-tracking-lost').textContent = s.tracking_lost ? '⚠ YES' : 'no';
+  document.getElementById('ps-fallback-active').textContent = s.fallback_active ? '⚠ YES' : 'no';
+  document.getElementById('ps-age').textContent = (s.age_seconds != null) ? s.age_seconds : '—';
+  const sel = document.getElementById('fallback-method-select');
+  if (sel && s.fallback_method && sel.value !== s.fallback_method) sel.value = s.fallback_method;
+  if (s.last_fallback) {
+    showOut('fallback-out', fmtResult(s.last_fallback), !s.last_fallback.success);
+  }
+}
+
+function connectPoseWs() {
+  setWsBadge('connecting');
+  try {
+    poseWs = new WebSocket(wsBaseUrl() + '/ws/pose_status');
+  } catch (e) {
+    setWsBadge('offline');
+    scheduleWsReconnect();
+    return;
+  }
+  poseWs.onopen = () => setWsBadge('ok');
+  poseWs.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'pose_status' || msg.type === 'heartbeat') renderPoseStatus(msg.data);
+    } catch (e) { /* ignore malformed frame */ }
+  };
+  poseWs.onerror = () => setWsBadge('offline');
+  poseWs.onclose = () => {
+    setWsBadge('offline');
+    scheduleWsReconnect();
+  };
+}
+
+function scheduleWsReconnect() {
+  clearTimeout(poseWsReconnectTimer);
+  poseWsReconnectTimer = setTimeout(connectPoseWs, 3000);
+}
+
+connectPoseWs();
+
+async function setFallbackMethod() {
+  const method = document.getElementById('fallback-method-select').value;
+  const r = await jpost('/api/v1/slam/fallback_method', { method });
+  showOut('fallback-out', fmtResult(r.data), !r.ok);
+  if (r.ok) toast(`Fallback method set to ${method}`, 'ok');
+}
+
+async function triggerFallbackNow() {
+  const r = await jpost('/api/v1/slam/fallback_trigger', {});
+  showOut('fallback-out', fmtResult(r.data), !r.ok);
+  toast(r.ok ? 'Fallback triggered' : 'Fallback trigger failed', r.ok ? 'ok' : 'err');
+}
+
+async function loadFallbackMethod() {
+  const r = await api('/api/v1/slam/fallback_method');
+  if (r.ok && r.data.method) {
+    document.getElementById('fallback-method-select').value = r.data.method;
+  }
+}
+loadFallbackMethod();
 
 // ─── SM component actions ────────────────────────────────────────────────────
 async function smAction(comp, action) {

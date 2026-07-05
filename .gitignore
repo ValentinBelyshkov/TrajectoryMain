@@ -86,3 +86,5 @@ build/
 .venv/
 __pycache__/
 *.pyc
+Database/calibration_data/calibration/calibration/calibration_0.db3
+*.db3
