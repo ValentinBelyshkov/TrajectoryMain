@@ -203,6 +203,8 @@ if (!orbAtlas_) {
         }
     }
 
+
+
     //get current reference map points
     void ORBSLAM3Interface::getReferenceMapPoints(sensor_msgs::msg::PointCloud2 &mapPointCloud)
     {
@@ -435,13 +437,29 @@ if (!orbAtlas_) {
                 std::cout << "Waiting for merge to finish." << endl;
                 return false;
             }
-            if (currentTrackingState == 2)
-            {
-                calculateReferencePoses();
-                correctTrackedPose(Tcw);
-                hasTracked_ = true;
-                return true;
+                    if (currentTrackingState == 2) // OK
+        {
+            calculateReferencePoses();
+            correctTrackedPose(Tcw);
+            hasTracked_ = true;
+            RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"),"Log tracking state 2");
+            // === Сохранение кадра по запросу ===
+            if (saveFrameRequest_.exchange(false)) {
+                auto fd = mSLAM_->GetFrameDrawer();
+                if (fd) {
+                    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
+                                "🖼️ SaveFrame triggered, calling DrawFrame...");
+                    fd->RequestSaveFrame();
+                    auto drawn = fd->DrawFrame(1.0f);
+                    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
+                                "🖼️ DrawFrame done, mat empty=%d", drawn.empty());
+                } else {
+                    RCLCPP_WARN(rclcpp::get_logger("ORBSLAM3Interface"), 
+                                "🖼️ FrameDrawer is null!");
+                }
             }
+            // ===================================
+        }
             else
             {
                 switch (currentTrackingState)

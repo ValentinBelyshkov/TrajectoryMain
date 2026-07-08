@@ -14,26 +14,28 @@ COMPONENT_CONFIG = {
     "slam": {
         "cmd": [
             "bash", "-lc",
-            "source /opt/ros/humble/setup.bash && "
-            "source /home/orb/colcon_ws/install/setup.bash && "
-            "export PATH='/usr/bin:/bin:/opt/ros/humble/bin:$PATH' && "
-            "export LD_LIBRARY_PATH='/home/orb/ORB_SLAM3/lib:/home/orb/colcon_ws/install/lib:/opt/ros/humble/lib:$LD_LIBRARY_PATH' && "
-            "mkdir -p /home/orb/.ros/log && "
-            "ros2 run orb_slam3_ros2_wrapper mono /home/orb/ORB_SLAM3/Vocabulary/ORBvoc.bin /home/orb/Database/real.yaml --ros-args -r __ns:=/"
+            'source /opt/ros/humble/setup.bash && '
+            'source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && '
+            'export PATH="/usr/bin:/bin:/usr/local/bin:/opt/ros/humble/bin:$PATH" && '
+            'export LD_LIBRARY_PATH="/opt/ros/humble/lib:/opt/main/Trajectory/lib:$LD_LIBRARY_PATH" && '
+            'mkdir -p /opt/main/Trajectory/.ros/log && '
+            'ros2 run orb_slam3_ros2_wrapper mono '
+            '/opt/main/Trajectory/ORB_SLAM3/Vocabulary/ORBvoc.bin '
+            '/opt/main/Trajectory/Database/real.yaml --ros-args -r __ns:=/'
         ],
-        "cwd": "/home/orb",
+        "cwd": "/opt/main/Trajectory",
         "env": {"ROS_DOMAIN_ID": "0", "QT_X11_NO_MITSHM": "1"},
         "autorestart": False,
         "max_restarts": 0,
     },
     "publisher_folder": {
-        "cwd": "/home/orb/Database",
+        "cwd": "/opt/main/Trajectory/Database",
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": False,
         "max_restarts": 0,
     },
     "relay": {
-        "cwd": "/home/orb/TerraSLAM_relay",
+        "cwd": "/opt/main/Trajectory/TerraSLAM_relay",
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": False,
         "max_restarts": 0,
@@ -41,9 +43,9 @@ COMPONENT_CONFIG = {
     "publisher_realsense": {
         "cmd": [
             "bash", "-lc",
-            "source /opt/ros/humble/setup.bash && source /home/orb/colcon_ws/install/setup.bash && exec python3 /home/orb/Database/realsense.py"
+            "source /opt/ros/humble/setup.bash && source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && exec python3 /opt/main/Trajectory/Database/realsense.py"
         ],
-        "cwd": "/home/orb/Database",
+        "cwd": "/opt/main/Trajectory/Database",
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": False,
         "max_restarts": 0,
@@ -51,11 +53,11 @@ COMPONENT_CONFIG = {
     "gps_bridge": {
         "cmd": [
             "bash", "-lc",
-            "source /opt/ros/humble/setup.bash && source /home/orb/colcon_ws/install/setup.bash && "
-            "python3 /home/orb/TerraSLAM_relay/Serial/gps_bridge_node.py --ros-args "
-            "-p protocol:=msp -p hw_type:=uart -p port:=/dev/ttyCH341USB0 -p baudrate:=115200"
+            "source /opt/ros/humble/setup.bash && source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
+            "python3 /opt/main/Trajectory/TerraSLAM_relay/Serial/gps_bridge_node.py --ros-args "
+            "-p protocol:=msp -p hw_type:=uart -p port:=/dev/ttyTHS1 -p baudrate:=115200"
         ],
-        "cwd": "/home/orb/TerraSLAM_relay/Serial",
+        "cwd": "/opt/main/Trajectory/TerraSLAM_relay/Serial",
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": True,
         "max_restarts": 3,
@@ -68,7 +70,7 @@ COMPONENT_CONFIG = {
             "ros2 launch rosbridge_server rosbridge_websocket_launch.xml "
             "port:=9091 cors_origin:=* max_message_size:=10000000 fragment_timeout:=4000"
         ],
-        "cwd": "/home/orb",
+        "cwd": "/opt/main/Trajectory",
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": True,
         "max_restarts": 999,
@@ -78,10 +80,10 @@ COMPONENT_CONFIG = {
         "cmd": [
             "bash", "-lc",
             "source /opt/ros/humble/setup.bash && "
-            "source /home/orb/colcon_ws/install/setup.bash && "
-            "python3 /home/orb/TerraSLAM_relay/slam_mode_manager.py"
+            "source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
+            "python3 /opt/main/Trajectory/TerraSLAM_relay/slam_mode_manager.py"
         ],
-        "cwd": "/home/orb",
+        "cwd": "/opt/main/Trajectory",
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": True,
         "max_restarts": 5,
@@ -90,9 +92,21 @@ COMPONENT_CONFIG = {
 }
 
 # --- Pose liveness config ---
-POSE_TOPIC = "/orb_slam3/camera_pose"
+POSE_TOPIC = "/camera_pose"
+TRACKING_STATE_TOPIC = "/orb_slam3/tracking_state"
 POSE_STALE_AFTER_SECONDS = 3.0
 POSE_POLL_INTERVAL_SECONDS = 1.0
+# NOTE: pose/tracking-state are now read via a persistent rclpy subscriber
+# (system_manager_pkg/ros_pose_subscriber.py) instead of spawning
+# `ros2 topic echo --once` per poll, so no echo timeout is needed anymore.
+# Kept here only in case older code still imports it.
+POSE_ECHO_TIMEOUT_SECONDS = 3.0
+
+# ORB-SLAM3 tracking state values published on /orb_slam3/tracking_state
+# (std_msgs/Int8): -1=SYSTEM_NOT_READY, 0=NO_IMAGES_YET, 1=NOT_INITIALIZED,
+# 2=OK, 3=RECENTLY_LOST, 4=LOST
+TRACKING_STATE_LOST_VALUES = (3, 4)
+TRACKING_STATE_OK_VALUE = 2
 
 # ORB-SLAM3 publishes this sentinel position when tracking is lost:
 # position.x = position.y = position.z = -3.0

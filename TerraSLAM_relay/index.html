@@ -538,7 +538,7 @@ input[type="text"]:focus { border-color: var(--blue); }
     <!-- ───── Camera Pose Panel ───── -->
     <section id="panel-camera_pose" class="panel">
       <div class="card">
-        <div class="card-header">📷 Camera Pose <span style="color:var(--muted);font-weight:400;font-size:12px">— /orb_slam3/camera_pose</span></div>
+        <div class="card-header">📷 Camera Pose <span style="color:var(--muted);font-weight:400;font-size:12px">— /camera_pose</span></div>
         <div class="card-body col">
           <div class="row">
             <button class="btn btn-blue btn-lg" onclick="echoTopic('camera_pose','pose-out')">Echo Once</button>
@@ -551,6 +551,11 @@ input[type="text"]:focus { border-color: var(--blue); }
             <div class="data-field"><label>Orientation W</label><div class="val" id="pose-ow">—</div></div>
           </div>
           <div id="pose-out" class="output">Waiting for data…</div>
+          <div class="row" style="margin-top:12px">
+            <input type="text" id="snapshot-path" placeholder="/opt/main/Trajectory/Database/snap1.jpg" value="/opt/main/Trajectory/Database/snap1.jpg" style="flex:1">
+            <button class="btn btn-green btn-lg" onclick="takeSnapshot()">📸 Save Photo + Pose</button>
+          </div>
+          <div id="snapshot-out" class="output" style="display:none"></div>
         </div>
       </div>
     </section>
@@ -743,6 +748,22 @@ function showOut(id, text, isErr=false) {
 function fmtResult(d) {
   if (typeof d === 'string') return d;
   return JSON.stringify(d, null, 2);
+}
+
+// ─── Camera snapshot ─────────────────────────────────────────────────────────
+async function takeSnapshot() {
+  const path = document.getElementById('snapshot-path').value.trim();
+  if (!path) { toast('Укажите путь для сохранения', 'err'); return; }
+  showOut('snapshot-out', 'Сохранение…');
+  const r = await jpost('/api/v1/camera/snapshot', { path });
+  if (r.ok && r.data.success) {
+    showOut('snapshot-out',
+      `Фото: ${r.data.image_path}\nПоза: ${r.data.pose_path}\nВозраст позы: ${r.data.pose_age_seconds ?? '—'} с`);
+    toast('Снимок сохранён', 'ok');
+  } else {
+    showOut('snapshot-out', fmtResult(r.data.detail || r.data), true);
+    toast('Ошибка сохранения снимка', 'err');
+  }
 }
 
 // ─── Health check ────────────────────────────────────────────────────────────
@@ -1137,3 +1158,4 @@ setInterval(() => {
 </script>
 </body>
 </html>
+

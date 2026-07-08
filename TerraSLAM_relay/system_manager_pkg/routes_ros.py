@@ -12,6 +12,7 @@ from typing import Optional
 from .config import ArmReq, FlightModeReq, ModeReq, PathReq, ValueReq
 from .process_manager import manager
 from .ros_utils import ros2_run
+from . import camera_snapshot
 from . import routes_components as rc
 from . import routes_slam as rs
 
@@ -21,8 +22,8 @@ _DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(_
 
 ROS2_TOPICS = {
     "covariance": "/orb_slam3/covariance",
-    "camera_pose": "/orb_slam3/camera_pose",
-    "imu": "/imu/data",
+    "camera_pose": "/camera_pose",
+    "imu": "/imu",
     "mavros_state": "/mavros/state",
     "mavros_imu": "/mavros/imu/data",
     "mavros_pose": "/mavros/local_position/pose",
@@ -60,6 +61,14 @@ def ros2_topic_echo(name: str):
         raise HTTPException(400, detail=f"Unknown topic '{name}'. Known: {list(ROS2_TOPICS.keys())}")
     stdout, stderr, rc_code = ros2_run(["topic", "echo", "--once", topic], timeout=5)
     return {"topic": topic, "output": stdout, "error": stderr, "returncode": rc_code}
+
+
+@router.post("/api/v1/camera/snapshot")
+def camera_snapshot_endpoint(req: PathReq):
+    result = camera_snapshot.save_snapshot(req.path)
+    if not result.get("success"):
+        raise HTTPException(400, detail=result.get("error", "snapshot failed"))
+    return result
 
 
 @router.post("/api/v1/ros/mavros/arm")

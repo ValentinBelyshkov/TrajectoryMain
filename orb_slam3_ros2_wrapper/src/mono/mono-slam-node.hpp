@@ -19,12 +19,11 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/ply_io.h> 
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-
+#include <filesystem>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
@@ -48,7 +47,6 @@ namespace ORB_SLAM3_Wrapper
 struct MapControlCmd {
     uint8_t command;  // 0=reset, 1=save, 2=load
     std::string filepath;
-    std::promise<std::pair<bool, std::string>> promise;  // для возврата результата
 };
 
 // =====================================================
@@ -133,6 +131,12 @@ void handleMapControl(const std::shared_ptr<orb_slam3_ros2_wrapper::srv::MapCont
         ORB_SLAM3_Wrapper::WrapperTypeConversions typeConversion_;
         std::shared_ptr<ORB_SLAM3_Wrapper::ORBSLAM3Interface> interface_;
         geometry_msgs::msg::TransformStamped tfMapOdom_;
+            std::atomic<bool> save_next_frame_{false};
+    std::atomic<uint64_t> frame_save_counter_{0};
+    std::string save_frame_dir_ = "/opt/main/Trajectory/output/procframe";
+
+    void saveFrame(const sensor_msgs::msg::Image::SharedPtr msgRGB, 
+                   const Sophus::SE3f& Tcw);
     };
 }
 #endif

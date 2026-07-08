@@ -22,7 +22,7 @@
 #include <slam_msgs/msg/map_graph.hpp>
 
 #include <cv_bridge/cv_bridge.h>
-
+#include <atomic>
 
 #include "sophus/se3.hpp"
 #include "System.h"
@@ -71,7 +71,7 @@ void disableLocalizationMode();
         void mapDataToMsg(slam_msgs::msg::MapData &mapDataMsg, bool currentMapKFOnly, bool includeMapPoints = false, std::vector<int> kFIDforMapPoints = std::vector<int>());
 
         void correctTrackedPose(Sophus::SE3f &s);
-
+void RequestSaveFrame() { saveFrameRequest_.store(true); }
         void getDirectMapToRobotTF(std_msgs::msg::Header headerToUse, geometry_msgs::msg::TransformStamped &tf);
 
         void getMapToOdomTF(const nav_msgs::msg::Odometry::SharedPtr msgOdom, geometry_msgs::msg::TransformStamped &tf);
@@ -139,7 +139,7 @@ bool loadMap(const std::string& filepath, bool binary = true);
         // Camera pose subscription
         rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr cameraPoseSub_;
         std::ofstream csvFile_;
-
+  std::atomic<bool> saveFrameRequest_{false};
         // Camera pose callback
         void cameraPoseCallback(const geometry_msgs::msg::Pose::SharedPtr msg);
     };

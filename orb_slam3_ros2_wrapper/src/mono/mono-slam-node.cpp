@@ -3,9 +3,12 @@
  * @brief Implementation of the MonoSlamNode Wrapper class.
  * @author Suchetan R S (rssuchetan@gmail.com)
  */
- #include <thread>
+#include <thread>
 #include <future>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <cv_bridge/cv_bridge.h>
 #include "mono-slam-node.hpp"
 
 #include <opencv2/core/core.hpp>
@@ -17,27 +20,13 @@ namespace ORB_SLAM3_Wrapper
                                ORB_SLAM3::System::eSensor sensor)
         : Node("ORB_SLAM3_MONO_ROS2")
     {
-        // ROS Subscribers
         rgbSub_ = this->create_subscription<sensor_msgs::msg::Image>("camera/image_raw",10,std::bind(&MonoSlamNode::MONOCallback,
         									    	    this,std::placeholders::_1));
 
         imuSub_ = this->create_subscription<sensor_msgs::msg::Imu>("imu", 1000, std::bind(&MonoSlamNode::ImuCallback, this, std::placeholders::_1));
         
-        
-        // odomSub_ = this->create_subscription<nav_msgs::msg::Odometry>("odom", 1000, std::bind(&MonoSlamNode::OdomCallback, this, std::placeholders::_1));
-        // ROS Publishers 
-        // mapPointsPub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("mono_map_points", 10);
-        // currentMapPointsPub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("mono_current_map_points", 10);
-
-
-        // referenceMapPointsPub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("mono_reference_map_points", 10);
         cameraPosePub_ = this->create_publisher<geometry_msgs::msg::Pose>("camera_pose", 10);
-        // После cameraPosePub_ = ...
         trackingStatePub_ = this->create_publisher<std_msgs::msg::Int8>("orb_slam3/tracking_state", 10);
-        // TF
-        // tfBroadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
-        // tfBuffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
-        // tfListener_ = std::make_shared<tf2_ros::TransformListener>(*tfBuffer_);
 
         bool bUseViewer =false;
         this->declare_parameter("visualization", rclcpp::ParameterValue(true));
@@ -71,14 +60,8 @@ namespace ORB_SLAM3_Wrapper
         this->get_parameter("landmark_publish_frequency", landmark_publish_frequency_);
         
 	    mapPointsCallbackGroup_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-        // mapReferencePointsTimer_ = this->create_wall_timer(std::chrono::milliseconds(landmark_publish_frequency_), std::bind(&MonoSlamNode::publishReferenceMapPointCloud, this));
-        
-        //mapCurrentPointsTimer_ = this->create_wall_timer(std::chrono::milliseconds(100 * landmark_publish_frequency_), std::bind(&MonoSlamNode::publishCurrentMapPointCloud, this));
         mapCurrentPointsTimer_ = this->create_wall_timer(std::chrono::milliseconds(5 * landmark_publish_frequency_), std::bind(&MonoSlamNode::saveCurrentMapPointCloud, this));
         RCLCPP_INFO(this->get_logger(), "Time is %d",landmark_publish_frequency_);
-        
-        //mapPointsTimer_ = this->create_wall_timer(std::chrono::milliseconds(landmark_publish_frequency_), std::bind(&MonoSlamNode::combinedPublishCallback, this));
-
 
         interface_ = std::make_shared<ORB_SLAM3_Wrapper::ORBSLAM3Interface>(strVocFile, strSettingsFile,
                                                                             sensor, bUseViewer, rosViz_, robot_x_,
@@ -88,12 +71,17 @@ namespace ORB_SLAM3_Wrapper
             std::bind(&MonoSlamNode::handleMapControl, this, std::placeholders::_1, std::placeholders::_2));
         RCLCPP_INFO(this->get_logger(), "✅ Map control service registered: /orb_slam3/map_control");
         
+        std::error_code ec;
+        std::filesystem::create_directories(save_frame_dir_, ec);
+        if (ec) {
+            RCLCPP_WARN(this->get_logger(), "Cannot create save dir: %s", ec.message().c_str());
+        }
+        
         frequency_tracker_count_ = 0;
         frequency_tracker_clock_ = std::chrono::high_resolution_clock::now();
 
-
-worker_thread_ = std::thread(&MonoSlamNode::workerLoop, this);
-RCLCPP_INFO(this->get_logger(), "🔧 Worker thread started");
+        worker_thread_ = std::thread(&MonoSlamNode::workerLoop, this);
+        RCLCPP_INFO(this->get_logger(), "🔧 Worker thread started");
 
         RCLCPP_INFO(this->get_logger(), "CONSTRUCTOR END!");
     }
@@ -105,18 +93,54 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread started");
         odomSub_.reset();
         interface_.reset();
         saveCurrentMapPointCloud();
-worker_running_ = false;
-cmd_cv_.notify_one();
-if (worker_thread_.joinable()) worker_thread_.join();
-RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
+        worker_running_ = false;
+        cmd_cv_.notify_one();
+        if (worker_thread_.joinable()) worker_thread_.join();
+        RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
         RCLCPP_INFO(this->get_logger(), "DESTRUCTOR!");
     }
 
     void MonoSlamNode::ImuCallback(const sensor_msgs::msg::Imu::SharedPtr msgIMU)
     {
         RCLCPP_DEBUG_STREAM(this->get_logger(), "ImuCallback");
-        // push value to imu buffer.
         interface_->handleIMU(msgIMU);
+    }
+
+    void MonoSlamNode::saveFrame(const sensor_msgs::msg::Image::SharedPtr msgRGB,
+                                 const Sophus::SE3f& Tcw)
+    {
+        try {
+            uint64_t id = frame_save_counter_.fetch_add(1);
+            std::string prefix = save_frame_dir_ + "/frame_" + std::to_string(id);
+            std::string imgfile = prefix + ".jpg";
+            std::string txtfile = prefix + ".txt";
+
+            cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvCopy(msgRGB);
+            cv::Mat img = cv_ptr->image;
+            if (img.channels() == 1) {
+                cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
+            }
+            if (!cv::imwrite(imgfile, img)) {
+                RCLCPP_ERROR(this->get_logger(), "cv::imwrite failed: %s", imgfile.c_str());
+            }
+
+            auto pose_msg = typeConversion_.se3ToPoseMsg(Tcw);
+            std::ofstream f(txtfile);
+            if (f.is_open()) {
+                f << std::fixed << std::setprecision(6)
+                  << pose_msg.position.x << " "
+                  << pose_msg.position.y << " "
+                  << pose_msg.position.z << "\n";
+                f.close();
+            }
+
+            RCLCPP_INFO(this->get_logger(), "💾 Saved frame %lu: %s + .txt", id, imgfile.c_str());
+
+        } catch (const cv_bridge::Exception& e) {
+            RCLCPP_ERROR(this->get_logger(), "cv_bridge error: %s", e.what());
+        } catch (const std::exception& e) {
+            RCLCPP_ERROR(this->get_logger(), "saveFrame error: %s", e.what());
+        }
     }
 
     void MonoSlamNode::OdomCallback(const nav_msgs::msg::Odometry::SharedPtr msgOdom)
@@ -128,30 +152,29 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
         }
         else RCLCPP_WARN(this->get_logger(), "Odometry msg recorded but no odometry mode is true, set to false to use this odometry");
     }
-    // Replication
+
     void MonoSlamNode::MONOCallback(const sensor_msgs::msg::Image::SharedPtr msgRGB)
     {
         Sophus::SE3f Tcw;
         int trackingState = interface_->trackMONO(msgRGB, Tcw);
         
-        // === ПУБЛИКУЕМ СОСТОЯНИЕ ТРЕКИНГА ===
         std_msgs::msg::Int8 stateMsg;
         stateMsg.data = trackingState;
         trackingStatePub_->publish(stateMsg);
         
-        // Create pose message
         auto camPose = typeConversion_.se3ToPoseMsg(Tcw);
         
-        // Handle different tracking states
-        if (trackingState == 2) // OK
+        if (save_next_frame_.exchange(false)) {
+            saveFrame(msgRGB, Tcw);
+        }
+        
+        if (trackingState == 2)
         {
             isTracked_ = true;
-            // publish camera's pose as normal
             cameraPosePub_->publish(camPose);
         }
-        else if (trackingState == 1) // Not initialized
+        else if (trackingState == 1)
         {
-            // Create a pose with all -1 values
             geometry_msgs::msg::Pose notInitializedPose;
             notInitializedPose.position.x = -1.0;
             notInitializedPose.position.y = -1.0;
@@ -162,9 +185,8 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
             notInitializedPose.orientation.w = -1.0;
             cameraPosePub_->publish(notInitializedPose);
         }
-        else if (trackingState == 3) // Tracking lost
+        else if (trackingState == 3)
         {
-            // Create a pose with all -3 values
             geometry_msgs::msg::Pose trackingLostPose;
             trackingLostPose.position.x = -3.0;
             trackingLostPose.position.y = -3.0;
@@ -175,9 +197,8 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
             trackingLostPose.orientation.w = -3.0;
             cameraPosePub_->publish(trackingLostPose);
         }
-        else // No images yet or merge detected
+        else
         {
-            // Create a pose with all 0 values
             geometry_msgs::msg::Pose noImagesPose;
             noImagesPose.position.x = 0.0;
             noImagesPose.position.y = 0.0;
@@ -189,22 +210,18 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
             cameraPosePub_->publish(noImagesPose);
         }
     }
-    // Replication
+
     void MonoSlamNode::publishCurrentMapPointCloud()
     {
         if (isTracked_)
         {
-            // Using high resolution clock to measure time
             auto start = std::chrono::high_resolution_clock::now();
-
             sensor_msgs::msg::PointCloud2 mapPCL;
-
             auto t1 = std::chrono::high_resolution_clock::now();
             auto time_create_mapPCL = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - start).count();
             RCLCPP_INFO_STREAM(this->get_logger(), "Time to create mapPCL object: " << time_create_mapPCL << " seconds");
 
             interface_->getCurrentMapPoints(mapPCL);
-            // interface_->getReferenceMapPoints(mapPCL);
 
             if(mapPCL.data.size() == 0)
                 return;
@@ -214,40 +231,26 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
             RCLCPP_INFO_STREAM(this->get_logger(), "Time to get current map points: " << time_get_map_points << " seconds");
 
             currentMapPointsPub_->publish(mapPCL);
-            // auto now = std::chrono::system_clock::now();
-            // auto in_time_t = std::chrono::system_clock::to_time_t(now);
-            // std::stringstream ss;
-            // ss << std::put_time(std::localtime(&in_time_t), "map_%Y%m%d_%H%M%S.ply");
-            // savePointCloudToPLY(mapPCL, ss.str());
 
             auto t3 = std::chrono::high_resolution_clock::now();
             auto time_publish_map_points = std::chrono::duration_cast<std::chrono::duration<double>>(t3 - t2).count();
-            // RCLCPP_INFO_STREAM(this->get_logger(), "Time to save " << ss.str() <<" map points: " << time_publish_map_points << " seconds");
             RCLCPP_INFO_STREAM(this->get_logger(), "Time to publish current map points: " << time_publish_map_points << " seconds");
             RCLCPP_INFO_STREAM(this->get_logger(), "=======================");
-
-
-            // Calculate the time taken for each line
-
-            // Print the time taken for each line
         }
     }
 
     void MonoSlamNode::saveCurrentMapPointCloud()
     {
-        if (false)//(interface_->checkSLAMShutdown() && !isMapPointsSaved)
+        if (false)
         {
             if (isTracked_)
             {
                 std::vector<Eigen::Vector3f> trackedMapPoints;
-
                 interface_->getCurrentMapPointsToSave(trackedMapPoints);
-                // interface_->getReferenceMapPoints(mapPCL);
 
                 if(trackedMapPoints.size() == 0)
                     return;
 
-                //currentMapPointsPub_->publish(mapPCL);
                 auto now = std::chrono::system_clock::now();
                 auto in_time_t = std::chrono::system_clock::to_time_t(now);
                 std::stringstream ss;
@@ -275,7 +278,6 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
             return;
         }
 
-        // PLY header
         outFile << "ply\n";
         outFile << "format ascii 1.0\n";
         outFile << "element vertex " << points.size() << "\n";
@@ -284,30 +286,24 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
         outFile << "property float z\n";
         outFile << "end_header\n";
 
-        // Point data
         for (const Eigen::Vector3f &point : points) {
             outFile << point[0] << " " << point[1] << " " << point[2] << "\n";
         }
 
         outFile.close();
         RCLCPP_INFO_STREAM(this->get_logger(), "Saved " << points.size() << " points to '" << filename << "'");
-        // std::cout << "Saved " << points.size() << " points to '" << filename << "'\n";
     }
 
     void MonoSlamNode::publishReferenceMapPointCloud()
     {
         if (isTracked_)
         {
-            // Using high resolution clock to measure time
             auto start = std::chrono::high_resolution_clock::now();
-
             sensor_msgs::msg::PointCloud2 mapPCL;
-
             auto t1 = std::chrono::high_resolution_clock::now();
             auto time_create_mapPCL = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - start).count();
             RCLCPP_INFO_STREAM(this->get_logger(), "Time to create mapPCL object: " << time_create_mapPCL << " seconds");
 
-            // interface_->getCurrentMapPoints(mapPCL);
             interface_->getReferenceMapPoints(mapPCL);
 
             if(mapPCL.data.size() == 0)
@@ -322,33 +318,12 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
             auto time_publish_map_points = std::chrono::duration_cast<std::chrono::duration<double>>(t3 - t2).count();
             RCLCPP_INFO_STREAM(this->get_logger(), "Time to publish map points: " << time_publish_map_points << " seconds");
             RCLCPP_INFO_STREAM(this->get_logger(), "=======================");
-
-
-            // Calculate the time taken for each line
-
-            // Print the time taken for each line
         }
     }
     
     void ORB_SLAM3_Wrapper::MonoSlamNode::changeMode(bool activate)
     {
-    /*
-	    if (!interface_)
-	    {
-		RCLCPP_ERROR(this->get_logger(), "ORB-SLAM3 interface is not initialized. Cannot change mode.");
-		return;
-	    }
-
-	    if (activate)
-	    {
-		RCLCPP_INFO(this->get_logger(), "Activating localization-only mode (tracking only, no mapping).");
-		interface_->ActivateLocalizationMode();
-	    }
-	    else
-	    {
-		RCLCPP_INFO(this->get_logger(), "Deactivating localization-only mode (returning to full SLAM mode).");
-		interface_->DeactivateLocalizationMode();
-	    }*/
+        (void)activate;
     }
 
     void MonoSlamNode::combinedPublishCallback() 
@@ -357,112 +332,94 @@ RCLCPP_INFO(this->get_logger(), "🔧 Worker thread stopped");
         this->publishReferenceMapPointCloud();
     }
 
-    // void MonoSlamNode::savePointCloudToPLY(const sensor_msgs::msg::PointCloud2 &msg, const std::string &filename) 
-    // {
-    //     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
-    //     pcl::fromROSMsg(msg, *cloud);  // Convert from ROS msg to PCL cloud
-    //     pcl::io::savePLYFileASCII(filename, *cloud);  // Save as PLY file
-    // }
- void MonoSlamNode::handleMapControl(
+void MonoSlamNode::handleMapControl(
     const std::shared_ptr<orb_slam3_ros2_wrapper::srv::MapControl::Request> req,
     std::shared_ptr<orb_slam3_ros2_wrapper::srv::MapControl::Response> res)
 {
-    RCLCPP_INFO(this->get_logger(), "⚡ Queuing command: %d", req->command);
-    
-    MapControlCmd cmd;
-    cmd.command = req->command;
-    cmd.filepath = req->filepath;
-    
-    // Сохраняем future для возврата результата
-    auto future = cmd.promise.get_future();
-    
-    // Кладём в очередь
+    RCLCPP_INFO(this->get_logger(), ">>> handleMapControl ENTER: cmd=%d", req->command);
+
+    if (req->command == 5) {
+        save_next_frame_ = true;
+        res->success = true;
+        res->message = "Next frame will be saved to " + save_frame_dir_;
+        RCLCPP_INFO(this->get_logger(), ">>> handleMapControl EXIT (cmd=5): success=1");
+        return;
+    }
+
+    // Команды 0-4 — в worker thread
+    MapControlCmd cmd{req->command, req->filepath};
     {
         std::lock_guard<std::mutex> lock(cmd_queue_mutex_);
-        cmd_queue_.push(std::move(cmd));
+        cmd_queue_.push(cmd);
     }
     cmd_cv_.notify_one();
-    
-    // Ждём результат с таймаутом 120с (но не блокируем ROS-исполнитель надолго)
-    auto status = future.wait_for(std::chrono::seconds(120));
-    if (status == std::future_status::ready) {
-        auto [success, message] = future.get();
-        res->success = success;
-        res->message = message;
-        RCLCPP_INFO(this->get_logger(), "✅ Command finished: %s", message.c_str());
-    } else {
-        res->success = false;
-        res->message = "Command timed out (>120s)";
-        RCLCPP_WARN(this->get_logger(), "⏳ Command timed out");
-    }
+
+    res->success = true;
+    res->message = "Command " + std::to_string(req->command) + " queued";
+    RCLCPP_INFO(this->get_logger(), ">>> handleMapControl EXIT (cmd=%d): queued", req->command);
 }
 
-// === Поток-обработчик (выполняет команды в безопасном контексте) ===
-void MonoSlamNode::workerLoop()
-{
-    while (worker_running_ || !cmd_queue_.empty()) {
-        MapControlCmd cmd;
+    void MonoSlamNode::workerLoop()
+    {
+        RCLCPP_INFO(this->get_logger(), "[WORKER] Thread started");
         
-        // Ждём команду
-        {
-            std::unique_lock<std::mutex> lock(cmd_queue_mutex_);
-            cmd_cv_.wait_for(lock, std::chrono::milliseconds(100), [this] {
-                return !cmd_queue_.empty() || !worker_running_;
-            });
+        while (worker_running_ || !cmd_queue_.empty()) {
+            MapControlCmd cmd;
             
-            if (cmd_queue_.empty()) continue;
-            cmd = std::move(cmd_queue_.front());
-            cmd_queue_.pop();
-        }
-        auto cmd_start = std::chrono::high_resolution_clock::now();
-        RCLCPP_INFO(this->get_logger(), "🔧 Executing command: %d", cmd.command);
-        
-        try {
-            std::pair<bool, std::string> result;
-            
-            switch (cmd.command) {
-                case 0: // Reset — самый критичный
-                    // Безопасный сброс: останавливаем трекинг на время
-                    {
-                        // Здесь можно добавить флаг pause_tracking_, который проверяется в trackMONO
-                        // Для простоты: просто вызываем resetMap (он уже имеет свои мьютексы)
-                        bool ok = interface_->resetMap();
-                        result = {ok, ok ? "Map reset" : "Reset failed"};
-                    }
-                    break;
-                case 1:{ // Save
-                    result = {interface_->saveMap(cmd.filepath), 
-                              "Saved to " + cmd.filepath};
-                    break;}
-                case 2: {// Load
-                    result = {interface_->loadMap(cmd.filepath), 
-                              "Loaded from " + cmd.filepath};
-                    break;
-                    }
-                    case 3: { // Enable Localization Mode
-                    interface_->enableLocalizationMode();
-                    result = {true, "Localization mode enabled"};
-                    break;
-                }
-                case 4: { // Disable Localization Mode
-                    interface_->disableLocalizationMode();
-                    result = {true, "Localization mode disabled"};
-                    break;
-                }
-                default:
-                    result = {false, "Unknown command"};
+            {
+                std::unique_lock<std::mutex> lock(cmd_queue_mutex_);
+                cmd_cv_.wait_for(lock, std::chrono::milliseconds(100), [this] {
+                    return !cmd_queue_.empty() || !worker_running_;
+                });
+                
+                if (cmd_queue_.empty()) continue;
+                
+                cmd = std::move(cmd_queue_.front());
+                cmd_queue_.pop();
+                RCLCPP_INFO(this->get_logger(), "[WORKER] Processing command: %d", cmd.command);
             }
             
-            // Возвращаем результат
-            cmd.promise.set_value(result);
+            std::pair<bool, std::string> result;
+            auto cmd_start = std::chrono::high_resolution_clock::now();
             
-        } catch (const std::exception& e) {
-            cmd.promise.set_value({false, std::string("Exception: ") + e.what()});
+            try {
+                switch (cmd.command) {
+                    case 0: {
+                        bool ok = interface_->resetMap();
+                        result = {ok, ok ? "Map reset" : "Reset failed"};
+                        break;
+                    }
+                    case 1:
+                        result = {interface_->saveMap(cmd.filepath), 
+                                  "Saved to " + cmd.filepath};
+                        break;
+                    case 2:
+                        result = {interface_->loadMap(cmd.filepath), 
+                                  "Loaded from " + cmd.filepath};
+                        break;
+                    case 3:
+                        interface_->enableLocalizationMode();
+                        result = {true, "Localization mode enabled"};
+                        break;
+                    case 4:
+                        interface_->disableLocalizationMode();
+                        result = {true, "Localization mode disabled"};
+                        break;
+                    default:
+                        result = {false, "Unknown command"};
+                        break;
+                }
+            } catch (const std::exception& e) {
+                RCLCPP_ERROR(this->get_logger(), "[WORKER] Exception: %s", e.what());
+                result = {false, std::string("Exception: ") + e.what()};
+            }
+            
+            auto cmd_end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(cmd_end - cmd_start).count();
+            RCLCPP_INFO(this->get_logger(), "[WORKER] Command %d finished in %ld ms", cmd.command, duration);
         }
-    auto cmd_end = std::chrono::high_resolution_clock::now();
-auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(cmd_end - cmd_start).count();
-RCLCPP_INFO(rclcpp::get_logger("Worker"), "⏱️ Command %d finished in %ld ms", cmd.command, duration);        
-    }
+        
+        RCLCPP_INFO(this->get_logger(), "[WORKER] Thread exiting");
     }
 
-}
+} // namespace ORB_SLAM3_Wrapper
