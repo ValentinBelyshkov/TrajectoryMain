@@ -16,9 +16,10 @@ Split into focused modules (~400 lines each):
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import routes_components, routes_ros, routes_slam, ws_routes
+from . import routes_components, routes_ros, routes_slam, routes_gps, ws_routes
 from .pose_monitor import pose_monitor
 from .process_manager import manager
+from . import camera_stream
 
 app = FastAPI(title="TerraSLAM System Manager")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -26,6 +27,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 app.include_router(routes_components.router)
 app.include_router(routes_slam.router)
 app.include_router(routes_ros.router)
+app.include_router(routes_gps.router)
 app.include_router(ws_routes.router)
 
 
@@ -37,6 +39,7 @@ async def startup():
     except Exception as e:
         print(f"[startup] Failed to start rosbridge: {e}")
     pose_monitor.start()
+    camera_stream.start()
 
 
 @app.on_event("shutdown")

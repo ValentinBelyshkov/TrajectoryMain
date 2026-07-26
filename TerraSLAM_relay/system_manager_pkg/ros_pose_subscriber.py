@@ -89,29 +89,41 @@ def _tracking_state_cb(msg) -> None:
 
 def _spin() -> None:
     global _node, _start_error
+    executor = None
     try:
         if not rclpy.ok():
             rclpy.init(args=None)
         _node = rclpy.create_node("terraslam_pose_monitor_subscriber")
+        # Use an explicit executor (not the rclpy.spin_once helper which creates
+        # a temporary SingleThreadedExecutor on every call — that leaks the
+        # _sigint_gc attribute and causes "AttributeError: … no attribute
+        # '_sigint_gc'" noise in the logs, and is unreliable under load).
+        executor = rclpy.executors.SingleThreadedExecutor()
+        executor.add_node(_node)
         _node.create_subscription(Pose, POSE_TOPIC, _pose_cb, 10)
         _node.create_subscription(Int8, TRACKING_STATE_TOPIC, _tracking_state_cb, 10)
         _start_error = ""
         while _running:
-            rclpy.spin_once(_node, timeout_sec=0.5)
+            executor.spin_once(timeout_sec=0.5)
     except Exception as e:
         _start_error = str(e)
     finally:
+        if executor is not None:
+            try:
+                if _node is not None:
+                    executor.remove_node(_node)
+                executor.shutdown()
+            except Exception:
+                pass
         if _node is not None:
             try:
                 _node.destroy_node()
             except Exception:
                 pass
             _node = None
-        try:
-            if rclpy.ok():
-                rclpy.shutdown()
-        except Exception:
-            pass
+        # NOTE: do NOT call rclpy.shutdown() here — this is one of several
+        # modules sharing the same rclpy context (camera_stream, camera_snapshot).
+        # Shutting it down would silently break them all.
 
 
 def start() -> None:
@@ -142,3 +154,4 @@ def get_status_extra() -> Dict[str, Any]:
         "subscriber_running": is_running(),
         "start_error": _start_error,
     }
+

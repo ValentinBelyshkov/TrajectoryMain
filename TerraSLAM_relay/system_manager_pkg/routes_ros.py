@@ -71,6 +71,117 @@ def camera_snapshot_endpoint(req: PathReq):
     return result
 
 
+@router.get("/api/v1/camera/frame")
+def camera_frame():
+    """Return the latest camera frame as a JPEG (single snapshot fallback)."""
+    import tempfile
+    import os as _os
+    from fastapi.responses import Response
+    from . import camera_stream as _cs
+
+    # Fast path: return the frame already in memory from the persistent subscriber
+    jpeg, _ = _cs.get_latest_frame()
+    if jpeg:
+        return Response(content=jpeg, media_type="image/jpeg",
+                        headers={"Cache-Control": "no-store, max-age=0"})
+
+    # Fallback: one-shot grab (slower, used if background subscriber hasn't received yet)
+    if not camera_snapshot.CAMERA_DEPS_AVAILABLE:
+        raise HTTPException(503, detail=f"Camera dependencies not available: {camera_snapshot._IMPORT_ERROR}")
+
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
+        tmp_path = f.name
+    txt_path = tmp_path.replace(".jpg", ".txt")
+    try:
+        result = camera_snapshot.save_snapshot(tmp_path, timeout=3.0)
+        if not result.get("success"):
+            raise HTTPException(503, detail=result.get("error", "frame grab failed"))
+        with open(tmp_path, "rb") as f:
+            data = f.read()
+        return Response(content=data, media_type="image/jpeg",
+                        headers={"Cache-Control": "no-store, max-age=0"})
+    finally:
+        for p in (tmp_path, txt_path):
+            try:
+                _os.unlink(p)
+            except Exception:
+                pass
+
+
+@router.get("/api/v1/camera/stream")
+async def camera_mjpeg_stream():
+    """MJPEG stream of /camera/image_raw.
+
+    Primary path: reads from the persistent in-memory subscriber (camera_stream).
+    Fallback path: when that subscriber has no frame (e.g. subscriber thread failed
+    to connect), falls back to the same one-shot grab used by /api/v1/camera/frame,
+    retried every FALLBACK_INTERVAL seconds so the stream keeps working.
+    """
+    import asyncio
+    import time as _time
+    from fastapi.responses import StreamingResponse
+    from . import camera_stream as _cs
+
+    FALLBACK_INTERVAL = 2.0   # seconds between fallback grab attempts
+    FALLBACK_QUALITY  = 75    # JPEG quality for fallback frames
+
+    async def _generate():
+        import cv2 as _cv2
+        from . import camera_snapshot as _snap
+
+        loop = asyncio.get_event_loop()
+        boundary = b"frame"
+        last_ts: float = 0.0
+        last_fallback_t: float = 0.0
+        fallback_in_flight: bool = False
+
+        while True:
+            # ── primary: in-memory subscriber ────────────────────────────────
+            jpeg, ts = _cs.get_latest_frame()
+            if jpeg and ts and ts != last_ts:
+                last_ts = ts
+                yield (
+                    b"--" + boundary + b"\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n"
+                    + jpeg
+                    + b"\r\n"
+                )
+            # ── fallback: one-shot grab when subscriber has nothing ───────────
+            elif not jpeg and not fallback_in_flight and _snap.CAMERA_DEPS_AVAILABLE:
+                now = _time.monotonic()
+                if now - last_fallback_t >= FALLBACK_INTERVAL:
+                    last_fallback_t = now
+                    fallback_in_flight = True
+                    try:
+                        cv_img, _err = await loop.run_in_executor(
+                            None, _snap._grab_one_frame, _snap.CAMERA_TOPIC, 3.0
+                        )
+                        if cv_img is not None:
+                            ok, buf = _cv2.imencode(
+                                ".jpg", cv_img,
+                                [_cv2.IMWRITE_JPEG_QUALITY, FALLBACK_QUALITY]
+                            )
+                            if ok:
+                                fb_jpeg = buf.tobytes()
+                                last_ts = _time.time()
+                                yield (
+                                    b"--" + boundary + b"\r\n"
+                                    b"Content-Type: image/jpeg\r\n\r\n"
+                                    + fb_jpeg
+                                    + b"\r\n"
+                                )
+                    finally:
+                        fallback_in_flight = False
+
+            await asyncio.sleep(0.04)  # up to 25 fps from subscriber; fallback is self-throttled
+
+    return StreamingResponse(
+        _generate(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-cache, no-store", "X-Accel-Buffering": "no"},
+    )
+
+
 @router.post("/api/v1/ros/mavros/arm")
 def ros2_mavros_arm(req: ArmReq):
     val = "true" if req.arm else "false"
