@@ -29,7 +29,7 @@ namespace ORB_SLAM3_Wrapper
         trackingStatePub_ = this->create_publisher<std_msgs::msg::Int8>("orb_slam3/tracking_state", 10);
 
         bool bUseViewer =false;
-        this->declare_parameter("visualization", rclcpp::ParameterValue(true));
+        this->declare_parameter("visualization", rclcpp::ParameterValue(false));
         this->get_parameter("visualization", bUseViewer);
 
         this->declare_parameter("ros_visualization", rclcpp::ParameterValue(false));

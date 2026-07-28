@@ -1,0 +1,117 @@
+INFO:     Started server process [111436]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:9000 (Press CTRL+C to quit)
+INFO:     192.168.0.162:62773 - "WebSocket /ws/pose_status" [accepted]
+INFO:     connection open
+[startup] rosbridge: started (pid 111443)
+INFO:     127.0.0.1:41156 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56786 - "WebSocket /ws/pose_status" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:56802 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:63066 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45144 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37488 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42536 - "GET /api/v1/map/tiles/14/9905/11262.pbf HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42546 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45752 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45758 - "GET /assets/maplibre-gl.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45766 - "GET /assets/maplibre-gl.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45768 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55882 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64338 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64338 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64338 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     192.168.0.162:64370 - "GET /assets/maplibre-gl.js HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64338 - "GET /assets/maplibre-gl.css HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64338 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64370 - "GET /api/v1/slam/fallback_method HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64375 - "WebSocket /ws/pose_status" [accepted]
+INFO:     connection open
+INFO:     192.168.0.162:64338 - "GET /api/v1/gps/position HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64370 - "GET /api/v1/gps/calib HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51100 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64605 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57658 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64782 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43500 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:64973 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36938 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65179 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     192.168.0.162:65179 - "GET /assets/maplibre-gl.css HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65180 - "GET /assets/maplibre-gl.js HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65180 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65179 - "GET /api/v1/slam/fallback_method HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65181 - "WebSocket /ws/pose_status" [accepted]
+INFO:     connection open
+INFO:     192.168.0.162:65180 - "GET /api/v1/gps/position HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65179 - "GET /api/v1/gps/calib HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54760 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65296 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65296 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     192.168.0.162:65297 - "GET /assets/maplibre-gl.js HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65296 - "GET /assets/maplibre-gl.css HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65296 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65297 - "GET /api/v1/slam/fallback_method HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65298 - "WebSocket /ws/pose_status" [accepted]
+INFO:     connection open
+INFO:     192.168.0.162:65297 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     192.168.0.162:65296 - "GET /api/v1/gps/position HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65297 - "GET /api/v1/gps/calib HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37532 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:65470 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56526 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:49296 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47926 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:49736 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53002 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:49951 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52100 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:50304 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52106 - "GET /assets/maplibre-gl.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37800 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:50544 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54738 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:50821 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57572 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:51107 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36988 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:51468 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32878 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:51679 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36238 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:51989 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55908 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:52295 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57850 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:52596 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39356 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60680 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47356 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59664 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45284 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40470 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:58372 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33994 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37956 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57932 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36336 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60514 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42956 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.0.162:63347 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50946 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54914 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47160 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52362 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47932 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55230 - "GET /health HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     connection closed
+INFO:     connection closed
+INFO:     Waiting for background tasks to complete. (CTRL+C to force quit)
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [111436]

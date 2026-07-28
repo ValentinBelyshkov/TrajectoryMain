@@ -1,5 +1,0 @@
-topic: /camera_pose
-last_seen_unix: None
-age_seconds: None
-
-no pose received yet
