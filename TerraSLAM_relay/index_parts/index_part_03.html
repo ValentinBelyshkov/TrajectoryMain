@@ -1,0 +1,300 @@
+          </div>
+          <div id="pose-out" class="output">Waiting for data…</div>
+          <div class="row" style="margin-top:12px">
+            <input type="text" id="snapshot-path" placeholder="/opt/main/Trajectory/Database/snap1.jpg" value="/opt/main/Trajectory/Database/snap1.jpg" style="flex:1">
+            <button class="btn btn-green btn-lg" onclick="takeSnapshot()">📸 Save Photo + Pose</button>
+          </div>
+          <div id="snapshot-out" class="output" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- ───── Camera Live View ───── -->
+      <div class="card">
+        <div class="card-header">
+          📷 Камера — /camera/image_raw (live)
+          <span id="cam-feed-badge" class="badge badge-warn" style="margin-left:auto">OFF</span>
+        </div>
+        <div class="card-body col">
+          <div class="row">
+            <button class="btn btn-green btn-lg" id="cam-feed-btn" onclick="toggleCameraFeed()">▶ Запустить трансляцию</button>
+            <button class="btn btn-sm" onclick="grabFrame()">📸 Один кадр</button>
+            <span style="color:var(--muted);font-size:11px;margin-left:4px" id="cam-last-ts"></span>
+          </div>
+          <img id="camera-live-img" src="" alt="camera feed" style="display:none">
+          <div id="cam-err" class="output err" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- ───── Auto Capture for Calibration ───── -->
+      <div class="card">
+        <div class="card-header">
+          🗂️ Авто-захват для калибровки
+          <span id="autocap-badge" class="badge badge-warn" style="margin-left:auto">OFF</span>
+        </div>
+        <div class="card-body col">
+          <p style="color:var(--muted);font-size:12px;margin-bottom:10px">
+            Каждую секунду сохраняет <code>.jpg</code> + <code>.txt</code> с позой. Файлы нумеруются
+            автоматически: <code>calib_HHMMSS_0001.jpg</code>, <code>calib_HHMMSS_0002.jpg</code>&nbsp;…
+          </p>
+          <div class="row" style="align-items:center;gap:8px;flex-wrap:wrap">
+            <input type="text" id="autocap-dir"
+              placeholder="/opt/main/Trajectory/Database"
+              value="/opt/main/Trajectory/Database"
+              style="flex:1;min-width:200px">
+            <label style="font-size:12px;color:var(--muted);white-space:nowrap">
+              интервал&nbsp;(мс)
+            </label>
+            <input type="number" id="autocap-interval" value="1000" min="200" step="100"
+              style="width:80px">
+          </div>
+          <div class="row" style="margin-top:10px;align-items:center;gap:10px">
+            <button class="btn btn-green btn-lg" id="autocap-btn" onclick="toggleAutoCapture()">
+              ▶ Начать захват
+            </button>
+            <span id="autocap-counter" style="font-size:13px;color:var(--muted)">Снимков: 0</span>
+            <span id="autocap-last" style="font-size:11px;color:var(--muted)"></span>
+          </div>
+          <div id="autocap-out" class="output" style="display:none"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── IMU Panel ───── -->
+    <section id="panel-imu" class="panel">
+      <div class="card">
+        <div class="card-header">🔄 IMU <span style="color:var(--muted);font-weight:400;font-size:12px">— /imu/data</span></div>
+        <div class="card-body col">
+          <div class="row">
+            <button class="btn btn-blue btn-lg" onclick="echoTopic('imu','imu-out')">Echo Once</button>
+            <button class="btn btn-sm" id="imu-poll-btn" onclick="togglePoll('imu','imu-out','imu-poll-btn')">▶ Live Poll (2s)</button>
+          </div>
+          <div class="data-grid" id="imu-parsed" style="display:none">
+            <div class="data-field"><label>Angular Vel X</label><div class="val" id="imu-avx">—</div></div>
+            <div class="data-field"><label>Angular Vel Y</label><div class="val" id="imu-avy">—</div></div>
+            <div class="data-field"><label>Angular Vel Z</label><div class="val" id="imu-avz">—</div></div>
+            <div class="data-field"><label>Linear Accel X</label><div class="val" id="imu-lax">—</div></div>
+            <div class="data-field"><label>Linear Accel Y</label><div class="val" id="imu-lay">—</div></div>
+            <div class="data-field"><label>Linear Accel Z</label><div class="val" id="imu-laz">—</div></div>
+          </div>
+          <div id="imu-out" class="output">Waiting for data…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── GPS Sender Panel ───── -->
+    <section id="panel-gps_sender" class="panel">
+
+      <!-- calib.gpc editor -->
+      <div class="card">
+        <div class="card-header">📄 calib.gpc — редактор калибровки</div>
+        <div class="card-body col">
+          <p style="color:var(--muted);font-size:12px">
+            Первая строка — проекция (+proj=…). Следующие строки: <code>X Y Z Lon Lat Alt</code>
+            (≥3 точки). Изменения применяются сразу после сохранения.
+          </p>
+          <textarea id="calib-editor" spellcheck="false" placeholder="Загрузка…"></textarea>
+          <div class="row">
+            <button class="btn btn-blue btn-lg" onclick="loadCalib()">↻ Загрузить</button>
+            <button class="btn btn-green btn-lg" onclick="saveCalib()">💾 Сохранить</button>
+            <span id="calib-status" style="color:var(--muted);font-size:12px;margin-left:4px"></span>
+          </div>
+          <div id="calib-out" class="output" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- GPS coords live -->
+      <div class="card">
+        <div class="card-header">
+          🌍 GPS-координаты дрона (из /camera_pose + calib.gpc)
+          <span id="gps-badge" class="badge badge-warn" style="margin-left:auto">—</span>
+          <button class="btn btn-sm" style="margin-left:8px" id="gps-poll-btn" onclick="toggleGpsPoll()">▶ Live</button>
+        </div>
+        <div class="card-body col">
+          <div class="gps-coords">
+            <div class="data-field">
+              <label>Latitude</label>
+              <div class="val" id="gps-lat">—</div>
+            </div>
+            <div class="data-field">
+              <label>Longitude</label>
+              <div class="val" id="gps-lon">—</div>
+            </div>
+            <div class="data-field">
+              <label>Altitude (m)</label>
+              <div class="val" id="gps-alt">—</div>
+            </div>
+          </div>
+          <div class="gps-coords" style="margin-top:6px">
+            <div class="data-field">
+              <label>Pose X</label>
+              <div class="val" id="gps-px">—</div>
+            </div>
+            <div class="data-field">
+              <label>Pose Y</label>
+              <div class="val" id="gps-py">—</div>
+            </div>
+            <div class="data-field">
+              <label>Pose Z</label>
+              <div class="val" id="gps-pz">—</div>
+            </div>
+          </div>
+          <div class="data-field" style="margin-top:6px">
+            <label>Возраст позы</label>
+            <div class="val" id="gps-age">—</div>
+          </div>
+          <div id="gps-err" class="output err" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Leaflet Map -->
+      <div class="card">
+        <div class="card-header">
+          🗺️ Положение дрона на карте
+          <button class="btn btn-sm" style="margin-left:auto" onclick="centerDroneMap()">⊕ Центрировать</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div id="drone-map"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ───── Mavros Panel ───── -->
+    <section id="panel-mavros" class="panel">
+      <div class="card">
+        <div class="card-header">🛩️ Mavros</div>
+        <div class="card-body col">
+
+          <!-- State -->
+          <div class="card" style="border-color:rgba(88,166,255,.3)">
+            <div class="card-header" style="font-size:12px">📡 Flight State</div>
+            <div class="card-body col">
+              <div class="row">
+                <button class="btn btn-blue" onclick="echoTopic('mavros_state','mav-state-out')">Echo /mavros/state</button>
+                <button class="btn btn-sm" id="mavs-poll-btn" onclick="togglePoll('mavros_state','mav-state-out','mavs-poll-btn')">▶ Live Poll</button>
+              </div>
+              <div class="data-grid" id="mav-state-parsed" style="display:none">
+                <div class="data-field"><label>Armed</label><div class="val" id="mav-armed">—</div></div>
+                <div class="data-field"><label>Mode</label><div class="val" id="mav-mode">—</div></div>
+                <div class="data-field"><label>Connected</label><div class="val" id="mav-conn">—</div></div>
+                <div class="data-field"><label>System Status</label><div class="val" id="mav-sys">—</div></div>
+              </div>
+              <div id="mav-state-out" class="output" style="max-height:160px">Waiting for data…</div>
+            </div>
+          </div>
+
+          <!-- IMU -->
+          <div class="card" style="border-color:rgba(188,140,255,.3)">
+            <div class="card-header" style="font-size:12px">🔄 Mavros IMU</div>
+            <div class="card-body col">
+              <div class="row">
+                <button class="btn btn-purple" onclick="echoTopic('mavros_imu','mav-imu-out')">Echo /mavros/imu/data</button>
+                <button class="btn btn-sm" id="mavimu-poll-btn" onclick="togglePoll('mavros_imu','mav-imu-out','mavimu-poll-btn')">▶ Live Poll</button>
+              </div>
+              <div id="mav-imu-out" class="output" style="max-height:160px">Waiting for data…</div>
+            </div>
+          </div>
+
+          <!-- Pose -->
+          <div class="card" style="border-color:rgba(255,166,87,.3)">
+            <div class="card-header" style="font-size:12px">📍 Local Position</div>
+            <div class="card-body col">
+              <div class="row">
+                <button class="btn btn-orange" onclick="echoTopic('mavros_pose','mav-pose-out')">Echo /mavros/local_position/pose</button>
+                <button class="btn btn-sm" id="mavpose-poll-btn" onclick="togglePoll('mavros_pose','mav-pose-out','mavpose-poll-btn')">▶ Live Poll</button>
+              </div>
+              <div id="mav-pose-out" class="output" style="max-height:160px">Waiting for data…</div>
+            </div>
+          </div>
+
+          <!-- ARM / Mode commands -->
+          <div class="card" style="border-color:rgba(248,81,73,.3)">
+            <div class="card-header" style="font-size:12px">🎮 Commands</div>
+            <div class="card-body col">
+              <div class="row">
+                <button class="btn btn-green" onclick="mavArm(true)">ARM</button>
+                <button class="btn btn-red" onclick="mavArm(false)">DISARM</button>
+              </div>
+              <div class="row">
+                <input type="text" id="mav-mode-input" placeholder="GUIDED / LOITER / AUTO …" value="GUIDED" style="max-width:200px">
+                <button class="btn btn-blue" onclick="mavSetMode()">Set Mode</button>
+              </div>
+              <div id="mav-cmd-out" class="output" style="display:none;max-height:120px"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Components Panel ───── -->
+    <section id="panel-components" class="panel">
+      <div class="card">
+        <div class="card-header">
+          🔧 System Components
+          <button class="btn btn-sm" style="margin-left:auto" onclick="loadComponents()">↻ Refresh</button>
+        </div>
+        <div class="card-body">
+          <div id="comp-grid" class="comp-grid"><div style="color:var(--muted)">Loading…</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Logs Panel ───── -->
+    <section id="panel-logs" class="panel">
+      <div class="card">
+        <div class="card-header">
+          📋 System Logs
+          <div class="row" style="margin-left:auto; gap:6px">
+            <select id="log-comp" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 6px;font-size:12px">
+              <option value="">All</option>
+              <option value="slam">slam</option>
+              <option value="relay">relay</option>
+              <option value="rosbridge">rosbridge</option>
+              <option value="gps_bridge">gps_bridge</option>
+              <option value="slam_mode_manager">slam_mode_manager</option>
+            </select>
+            <button class="btn btn-sm" onclick="loadLogs()">↻ Fetch</button>
+            <button class="btn btn-sm" id="log-follow-btn" onclick="toggleLogFollow()">▶ Follow</button>
+            <button class="btn btn-sm" onclick="clearLogs()">✕ Clear</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="log-output"><span style="color:var(--muted)">Click Fetch or enable Follow…</span></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ─── Navigation ──────────────────────────────────────────────────────────────
+let currentPanel = 'slam';
+function show(name) {
+  // Stop auto-capture and camera feed when leaving Camera Pose panel
+  if (currentPanel === 'camera_pose' && name !== 'camera_pose') {
+    if (_autoCaptureRunning) _stopAutoCapture('manual');
+    if (_camFeedActive) {
+      const img = document.getElementById('camera-live-img');
+      if (img) { img.src = ''; img.style.display = 'none'; }
+      const btn = document.getElementById('cam-feed-btn');
+      if (btn) { btn.textContent = '▶ Запустить трансляцию'; btn.className = 'btn btn-green btn-lg'; }
+      setCamBadge('off');
+      _camFeedActive = false;
+      _camFeedInterval = null;
+    }
+  }
+  // Stop GPS poll when leaving GPS Sender panel
+  if (currentPanel === 'gps_sender' && name !== 'gps_sender' && _gpsPollInterval) {
+    clearInterval(_gpsPollInterval);
+    _gpsPollInterval = null;
+    const btn = document.getElementById('gps-poll-btn');
+    if (btn) { btn.textContent = '▶ Live'; btn.style.color = ''; }
+  }
+
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));

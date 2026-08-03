@@ -1,0 +1,300 @@
+.data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.data-field { background: var(--surface2); border-radius: 6px; padding: 10px 12px; }
+.data-field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.data-field .val { font-size: 13px; font-weight: 600; font-family: monospace; }
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  max-width: 340px;
+  z-index: 9999;
+  transition: opacity .3s;
+  opacity: 0;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; }
+#toast.ok { border-color: var(--green); color: var(--green); }
+#toast.err { border-color: var(--red); color: var(--red); }
+#toast.info { border-color: var(--blue); color: var(--blue); }
+
+.sep { color: var(--border); margin: 0 4px; }
+.full-width { width: 100%; }
+
+/* Camera feed */
+#camera-live-img {
+  width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+  background: #010409;
+  border-radius: 6px;
+  display: block;
+}
+
+/* Calib editor */
+#calib-editor {
+  width: 100%;
+  background: #010409;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--cyan);
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 10px 12px;
+  min-height: 160px;
+  resize: vertical;
+  outline: none;
+}
+#calib-editor:focus { border-color: var(--blue); }
+
+/* Leaflet map */
+#drone-map {
+  height: 420px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+/* GPS coord display */
+.gps-coords {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 700px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .data-grid { grid-template-columns: 1fr; }
+  .gps-coords { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span>🛰️</span>
+  <h1>TerraSLAM Control Panel</h1>
+  <span id="gw-badge" class="badge badge-ok">Gateway OK</span>
+  <span id="sm-badge" class="badge badge-warn">SM …</span>
+</header>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="nav-section">SLAM</div>
+    <button class="nav-btn active" onclick="show('slam')">
+      <span class="icon">🚀</span> ORB-SLAM3
+    </button>
+    <button class="nav-btn" onclick="show('map')">
+      <span class="icon">🗺️</span> Map Control
+    </button>
+    <button class="nav-btn" onclick="show('mode')">
+      <span class="icon">⚙️</span> SLAM Mode
+    </button>
+
+    <div class="nav-section">SENSORS</div>
+    <button class="nav-btn" onclick="show('covariance')">
+      <span class="icon">📐</span> Covariance
+    </button>
+    <button class="nav-btn" onclick="show('camera_pose')">
+      <span class="icon">📷</span> Camera Pose
+    </button>
+    <button class="nav-btn" onclick="show('imu')">
+      <span class="icon">🔄</span> IMU
+    </button>
+
+    <div class="nav-section">NAVIGATION</div>
+    <button class="nav-btn" onclick="show('mavros')">
+      <span class="icon">🛩️</span> Mavros
+    </button>
+    <button class="nav-btn" onclick="show('gps_sender')">
+      <span class="icon">📡</span> GPS Sender
+    </button>
+
+    <div class="nav-section">SYSTEM</div>
+    <button class="nav-btn" onclick="show('components')">
+      <span class="icon">🔧</span> Components
+    </button>
+    <button class="nav-btn" onclick="show('logs')">
+      <span class="icon">📋</span> Logs
+    </button>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ───── SLAM Panel ───── -->
+    <section id="panel-slam" class="panel active">
+      <div class="card">
+        <div class="card-header">🚀 ORB-SLAM3 — Launch &amp; Control</div>
+        <div id="slam-state-bar" class="slam-state">
+          <div class="slam-kv"><span>State</span><span id="ss-state">—</span></div>
+          <span class="sep">|</span>
+          <div class="slam-kv"><span>Drone Mode</span><span id="ss-mode">—</span></div>
+          <span class="sep">|</span>
+          <div class="slam-kv"><span>Initialized</span><span id="ss-init">—</span></div>
+          <span class="sep">|</span>
+          <div class="slam-kv"><span>Updated</span><span id="ss-ts">—</span></div>
+          <button class="btn btn-sm" style="margin-left:auto" onclick="refreshSlamStatus()">↻ Refresh</button>
+        </div>
+        <div class="card-body col">
+          <p style="color:var(--muted);font-size:12px">
+            Start/stop ORB-SLAM3 via <strong>system_manager</strong> (inside Docker) or via the <strong>legacy ROS2 task</strong> (direct launch).
+          </p>
+
+          <div class="row">
+            <button class="btn btn-green btn-lg" onclick="smAction('slam','start')">▶ Start (SM)</button>
+            <button class="btn btn-red btn-lg" onclick="smAction('slam','stop')">■ Stop (SM)</button>
+            <button class="btn btn-orange" onclick="smAction('slam','restart')">↻ Restart (SM)</button>
+          </div>
+
+          <div style="border-top:1px solid var(--border); padding-top:10px;">
+            <div class="row">
+              <button class="btn btn-blue" onclick="ros2SlamStart()">▶ Start (ROS2 direct)</button>
+              <button class="btn btn-sm btn-red" onclick="stopLegacy('slam')">■ Stop (legacy)</button>
+            </div>
+          </div>
+
+          <div id="slam-out" class="output" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- ───── Pose / Fallback live status (WebSocket) ───── -->
+      <div class="card">
+        <div class="card-header">
+          📡 Pose Liveness &amp; Fallback (live)
+          <span id="ws-badge" class="badge badge-warn" style="margin-left:auto">WS …</span>
+        </div>
+        <div class="card-body col">
+          <div id="pose-state-bar" class="slam-state">
+            <div class="slam-kv"><span>Pose</span><span id="ps-state">—</span></div>
+            <span class="sep">|</span>
+            <div class="slam-kv"><span>Tracking lost</span><span id="ps-tracking-lost">—</span></div>
+            <span class="sep">|</span>
+            <div class="slam-kv"><span>Fallback active</span><span id="ps-fallback-active">—</span></div>
+            <span class="sep">|</span>
+            <div class="slam-kv"><span>Age (s)</span><span id="ps-age">—</span></div>
+          </div>
+          <p style="color:var(--muted);font-size:12px">
+            Fallback method on tracking loss / pose staleness:
+            <select id="fallback-method-select" onchange="setFallbackMethod()">
+              <option value="POSHOLD">PosHold</option>
+              <option value="RTL">RTL</option>
+              <option value="LAND">Land</option>
+            </select>
+            <button class="btn btn-sm btn-orange" onclick="triggerFallbackNow()">⚠ Trigger now</button>
+          </p>
+          <div id="fallback-out" class="output" style="display:none"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ───── Map Panel ───── -->
+    <section id="panel-map" class="panel">
+      <div class="card">
+        <div class="card-header">🗺️ Map Control</div>
+        <div class="card-body col">
+
+          <!-- Reset -->
+          <div class="card" style="border-color:rgba(248,81,73,.3)">
+            <div class="card-header" style="font-size:12px">🗑️ Reset Map</div>
+            <div class="card-body">
+              <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Clears the current SLAM map and restarts tracking from scratch.</p>
+              <button class="btn btn-red btn-lg" onclick="slamCmd('reset', '')">Reset Map</button>
+              <div id="reset-out" class="output" style="display:none;margin-top:10px"></div>
+            </div>
+          </div>
+
+          <!-- Save -->
+          <div class="card" style="border-color:rgba(63,185,80,.3)">
+            <div class="card-header" style="font-size:12px">💾 Save Map</div>
+            <div class="card-body col">
+              <div class="row">
+                <input type="text" id="save-path" placeholder="/opt/main/Trajectory/Database/map.osa" value="/opt/main/Trajectory/Database/map.osa">
+                <button class="btn btn-green btn-lg" onclick="slamCmdWithPath('save_map','save-path')">Save Map</button>
+              </div>
+              <div id="save-out" class="output" style="display:none"></div>
+            </div>
+          </div>
+
+          <!-- Load -->
+          <div class="card" style="border-color:rgba(88,166,255,.3)">
+            <div class="card-header" style="font-size:12px">📂 Load Map</div>
+            <div class="card-body col">
+              <div class="row">
+                <input type="text" id="load-path" placeholder="/opt/main/Trajectory/Database/map.osa" value="/opt/main/Trajectory/Database/map.osa">
+                <button class="btn btn-blue btn-lg" onclick="slamCmdWithPath('load_map','load-path')">Load Map</button>
+              </div>
+              <div id="load-out" class="output" style="display:none"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Mode Panel ───── -->
+    <section id="panel-mode" class="panel">
+      <div class="card">
+        <div class="card-header">⚙️ SLAM Mode</div>
+        <div id="slam-state-bar2" class="slam-state">
+          <div class="slam-kv"><span>Current Mode</span><span id="sm2-mode" style="color:var(--blue)">—</span></div>
+          <span class="sep">|</span>
+          <div class="slam-kv"><span>SLAM State</span><span id="sm2-state">—</span></div>
+          <button class="btn btn-sm" style="margin-left:auto" onclick="refreshSlamStatus2()">↻ Refresh</button>
+        </div>
+        <div class="card-body col">
+          <p style="color:var(--muted);font-size:12px">
+            Switch between <strong>Localization Only</strong> (uses existing map, no new features added)
+            and <strong>SLAM + Mapping</strong> (builds / expands the map).
+          </p>
+
+          <div class="toggle-group" style="max-width:400px">
+            <button id="mode-loc" class="toggle-opt active" onclick="setSlamMode('LOCALIZATION_ONLY')">🔒 Localization Only</button>
+            <button id="mode-map" class="toggle-opt" onclick="setSlamMode('SLAM_MAPPING')">🗺️ SLAM + Mapping</button>
+          </div>
+
+          <div id="mode-out" class="output" style="display:none"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Covariance Panel ───── -->
+    <section id="panel-covariance" class="panel">
+      <div class="card">
+        <div class="card-header">📐 Covariance <span style="color:var(--muted);font-weight:400;font-size:12px">— /orb_slam3/covariance</span></div>
+        <div class="card-body col">
+          <div class="row">
+            <button class="btn btn-blue btn-lg" onclick="echoTopic('covariance','cov-out')">Echo Once</button>
+            <button class="btn btn-sm" id="cov-poll-btn" onclick="togglePoll('covariance','cov-out','cov-poll-btn')">▶ Live Poll (2s)</button>
+          </div>
+          <div class="data-grid" id="cov-parsed" style="display:none"></div>
+          <div id="cov-out" class="output">Waiting for data…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── Camera Pose Panel ───── -->
+    <section id="panel-camera_pose" class="panel">
+      <div class="card">
+        <div class="card-header">📷 Camera Pose <span style="color:var(--muted);font-weight:400;font-size:12px">— /camera_pose</span></div>
+        <div class="card-body col">
+          <div class="row">
+            <button class="btn btn-blue btn-lg" onclick="echoTopic('camera_pose','pose-out')">Echo Once</button>
+            <button class="btn btn-sm" id="pose-poll-btn" onclick="togglePoll('camera_pose','pose-out','pose-poll-btn')">▶ Live Poll (2s)</button>
+          </div>
+          <div class="data-grid" id="pose-parsed" style="display:none">
+            <div class="data-field"><label>Position X</label><div class="val" id="pose-px">—</div></div>
+            <div class="data-field"><label>Position Y</label><div class="val" id="pose-py">—</div></div>
+            <div class="data-field"><label>Position Z</label><div class="val" id="pose-pz">—</div></div>
+            <div class="data-field"><label>Orientation W</label><div class="val" id="pose-ow">—</div></div>

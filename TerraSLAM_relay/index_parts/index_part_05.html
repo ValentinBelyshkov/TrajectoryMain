@@ -1,0 +1,300 @@
+}
+
+connectPoseWs();
+
+async function setFallbackMethod() {
+  const method = document.getElementById('fallback-method-select').value;
+  const r = await jpost('/api/v1/slam/fallback_method', { method });
+  showOut('fallback-out', fmtResult(r.data), !r.ok);
+  if (r.ok) toast(`Fallback method set to ${method}`, 'ok');
+}
+
+async function triggerFallbackNow() {
+  const r = await jpost('/api/v1/slam/fallback_trigger', {});
+  showOut('fallback-out', fmtResult(r.data), !r.ok);
+  toast(r.ok ? 'Fallback triggered' : 'Fallback trigger failed', r.ok ? 'ok' : 'err');
+}
+
+async function loadFallbackMethod() {
+  const r = await api('/api/v1/slam/fallback_method');
+  if (r.ok && r.data.method) {
+    document.getElementById('fallback-method-select').value = r.data.method;
+  }
+}
+loadFallbackMethod();
+
+// ─── SM component actions ────────────────────────────────────────────────────
+async function smAction(comp, action) {
+  toast(`Sending ${action} → ${comp}…`, 'info');
+  const r = await jpost(`/api/sm/components/${comp}/${action}`, {});
+  if (r.ok) {
+    toast(`${comp}: ${action} OK`, 'ok');
+    showOut('slam-out', fmtResult(r.data));
+  } else {
+    toast(`Error: ${r.data.error || r.status}`, 'err');
+    showOut('slam-out', fmtResult(r.data), true);
+  }
+}
+
+async function ros2SlamStart() {
+  toast('Starting SLAM via ROS2 direct…', 'info');
+  const r = await jpost('/api/ros2/slam/start', {});
+  showOut('slam-out', fmtResult(r.data), !r.ok);
+  if (r.ok) toast('SLAM task started (legacy)', 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+async function stopLegacy(type) {
+  toast(`Stopping ${type} (legacy)…`, 'info');
+  const r = await api('/stop/' + type, { method: 'POST' });
+  showOut('slam-out', fmtResult(r.data), !r.ok);
+}
+
+// ─── Map commands ────────────────────────────────────────────────────────────
+async function slamCmd(cmd, path, outId) {
+  if (!outId) outId = cmd === 'reset' ? 'reset-out' : 'save-out';
+  toast(`Executing: ${cmd}…`, 'info');
+  const r = await jpost('/api/sm/slam/command', { value: cmd });
+  showOut(outId, fmtResult(r.data), !r.ok);
+  if (r.ok) toast(`${cmd} sent ✓`, 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+async function slamCmdWithPath(cmd, inputId) {
+  const path = document.getElementById(inputId).value.trim();
+  const outId = cmd === 'save_map' ? 'save-out' : 'load-out';
+  toast(`Executing: ${cmd} → ${path}`, 'info');
+  const r = await jpost('/api/sm/slam/command', { value: cmd + '|' + path });
+  showOut(outId, fmtResult(r.data), !r.ok);
+  if (r.ok) toast(`${cmd} sent ✓`, 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+// ─── SLAM Mode ────────────────────────────────────────────────────────────────
+async function setSlamMode(mode) {
+  toast(`Setting mode: ${mode}…`, 'info');
+  const r = await jpost('/api/sm/slam/mode', { mode });
+  showOut('mode-out', fmtResult(r.data), !r.ok);
+  if (r.ok) {
+    toast(`Mode → ${mode}`, 'ok');
+    document.getElementById('mode-loc').classList.toggle('active', mode === 'LOCALIZATION_ONLY');
+    document.getElementById('mode-map').classList.toggle('active', mode === 'SLAM_MAPPING');
+  } else {
+    toast('Error: ' + (r.data.error || r.status), 'err');
+  }
+}
+
+// ─── ROS2 topic echo ─────────────────────────────────────────────────────────
+const _polls = {};
+
+async function echoTopic(name, outId) {
+  document.getElementById(outId).textContent = 'Fetching…';
+  const r = await api('/api/ros2/topic/' + name);
+  const d = r.data;
+  const text = d.error ? `⚠ ${d.error}` : (d.output || '(no data)');
+  document.getElementById(outId).textContent = text;
+  parseTopic(name, d.output || '');
+}
+
+function parseTopic(name, raw) {
+  if (name === 'camera_pose') {
+    const px = raw.match(/x:\s*([\d\.\-e]+)/);
+    const py = raw.match(/y:\s*([\d\.\-e]+)/);
+    const pz = raw.match(/z:\s*([\d\.\-e]+)/);
+    const ow = raw.match(/w:\s*([\d\.\-e]+)/);
+    if (px) {
+      document.getElementById('pose-parsed').style.display = 'grid';
+      ['px','py','pz','ow'].forEach((id,i) => {
+        const m = [px,py,pz,ow][i];
+        if (m) document.getElementById('pose-'+id).textContent = parseFloat(m[1]).toFixed(4);
+      });
+    }
+  }
+  if (name === 'imu') {
+    const avx = raw.match(/angular_velocity[\s\S]*?x:\s*([\d\.\-e]+)/);
+    const avy = raw.match(/angular_velocity[\s\S]*?y:\s*([\d\.\-e]+)/);
+    const avz = raw.match(/angular_velocity[\s\S]*?z:\s*([\d\.\-e]+)/);
+    const lax = raw.match(/linear_acceleration[\s\S]*?x:\s*([\d\.\-e]+)/);
+    const lay = raw.match(/linear_acceleration[\s\S]*?y:\s*([\d\.\-e]+)/);
+    const laz = raw.match(/linear_acceleration[\s\S]*?z:\s*([\d\.\-e]+)/);
+    if (avx) {
+      document.getElementById('imu-parsed').style.display = 'grid';
+      [['avx',avx],['avy',avy],['avz',avz],['lax',lax],['lay',lay],['laz',laz]].forEach(([k,m]) => {
+        if (m) document.getElementById('imu-'+k).textContent = parseFloat(m[1]).toFixed(5);
+      });
+    }
+  }
+  if (name === 'mavros_state') {
+    const armed = raw.match(/armed:\s*(\w+)/);
+    const mode = raw.match(/mode:\s*(\S+)/);
+    const conn = raw.match(/connected:\s*(\w+)/);
+    const sys = raw.match(/system_status:\s*(\d+)/);
+    if (armed) {
+      document.getElementById('mav-state-parsed').style.display = 'grid';
+      if (armed) { const v=armed[1]; document.getElementById('mav-armed').textContent=v; document.getElementById('mav-armed').style.color=v==='True'?'var(--green)':'var(--muted)'; }
+      if (mode) document.getElementById('mav-mode').textContent = mode[1];
+      if (conn) document.getElementById('mav-conn').textContent = conn[1];
+      if (sys) document.getElementById('mav-sys').textContent = sys[1];
+    }
+  }
+}
+
+function togglePoll(name, outId, btnId) {
+  const key = name + '_' + outId;
+  if (_polls[key]) {
+    clearInterval(_polls[key]);
+    delete _polls[key];
+    document.getElementById(btnId).textContent = '▶ Live Poll (2s)';
+  } else {
+    echoTopic(name, outId);
+    _polls[key] = setInterval(() => echoTopic(name, outId), 2000);
+    document.getElementById(btnId).textContent = '■ Stop Poll';
+    document.getElementById(btnId).style.color = 'var(--red)';
+  }
+}
+
+// ─── Mavros commands ──────────────────────────────────────────────────────────
+async function mavArm(arm) {
+  toast(arm ? 'Sending ARM…' : 'Sending DISARM…', 'info');
+  const r = await jpost('/api/ros2/mavros/arm', { arm });
+  showOut('mav-cmd-out', fmtResult(r.data), !r.ok);
+  if (r.ok) toast(arm ? 'ARM sent ✓' : 'DISARM sent ✓', 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+async function mavSetMode() {
+  const mode = document.getElementById('mav-mode-input').value.trim();
+  if (!mode) { toast('Enter a mode', 'err'); return; }
+  toast(`Setting mode: ${mode}…`, 'info');
+  const r = await jpost('/api/ros2/mavros/set_mode', { mode });
+  showOut('mav-cmd-out', fmtResult(r.data), !r.ok);
+  if (r.ok) toast(`Mode ${mode} sent ✓`, 'ok');
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+// ─── Components ───────────────────────────────────────────────────────────────
+async function loadComponents() {
+  const grid = document.getElementById('comp-grid');
+  grid.innerHTML = '<div style="color:var(--muted)">Loading…</div>';
+  const r = await api('/api/sm/status');
+  if (!r.ok) {
+    grid.innerHTML = `<div style="color:var(--red)">system_manager unavailable: ${r.data.error || r.status}</div>`;
+    return;
+  }
+  const comps = r.data.components || [];
+  if (!comps.length) { grid.innerHTML = '<div style="color:var(--muted)">No components</div>'; return; }
+
+  grid.innerHTML = '';
+  comps.forEach(c => {
+    const name = c.name.replace('terraslam/', '');
+    const dotClass = c.level === 0 ? 'dot-ok' : (c.level === 1 ? 'dot-warn' : 'dot-err');
+    const pid = c.values?.pid ? ` · pid ${c.values.pid}` : '';
+    const div = document.createElement('div');
+    div.className = 'comp-card';
+    div.innerHTML = `
+      <div class="comp-name">${name}</div>
+      <div class="comp-status">
+        <span class="dot ${dotClass}"></span>
+        ${c.message}${pid}
+      </div>
+      <div class="comp-actions">
+        <button class="btn btn-sm btn-green" onclick="smCompAction('${name}','start')">Start</button>
+        <button class="btn btn-sm btn-red" onclick="smCompAction('${name}','stop')">Stop</button>
+        <button class="btn btn-sm btn-orange" onclick="smCompAction('${name}','restart')">↻</button>
+      </div>`;
+    grid.appendChild(div);
+  });
+}
+
+async function smCompAction(comp, action) {
+  toast(`${action} → ${comp}…`, 'info');
+  const r = await jpost(`/api/sm/components/${comp}/${action}`, {});
+  if (r.ok) { toast(`${comp}: ${action} OK`, 'ok'); loadComponents(); }
+  else toast('Error: ' + (r.data.error || r.status), 'err');
+}
+
+// ─── Logs ──────────────────────────────────────────────────────────────────────
+let logFollowInterval = null;
+let lastLogTs = null;
+
+function clearLogs() {
+  document.getElementById('log-output').innerHTML = '';
+  lastLogTs = null;
+}
+
+function colorLevel(lvl) {
+  if (lvl === 'ERROR') return 'log-error';
+  if (lvl === 'WARN') return 'log-warn';
+  if (lvl === 'DEBUG') return 'log-debug';
+  return 'log-info';
+}
+
+function appendLogs(logs) {
+  const el = document.getElementById('log-output');
+  logs.forEach(l => {
+    const ts = new Date(l.timestamp * 1000).toLocaleTimeString();
+    const cls = colorLevel(l.level);
+    const span = document.createElement('span');
+    span.className = 'log-line ' + cls;
+    span.textContent = `[${ts}][${(l.level||'INFO').padEnd(5)}][${(l.component||'?').padEnd(16)}] ${l.message}`;
+    el.appendChild(span);
+  });
+  el.scrollTop = el.scrollHeight;
+  if (logs.length) lastLogTs = logs[logs.length - 1].timestamp;
+}
+
+async function loadLogs() {
+  clearLogs();
+  const comp = document.getElementById('log-comp').value;
+  const params = new URLSearchParams({ limit: 100 });
+  if (comp) params.set('component', comp);
+  const r = await api('/api/sm/logs?' + params);
+  if (!r.ok) {
+    document.getElementById('log-output').innerHTML = `<span style="color:var(--red)">SM unavailable: ${r.data.error || r.status}</span>`;
+    return;
+  }
+  appendLogs(r.data.logs || []);
+}
+
+async function fetchNewLogs() {
+  const comp = document.getElementById('log-comp').value;
+  const params = new URLSearchParams({ limit: 50 });
+  if (comp) params.set('component', comp);
+  if (lastLogTs) params.set('since', lastLogTs);
+  const r = await api('/api/sm/logs?' + params);
+  if (r.ok) appendLogs(r.data.logs || []);
+}
+
+function toggleLogFollow() {
+  const btn = document.getElementById('log-follow-btn');
+  if (logFollowInterval) {
+    clearInterval(logFollowInterval);
+    logFollowInterval = null;
+    btn.textContent = '▶ Follow';
+    btn.style.color = '';
+  } else {
+    loadLogs();
+    logFollowInterval = setInterval(fetchNewLogs, 2000);
+    btn.textContent = '■ Stop Follow';
+    btn.style.color = 'var(--red)';
+  }
+}
+
+// ─── Auto-refresh slam status in background ───────────────────────────────────
+setInterval(() => {
+  if (currentPanel === 'slam') refreshSlamStatus();
+  if (currentPanel === 'mode') refreshSlamStatus2();
+  if (currentPanel === 'components') loadComponents();
+}, 8000);
+
+// ─── Camera Live Feed (MJPEG) ────────────────────────────────────────────────
+// The server streams multipart/x-mixed-replace — the browser updates <img>
+// automatically with no JS polling at all. We just set/clear the src.
+let _camFeedActive = false;
+let _camFeedInterval = null; // kept for show() cleanup compat
+
+function setCamBadge(state) {
+  const el = document.getElementById('cam-feed-badge');
+  if (!el) return;
+  if (state === 'live') { el.textContent = 'LIVE'; el.className = 'badge badge-ok'; }
+  else if (state === 'loading') { el.textContent = '…'; el.className = 'badge badge-warn'; }

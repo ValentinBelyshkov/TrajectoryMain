@@ -1,0 +1,6 @@
+[submodule "ORB_SLAM3"]
+	path = ORB_SLAM3
+	url = https://github.com/ORB-SLAM/ORB-SLAM3.git
+[submodule "TWA"]
+	path = TWA
+	url = https://github.com/ValentinBelyshkov/TWA.git

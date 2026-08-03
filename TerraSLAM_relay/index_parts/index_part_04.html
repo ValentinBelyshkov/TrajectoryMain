@@ -1,0 +1,300 @@
+  document.getElementById('panel-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  currentPanel = name;
+  if (name === 'components') loadComponents();
+  if (name === 'logs') loadLogs();
+  if (name === 'slam' || name === 'mode') refreshSlamStatus();
+  if (name === 'gps_sender') {
+    loadCalib();
+    initDroneMap();
+    fetchGpsPosition();
+  }
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3500);
+}
+
+// ─── API helpers ─────────────────────────────────────────────────────────────
+async function api(path, opts={}) {
+  try {
+    const r = await fetch(path, opts);
+    const d = await r.json();
+    return { ok: r.ok, status: r.status, data: d };
+  } catch(e) {
+    return { ok: false, status: 0, data: { error: String(e) } };
+  }
+}
+
+function jpost(path, body) {
+  return api(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+function showOut(id, text, isErr=false) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.className = 'output' + (isErr ? ' err' : '');
+  el.textContent = text;
+  el.scrollTop = el.scrollHeight;
+}
+
+function fmtResult(d) {
+  if (typeof d === 'string') return d;
+  return JSON.stringify(d, null, 2);
+}
+
+// ─── Camera snapshot ─────────────────────────────────────────────────────────
+async function takeSnapshot() {
+  const path = document.getElementById('snapshot-path').value.trim();
+  if (!path) { toast('Укажите путь для сохранения', 'err'); return; }
+  showOut('snapshot-out', 'Сохранение…');
+  const r = await jpost('/api/v1/camera/snapshot', { path });
+  if (r.ok && r.data.success) {
+    showOut('snapshot-out',
+      `Фото: ${r.data.image_path}\nПоза: ${r.data.pose_path}\nВозраст позы: ${r.data.pose_age_seconds ?? '—'} с`);
+    toast('Снимок сохранён', 'ok');
+  } else {
+    showOut('snapshot-out', fmtResult(r.data.detail || r.data), true);
+    toast('Ошибка сохранения снимка', 'err');
+  }
+}
+
+// ─── Auto Capture for Calibration ────────────────────────────────────────────
+const AUTOCAP_MAX_CONSECUTIVE_ERRORS = 5;
+const AUTOCAP_LOG_MAX_LINES = 200;
+
+let _autoCaptureTimer    = null;
+let _autoCaptureIndex    = 0;
+let _autoCaptureRunning  = false;
+let _autoCaptureLog      = [];   // rolling log lines
+let _autoCaptureErrStreak = 0;   // consecutive errors counter
+
+function toggleAutoCapture() {
+  if (_autoCaptureRunning) {
+    _stopAutoCapture('manual');
+  } else {
+    _startAutoCapture();
+  }
+}
+
+// Append a line to the rolling log and refresh the output div
+function _autocapLog(line, isErr) {
+  const ts = new Date().toLocaleTimeString();
+  _autoCaptureLog.push(`[${ts}] ${line}`);
+  if (_autoCaptureLog.length > AUTOCAP_LOG_MAX_LINES)
+    _autoCaptureLog.splice(0, _autoCaptureLog.length - AUTOCAP_LOG_MAX_LINES);
+  const el = document.getElementById('autocap-out');
+  if (el) {
+    el.style.display = 'block';
+    el.className = 'output' + (isErr ? ' err' : '');
+    el.textContent = _autoCaptureLog.join('\n');
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+async function _startAutoCapture() {
+  const dir = document.getElementById('autocap-dir').value.trim().replace(/\/+$/, '');
+  if (!dir) { toast('Укажите директорию для сохранения', 'err'); return; }
+  const ms = Math.max(200, parseInt(document.getElementById('autocap-interval').value, 10) || 1000);
+
+  // Session prefix — ensures each run writes to a unique filename namespace
+  const now = new Date();
+  const sess = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(v => String(v).padStart(2, '0')).join('');
+
+  // Disable the button while preflight runs
+  const btn = document.getElementById('autocap-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Проверка…';
+  _autoCaptureLog = [];
+  _autoCaptureIndex = 0;
+  _autoCaptureErrStreak = 0;
+
+  // ── Preflight: one test capture before entering REC state ──────────────────
+  _autocapLog(`Префлайт: ${dir}/calib_${sess}_test.jpg`);
+  const pre = await jpost('/api/v1/camera/snapshot',
+    { path: `${dir}/calib_${sess}_test.jpg` });
+  btn.disabled = false;
+
+  if (!pre.ok || !pre.data?.success) {
+    const err = pre.data?.detail || JSON.stringify(pre.data);
+    _autocapLog(`❌ Префлайт не прошёл: ${err}`, true);
+    toast('Захват не запущен — камера/директория недоступны', 'err');
+    btn.textContent = '▶ Начать захват';
+    btn.className = 'btn btn-green btn-lg';
+    return;
+  }
+  _autocapLog(`✔ Префлайт OK  (возраст позы: ${pre.data.pose_age_seconds ?? '—'} с)`);
+
+  // ── Enter REC state ────────────────────────────────────────────────────────
+  _autoCaptureRunning = true;
+  btn.textContent = '■ Остановить захват';
+  btn.className = 'btn btn-red btn-lg';
+  document.getElementById('autocap-badge').textContent = 'REC';
+  document.getElementById('autocap-badge').className = 'badge badge-ok';
+  document.getElementById('autocap-counter').textContent = 'Снимков: 0';
+  document.getElementById('autocap-last').textContent = `сессия ${sess}`;
+
+  const _doCapture = async () => {
+    if (!_autoCaptureRunning) return;
+    _autoCaptureIndex++;
+    const n = String(_autoCaptureIndex).padStart(4, '0');
+    const path = `${dir}/calib_${sess}_${n}.jpg`;
+    const r = await jpost('/api/v1/camera/snapshot', { path });
+
+    if (r.ok && r.data?.success) {
+      _autoCaptureErrStreak = 0;
+      document.getElementById('autocap-counter').textContent = `Снимков: ${_autoCaptureIndex}`;
+      document.getElementById('autocap-last').textContent =
+        `[${new Date().toLocaleTimeString()}] ${path}`;
+      _autocapLog(`#${n}  ✔  поза_возраст=${r.data.pose_age_seconds ?? '—'} с  →  ${path}`);
+    } else {
+      _autoCaptureErrStreak++;
+      const err = r.data?.detail || JSON.stringify(r.data);
+      _autocapLog(`#${n}  ❌  ${err}  (ошибок подряд: ${_autoCaptureErrStreak})`, true);
+
+      if (_autoCaptureErrStreak >= AUTOCAP_MAX_CONSECUTIVE_ERRORS) {
+        _autocapLog(`⛔ Остановлено: ${AUTOCAP_MAX_CONSECUTIVE_ERRORS} ошибок подряд`, true);
+        _stopAutoCapture('error');
+        return;
+      }
+    }
+
+    if (_autoCaptureRunning) {
+      _autoCaptureTimer = setTimeout(_doCapture, ms);
+    }
+  };
+
+  _autoCaptureTimer = setTimeout(_doCapture, ms);
+}
+
+function _stopAutoCapture(reason) {
+  _autoCaptureRunning = false;
+  if (_autoCaptureTimer) { clearTimeout(_autoCaptureTimer); _autoCaptureTimer = null; }
+  const btn = document.getElementById('autocap-btn');
+  btn.textContent = '▶ Начать захват';
+  btn.className = 'btn btn-green btn-lg';
+  btn.disabled = false;
+  document.getElementById('autocap-badge').textContent = 'OFF';
+  document.getElementById('autocap-badge').className = 'badge badge-warn';
+  if (reason !== 'manual')
+    _autocapLog(`Захват завершён. Сохранено снимков: ${_autoCaptureIndex}`, reason === 'error');
+  toast(
+    reason === 'error'
+      ? `Захват прерван (ошибки). Снимков: ${_autoCaptureIndex}`
+      : `Захват остановлен — сохранено ${_autoCaptureIndex} снимков`,
+    reason === 'error' ? 'err' : 'ok'
+  );
+}
+
+// ─── Health check ────────────────────────────────────────────────────────────
+async function checkHealth() {
+  const r = await api('/health');
+  const smBadge = document.getElementById('sm-badge');
+  if (r.ok && r.data.system_manager === 'ok') {
+    smBadge.textContent = 'SM OK';
+    smBadge.className = 'badge badge-ok';
+  } else if (r.ok) {
+    smBadge.textContent = 'SM unavailable';
+    smBadge.className = 'badge badge-warn';
+  } else {
+    smBadge.textContent = 'SM offline';
+    smBadge.className = 'badge badge-err';
+  }
+}
+checkHealth();
+setInterval(checkHealth, 10000);
+
+// ─── SLAM status ─────────────────────────────────────────────────────────────
+async function refreshSlamStatus() {
+  const r = await api('/api/sm/slam/status');
+  if (!r.ok) return;
+  const s = r.data.status || {};
+  document.getElementById('ss-state').textContent = s.slam_state_name || '—';
+  document.getElementById('ss-mode').textContent = s.drone_mode || '—';
+  document.getElementById('ss-init').textContent = s.initialized ? '✅ Yes' : '❌ No';
+  const ts = s.timestamp ? new Date(s.timestamp * 1000).toLocaleTimeString() : '—';
+  document.getElementById('ss-ts').textContent = ts;
+}
+
+async function refreshSlamStatus2() {
+  const r = await api('/api/sm/slam/status');
+  if (!r.ok) return;
+  const s = r.data.status || {};
+  document.getElementById('sm2-mode').textContent = s.drone_mode || '—';
+  document.getElementById('sm2-state').textContent = s.slam_state_name || '—';
+  const m = s.drone_mode || '';
+  document.getElementById('mode-loc').classList.toggle('active', m === 'LOCALIZATION_ONLY');
+  document.getElementById('mode-map').classList.toggle('active', m === 'SLAM_MAPPING');
+}
+
+// ─── Pose / fallback live status (WebSocket) ──────────────────────────────────
+let poseWs = null;
+let poseWsReconnectTimer = null;
+
+function wsBaseUrl() {
+  // system_manager (FastAPI, port 9000) is reverse-proxied by the Flask
+  // gateway on the same host; connect to the same origin the page was
+  // served from, over ws:// or wss:// to match http/https.
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${location.host}`;
+}
+
+function setWsBadge(state) {
+  const el = document.getElementById('ws-badge');
+  if (!el) return;
+  if (state === 'ok') { el.textContent = 'WS live'; el.className = 'badge badge-ok'; }
+  else if (state === 'connecting') { el.textContent = 'WS …'; el.className = 'badge badge-warn'; }
+  else { el.textContent = 'WS offline'; el.className = 'badge badge-err'; }
+}
+
+function renderPoseStatus(s) {
+  if (!s) return;
+  const stateLabels = { fallback: '⚠ FALLBACK', alive: '✅ alive', unknown: '❓ unknown' };
+  document.getElementById('ps-state').textContent = stateLabels[s.state] || s.state || '—';
+  document.getElementById('ps-tracking-lost').textContent = s.tracking_lost ? '⚠ YES' : 'no';
+  document.getElementById('ps-fallback-active').textContent = s.fallback_active ? '⚠ YES' : 'no';
+  document.getElementById('ps-age').textContent = (s.age_seconds != null) ? s.age_seconds : '—';
+  const sel = document.getElementById('fallback-method-select');
+  if (sel && s.fallback_method && sel.value !== s.fallback_method) sel.value = s.fallback_method;
+  if (s.last_fallback) {
+    showOut('fallback-out', fmtResult(s.last_fallback), !s.last_fallback.success);
+  }
+}
+
+function connectPoseWs() {
+  setWsBadge('connecting');
+  try {
+    poseWs = new WebSocket(wsBaseUrl() + '/ws/pose_status');
+  } catch (e) {
+    setWsBadge('offline');
+    scheduleWsReconnect();
+    return;
+  }
+  poseWs.onopen = () => setWsBadge('ok');
+  poseWs.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'pose_status' || msg.type === 'heartbeat') renderPoseStatus(msg.data);
+    } catch (e) { /* ignore malformed frame */ }
+  };
+  poseWs.onerror = () => setWsBadge('offline');
+  poseWs.onclose = () => {
+    setWsBadge('offline');
+    scheduleWsReconnect();
+  };
+}
+
+function scheduleWsReconnect() {
+  clearTimeout(poseWsReconnectTimer);
+  poseWsReconnectTimer = setTimeout(connectPoseWs, 3000);

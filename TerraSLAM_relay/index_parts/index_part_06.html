@@ -1,0 +1,197 @@
+  else { el.textContent = 'OFF'; el.className = 'badge badge-warn'; }
+}
+
+async function grabFrame() {
+  // Single-frame snapshot via /api/v1/camera/frame (reads from in-memory state)
+  const img = document.getElementById('camera-live-img');
+  const errEl = document.getElementById('cam-err');
+  const tsEl = document.getElementById('cam-last-ts');
+  try {
+    const r = await fetch('/api/v1/camera/frame?t=' + Date.now());
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      errEl.textContent = d.detail || `HTTP ${r.status}`;
+      errEl.style.display = 'block';
+      return;
+    }
+    const blob = await r.blob();
+    const prev = img.src;
+    img.src = URL.createObjectURL(blob);
+    img.style.display = 'block';
+    errEl.style.display = 'none';
+    tsEl.textContent = new Date().toLocaleTimeString();
+    if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+  } catch(e) {
+    errEl.textContent = String(e);
+    errEl.style.display = 'block';
+  }
+}
+
+function toggleCameraFeed() {
+  const btn = document.getElementById('cam-feed-btn');
+  const img = document.getElementById('camera-live-img');
+  const errEl = document.getElementById('cam-err');
+
+  if (_camFeedActive) {
+    // Stop: disconnect from the MJPEG stream by clearing src
+    img.src = '';
+    img.style.display = 'none';
+    btn.textContent = '▶ Запустить трансляцию';
+    btn.className = 'btn btn-green btn-lg';
+    setCamBadge('off');
+    _camFeedActive = false;
+    _camFeedInterval = null;
+  } else {
+    // Start: point <img> at the MJPEG stream — browser handles everything
+    errEl.style.display = 'none';
+    img.onerror = () => {
+      setCamBadge('off');
+      errEl.textContent = 'Нет данных с камеры (/camera/image_raw не публикуется)';
+      errEl.style.display = 'block';
+    };
+    img.onload = () => {
+      setCamBadge('live');
+      document.getElementById('cam-last-ts').textContent = new Date().toLocaleTimeString();
+    };
+    img.src = '/api/v1/camera/stream';
+    img.style.display = 'block';
+    btn.textContent = '■ Остановить трансляцию';
+    btn.className = 'btn btn-red btn-lg';
+    setCamBadge('loading');
+    _camFeedActive = true;
+    _camFeedInterval = true; // truthy so show() cleanup branch fires
+  }
+}
+
+
+// ─── GPS Sender: calib.gpc editor ────────────────────────────────────────────
+async function loadCalib() {
+  const statusEl = document.getElementById('calib-status');
+  statusEl.textContent = 'Загрузка…';
+  const r = await api('/api/v1/gps/calib');
+  if (r.ok && r.data.success) {
+    document.getElementById('calib-editor').value = r.data.content;
+    statusEl.textContent = '✅ Загружено';
+    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+  } else {
+    statusEl.textContent = '⚠ ' + (r.data.detail || r.data.error || 'не найден');
+    showOut('calib-out', fmtResult(r.data), true);
+  }
+}
+
+async function saveCalib() {
+  const content = document.getElementById('calib-editor').value;
+  const statusEl = document.getElementById('calib-status');
+  statusEl.textContent = 'Сохранение…';
+  const r = await jpost('/api/v1/gps/calib', { content });
+  if (r.ok && r.data.success) {
+    statusEl.textContent = '✅ Сохранено';
+    toast('calib.gpc сохранён', 'ok');
+    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+  } else {
+    statusEl.textContent = '❌ Ошибка';
+    showOut('calib-out', fmtResult(r.data), true);
+    toast('Ошибка сохранения', 'err');
+  }
+}
+
+// ─── GPS Sender: live position polling ───────────────────────────────────────
+let _gpsPollInterval = null;
+let _droneMap = null;
+let _droneMarker = null;
+let _droneMapReady = false;
+
+function initDroneMap() {
+  if (_droneMapReady) return;
+  const container = document.getElementById('drone-map');
+  if (!container) return;
+  if (typeof window.L === 'undefined') {
+    container.innerHTML = '<div style="padding:20px;color:var(--red)">⚠ Leaflet не загружен (нет сети). Карта недоступна.</div>';
+    return;
+  }
+  try {
+    _droneMap = L.map('drone-map').setView([55.492, 38.634], 17);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 22,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(_droneMap);
+    _droneMapReady = true;
+  } catch(e) {
+    container.innerHTML = `<div style="padding:20px;color:var(--red)">⚠ Ошибка инициализации карты: ${e}</div>`;
+  }
+}
+
+function centerDroneMap() {
+  if (_droneMap && _droneMarker) {
+    _droneMap.setView(_droneMarker.getLatLng(), _droneMap.getZoom());
+  }
+}
+
+function updateGpsUI(d) {
+  const badge = document.getElementById('gps-badge');
+  if (d.success) {
+    badge.textContent = 'OK'; badge.className = 'badge badge-ok';
+    document.getElementById('gps-lat').textContent = d.lat != null ? d.lat.toFixed(7) : '—';
+    document.getElementById('gps-lon').textContent = d.lon != null ? d.lon.toFixed(7) : '—';
+    document.getElementById('gps-alt').textContent = d.alt != null ? d.alt.toFixed(2) : '—';
+    document.getElementById('gps-px').textContent = d.pose_x != null ? d.pose_x.toFixed(4) : '—';
+    document.getElementById('gps-py').textContent = d.pose_y != null ? d.pose_y.toFixed(4) : '—';
+    document.getElementById('gps-pz').textContent = d.pose_z != null ? d.pose_z.toFixed(4) : '—';
+    document.getElementById('gps-age').textContent = d.pose_age_seconds != null ? d.pose_age_seconds + ' с' : '—';
+    document.getElementById('gps-err').style.display = 'none';
+
+    // Update map marker
+    if (_droneMapReady && d.lat != null && d.lon != null) {
+      const latlng = [d.lat, d.lon];
+      if (!_droneMarker) {
+        _droneMarker = L.marker(latlng, {
+          icon: L.divIcon({
+            className: '',
+            html: '<div style="font-size:24px;line-height:1;filter:drop-shadow(0 0 4px #3fb950)">🛸</div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          })
+        }).addTo(_droneMap);
+        _droneMap.setView(latlng, 18);
+      } else {
+        _droneMarker.setLatLng(latlng);
+      }
+    }
+  } else {
+    badge.textContent = '⚠'; badge.className = 'badge badge-warn';
+    const errEl = document.getElementById('gps-err');
+    errEl.textContent = d.error || 'нет данных';
+    errEl.style.display = 'block';
+  }
+}
+
+async function fetchGpsPosition() {
+  const r = await api('/api/v1/gps/position');
+  if (r.ok) {
+    updateGpsUI(r.data);
+  } else {
+    const badge = document.getElementById('gps-badge');
+    if (badge) { badge.textContent = '⚠'; badge.className = 'badge badge-err'; }
+    const errEl = document.getElementById('gps-err');
+    if (errEl) { errEl.textContent = r.data.detail || r.data.error || `HTTP ${r.status}`; errEl.style.display = 'block'; }
+  }
+}
+
+function toggleGpsPoll() {
+  const btn = document.getElementById('gps-poll-btn');
+  if (_gpsPollInterval) {
+    clearInterval(_gpsPollInterval);
+    _gpsPollInterval = null;
+    btn.textContent = '▶ Live';
+    btn.style.color = '';
+  } else {
+    fetchGpsPosition();
+    _gpsPollInterval = setInterval(fetchGpsPosition, 2000);
+    btn.textContent = '■ Stop';
+    btn.style.color = 'var(--red)';
+  }
+}
+</script>
+</body>
+</html>
+
