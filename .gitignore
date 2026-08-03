@@ -47,6 +47,8 @@ orb_slam3_ros2_wrapper/params/olympe.yaml
 ORB_SLAM3/Vocabulary/ORBvoc.txt
 
 build/
+.fisuon/
+.kilo/
 
 *.mp4
 # Prerequisites

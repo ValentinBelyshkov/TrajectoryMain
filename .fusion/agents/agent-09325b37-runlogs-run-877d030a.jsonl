@@ -1,0 +1,2 @@
+{"timestamp":"2026-08-03T18:47:45.940Z","taskId":"heartbeat","type":"text","text":"Agent memory inclusion mode: (initial) → full (source: global)"}
+{"timestamp":"2026-08-03T18:47:46.052Z","taskId":"","text":"Mock heartbeat no-op.","type":"text","agent":"custom","timeToFirstTokenMs":93}

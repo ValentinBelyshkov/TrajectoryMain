@@ -15,53 +15,8 @@ from fastapi import WebSocket
 from .config import COMPONENT_CONFIG
 
 
-# --- YAML Updater ---
-def update_yaml(yaml_path: str, save_path: str):
-    """
-    Updates ORB-SLAM3 YAML config using text replacement.
-    Preserves OpenCV FileStorage format (%YAML:1.0 etc).
-    """
-    if os.path.exists(yaml_path):
-        with open(yaml_path, "r") as f:
-            lines = f.readlines()
-    else:
-        lines = []
-
-    settings = {
-        "System.SaveAtlas": "true",
-        "System.LoadAtlas": "false",
-        "System.AtlasLoadPath": '""',
-        "System.AtlasSavePath": f'"{save_path}"',
-    }
-
-    updated = {}
-    new_lines = []
-
-    for line in lines:
-        stripped = line.strip()
-        replaced = False
-        for key, value in settings.items():
-            if stripped.startswith(f"{key}:") or stripped.startswith(f"{key} :"):
-                indent = line[:len(line) - len(line.lstrip())]
-                new_lines.append(f"{indent}{key}: {value}\n")
-                updated[key] = True
-                replaced = True
-                break
-        if not replaced:
-            new_lines.append(line)
-
-    missing = [k for k in settings if k not in updated]
-    if missing:
-        if new_lines and new_lines[-1].strip() != "":
-            new_lines.append("\n")
-        for key in missing:
-            new_lines.append(f"{key}: {settings[key]}\n")
-
-    os.makedirs(os.path.dirname(yaml_path), exist_ok=True)
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-
-    with open(yaml_path, "w") as f:
-        f.writelines(new_lines)
+# YAML updater moved to utils/yaml_editor.py
+from .utils.yaml_editor import update_yaml
 
 
 # --- Log Hub ---

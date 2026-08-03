@@ -180,7 +180,9 @@ RUN echo "/home/orb/ORB_SLAM3/lib" > /etc/ld.so.conf.d/orb_slam3.conf && \
     ldconfig
 
 RUN apt-get update && apt-get install -y python3-pip python3-smbus && \
-    pip install --no-cache-dir fastapi uvicorn serial pyyaml requests pymap3d smbus2 && \
+    pip install --no-cache-dir fastapi uvicorn serial pyyaml requests pymap3d smbus2 \
+        sqlalchemy opencv-python-headless pillow python-multipart websockets sse-starlette \
+        pydantic python-dotenv aiofiles httpx numpy && \
     rm -rf /var/lib/apt/lists/*
         
 COPY entrypoint.sh /entrypoint.sh

@@ -19,8 +19,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi import Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 import os
+from pathlib import Path
 
-from . import routes_components, routes_ros, routes_slam, routes_gps, ws_routes
+from . import routes_components, routes_ros, routes_slam, routes_gps, routes_calibration, ws_routes
+from . import routes_projects, routes_calibration_twa, routes_control, routes_telemetry, routes_video, routes_settings
 from .pose_monitor import pose_monitor
 from .process_manager import manager
 from . import camera_stream
@@ -32,12 +34,24 @@ app.include_router(routes_components.router)
 app.include_router(routes_slam.router)
 app.include_router(routes_ros.router)
 app.include_router(routes_gps.router)
+app.include_router(routes_calibration.router)
 app.include_router(ws_routes.router)
+app.include_router(routes_projects.router, prefix="/api/projects", tags=["projects"])
+app.include_router(routes_calibration_twa.router, prefix="/api/projects", tags=["calibration_twa"])
+app.include_router(routes_control.router, prefix="/api/control", tags=["control"])
+app.include_router(routes_telemetry.router, prefix="/api/telemetry", tags=["telemetry"])
+app.include_router(routes_video.router, prefix="/api/video", tags=["video"])
+app.include_router(routes_settings.router, prefix="/api/settings", tags=["settings"])
 
-app.mount("/assets", StaticFiles(directory="/opt/main/Trajectory/TerraSLAM_relay/assets"), name="assets")
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_RELAY_DIR = os.path.abspath(os.path.join(_THIS_DIR, "..", ".."))
+_ASSETS_DIR = os.path.join(_RELAY_DIR, "assets")
+if os.path.isdir(_ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
 
 _TILES_ROOT = "/opt/main/Maps/tiles"
-os.makedirs(_TILES_ROOT, exist_ok=True)
+if os.path.isdir(_TILES_ROOT):
+    os.makedirs(_TILES_ROOT, exist_ok=True)
 
 
 def _iter_candidate_paths(z: int, x: int, y: int):
@@ -94,15 +108,36 @@ async def serve_tile_alias(z: int, x: int, y: int, request: Request):
 @app.on_event("startup")
 async def startup():
     try:
+        projects_path = Path("/home/orb/Database/projects")
+        projects_path.mkdir(parents=True, exist_ok=True)
+        app.state.projects_path = projects_path
+    except Exception as e:
+        print(f"[startup] projects_path init error: {e}")
+
+    try:
         res = await manager.start("rosbridge")
         print(f"[startup] {res}")
     except Exception as e:
         print(f"[startup] Failed to start rosbridge: {e}")
-    pose_monitor.start()
-    camera_stream.start()
+
+    try:
+        pose_monitor.start()
+    except Exception as e:
+        print(f"[startup] pose_monitor start error: {e}")
+
+    try:
+        camera_stream.start()
+    except Exception as e:
+        print(f"[startup] camera_stream start error: {e}")
 
 
 @app.on_event("shutdown")
 async def shutdown():
-    await pose_monitor.stop()
-    await manager.stop_all()
+    try:
+        await pose_monitor.stop()
+    except Exception:
+        pass
+    try:
+        await manager.stop_all()
+    except Exception:
+        pass
