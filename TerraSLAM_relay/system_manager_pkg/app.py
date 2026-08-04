@@ -111,7 +111,7 @@ async def serve_tile_alias(z: int, x: int, y: int, request: Request):
 @app.on_event("startup")
 async def startup():
     try:
-        projects_path = Path(os.getenv("PROJECTS_DIR", "/home/orb/Database/projects"))
+        projects_path = Path(os.getenv("PROJECTS_DIR", "/opt/main/Trajectory/Database/projects"))
         projects_path.mkdir(parents=True, exist_ok=True)
         app.state.projects_path = projects_path
     except Exception as e:

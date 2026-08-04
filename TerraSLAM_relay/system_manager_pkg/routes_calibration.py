@@ -27,11 +27,11 @@ from .ros_utils import ros2_run
 
 router = APIRouter()
 
-SESSIONS_DIR = Path(os.getenv("CALIBRATION_SESSIONS_DIR", "/home/orb/Database/calibration_sessions"))
+SESSIONS_DIR = Path(os.getenv("CALIBRATION_SESSIONS_DIR", "/opt/main/Trajectory/Database/projects/calibration_sessions"))
 SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 
 PROCFRAME_DIR = Path(os.getenv("PROCFRAME_DIR", "/opt/main/Trajectory/output/procframe"))
-PROJECTS_DIR = Path(os.getenv("PROJECTS_DIR", "/home/orb/Database/projects"))
+PROJECTS_DIR = Path(os.getenv("PROJECTS_DIR", "/opt/main/Trajectory/Database/projects"))
 
 
 class SessionStatus(str):
