@@ -156,6 +156,7 @@ export default function ProjectScreen() {
           onUploadErrorDismiss={clearUploadError}
           projectId={projectId}
           projectType={project?.type}
+          publisherMode={systemStatus?.publisher_mode}
           projectVideoFilename={project?.videoFilename}
           hasVideoStream={hasVideoStream}
           videoCanvasRef={videoCanvasRef}
