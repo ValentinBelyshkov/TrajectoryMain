@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:9000
+    container_name: odometry-frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./client:/app/client
+      - ./shared:/app/shared
+    environment:
+      - VITE_WS_URL=ws://localhost:9000
+      - VITE_PUBLIC_BUILDER_KEY=${VITE_PUBLIC_BUILDER_KEY}
+      - FASTAPI_URL=http://host.docker.internal:9000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - webadmin_net
+    restart: unless-stopped
+    
+
+networks:
+  webadmin_net:
+    driver: bridge

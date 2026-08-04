@@ -1,0 +1,162 @@
+/** @import must precede all other statements */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 210 11% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 11% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 11% 15%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 189 82% 47%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 10% 90%;
+    --muted-foreground: 210 6% 42%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 210 10% 92%;
+    --input: 210 10% 96%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 199 89% 48%;
+
+    --sidebar-primary-foreground: 0 0% 100%;
+
+    --sidebar-accent: 199 89% 48%;
+
+    --sidebar-accent-foreground: 0 0% 100%;
+
+    --sidebar-border: 210 10% 90%;
+
+    --sidebar-ring: 199 89% 48%;
+  }
+
+  .dark {
+    --background: 210 11% 12%;
+    --foreground: 0 0% 98%;
+
+    --card: 210 11% 18%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 210 11% 18%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 199 89% 58%;
+    --primary-foreground: 210 11% 12%;
+
+    --secondary: 189 82% 56%;
+    --secondary-foreground: 210 11% 12%;
+
+    --muted: 210 11% 28%;
+    --muted-foreground: 210 6% 68%;
+
+    --accent: 199 89% 58%;
+    --accent-foreground: 210 11% 12%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 210 11% 24%;
+    --input: 210 11% 24%;
+    --ring: 199 89% 58%;
+    --sidebar-background: 210 11% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 199 89% 58%;
+    --sidebar-primary-foreground: 210 11% 12%;
+    --sidebar-accent: 199 89% 58%;
+    --sidebar-accent-foreground: 210 11% 12%;
+    --sidebar-border: 210 11% 24%;
+    --sidebar-ring: 199 89% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  pre,
+  code {
+    overflow-x: auto;
+    white-space: pre;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2.5 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 transition-colors shadow-sm hover:shadow-md;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2.5 rounded-lg font-semibold text-foreground bg-secondary/20 hover:bg-secondary/30 transition-colors;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2.5 rounded-lg font-semibold text-foreground hover:bg-muted transition-colors;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  /* Leaflet Map Styles */
+  #map {
+    @apply w-full h-full;
+    z-index: 10;
+  }
+
+  #map .leaflet-control {
+    @apply rounded-lg shadow-md;
+  }
+
+  #map .leaflet-popup-content-wrapper {
+    @apply rounded-lg shadow-lg border border-border;
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+  }
+
+  #map .leaflet-popup-tip {
+    background-color: hsl(var(--card));
+  }
+
+  #map .leaflet-container {
+    font-family: inherit;
+  }
+}

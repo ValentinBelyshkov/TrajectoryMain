@@ -1,0 +1,22 @@
+<!DOCTYPE html><body><h3>ROS Bridge Test</h3>
+<img id="v" width="640" style="border:2px solid #f00;background:#000"><br>
+<pre id="l" style="font:11px monospace;background:#000;color:#0f0"></pre>
+<script>
+const log=m=>document.getElementById('l').innerText='['+new Date().toLocaleTimeString()+'] '+m+'\n'+document.getElementById('l').innerText;
+let ws;function go(){
+  log('Connecting...');ws=new WebSocket(document.getElementById('u').value||'ws://localhost:9090');
+  ws.onopen=()=>{log('✅ Connected');ws.send(JSON.stringify({op:'subscribe',topic:'/camera/image_raw',type:'sensor_msgs/msg/Image',fragment_size:0}));log('📡 Subscribed');};
+  ws.onmessage=e=>{try{const msg=JSON.parse(e.data);if(msg.topic==='/camera/image_raw'&&msg.msg?.data){
+    log('🖼️ '+msg.msg.width+'x'+msg.msg.height+' '+msg.msg.encoding+' type:'+typeof msg.msg.data);
+    const d=msg.msg.data,w=msg.msg.width,h=msg.msg.height,enc=msg.msg.encoding;
+    const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d'),img=ctx.createImageData(w,h);
+    let p;if(typeof d==='string'){const b=atob(d);p=new Uint8Array(b.length);for(let i=0;i<b.length;i++)p[i]=b.charCodeAt(i);}
+    else if(Array.isArray(d))p=new Uint8Array(d);else{log('❌ Bad data type');return;}
+    if(enc==='bgr8')for(let i=0,j=0;i<p.length&&j<img.data.length;i+=3,j+=4){img.data[j]=p[i+2];img.data[j+1]=p[i+1];img.data[j+2]=p[i];img.data[j+3]=255;}
+    else if(enc==='rgb8')for(let i=0,j=0;i<p.length&&j<img.data.length;i+=3,j+=4){img.data[j]=p[i];img.data[j+1]=p[i+1];img.data[j+2]=p[i+2];img.data[j+3]=255;}
+    else if(enc==='mono8')for(let i=0,j=0;i<p.length&&j<img.data.length;i++,j+=4){img.data[j]=img.data[j+1]=img.data[j+2]=p[i];img.data[j+3]=255;}
+    else{log('⚠️ '+enc);return;}
+    ctx.putImageData(img,0,0);document.getElementById('v').src=c.toDataURL('image/jpeg');log('✅ Rendered');}}catch(e){log('❌ '+e.message);}};
+  ws.onclose=e=>log('🔌 '+e.code);ws.onerror=e=>log('❌ WS error');}
+</script>
+<input id="u" value="ws://localhost:9090"><button onclick="go()">Connect</button></body></html>
