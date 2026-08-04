@@ -1,19 +1,29 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import { TelemetryBar } from "@/components/TelemetryBar";
 import { Button } from "@/components/ui/button";
-import { getProject } from "@/lib/api";
 import { useProject } from "@/hooks/useProject";
+import type { CalibrationStep } from "@/hooks/useProject";
 import { ProjectHeader } from "@/components/ProjectHeader";
 import { CalibrationWorkflow } from "@/components/calibration/CalibrationWorkflow";
 import { OperationScreen } from "@/components/operation/OperationScreen";
 import { SettingsModal } from "@/components/SettingsModal";
 
+const RESTORABLE_STEPS: CalibrationStep[] = [
+  "type-selection",
+  "recording",
+  "trimming",
+  "processing",
+  "correlating",
+  "finalizing",
+];
+
 export default function ProjectScreen() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const hasRestoredRef = useRef(false);
 
   const {
     project,
@@ -25,6 +35,7 @@ export default function ProjectScreen() {
     telemetry,
     showCalibration,
     calibrationStep,
+    setCalibrationStep,
     uploadedImage,
     selectedFrames,
     uploadError,
@@ -73,15 +84,63 @@ export default function ProjectScreen() {
     handleRunProcessing,
     handleComputeCorrelation,
     handleFinalizeCalibration,
-    setCalibrationStep,
   } = useProject(projectId);
 
-  const onRecordingNext = () => setCalibrationStep("trimming");
-  const onTrimmingBack = () => setCalibrationStep("recording");
-  const onProcessingBack = () => setCalibrationStep("trimming");
+  // ── Step transitions ──────────────────────────────────────────────────
+  const onRecordingNext   = () => setCalibrationStep("trimming");
+  const onTrimmingBack    = () => setCalibrationStep("recording");
+  const onTrimmingSkip    = () => setCalibrationStep("processing");
+  const onProcessingBack  = () => setCalibrationStep("trimming");
+  const onProcessingSkip  = () => setCalibrationStep("correlating");
   const onCorrelatingBack = () => setCalibrationStep("processing");
-  const onFinalizingBack = () => setCalibrationStep("correlating");
+  const onFinalizingBack  = () => setCalibrationStep("correlating");
+  const onFinalizingSkip  = () => setCalibrationStep("complete");
 
+  // ── Restore calibration step from URL on project load (once) ─────────
+  useEffect(() => {
+    if (!project || hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+
+    const calibParam = searchParams.get("calib") as CalibrationStep | null;
+    const sessionParam = searchParams.get("session");
+
+    if (calibParam && RESTORABLE_STEPS.includes(calibParam)) {
+      setCalibrationStep(calibParam);
+      if (sessionParam) setCalibrationSessionId(sessionParam);
+    }
+  }, [project]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Sync calibration step → URL ───────────────────────────────────────
+  useEffect(() => {
+    if (!RESTORABLE_STEPS.includes(calibrationStep)) {
+      // Clear calib params when idle / complete
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("calib");
+          next.delete("session");
+          return next;
+        },
+        { replace: true }
+      );
+    } else {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("calib", calibrationStep);
+          if (calibrationSessionId) {
+            next.set("session", calibrationSessionId);
+          } else {
+            next.delete("session");
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [calibrationStep, calibrationSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Loading / error states ────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -114,9 +173,9 @@ export default function ProjectScreen() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <ProjectHeader 
-        project={project} 
-        onBack={() => navigate("/")} 
+      <ProjectHeader
+        project={project}
+        onBack={() => navigate("/")}
         onSettingsClick={() => setIsSettingsOpen(true)}
       />
 
@@ -186,11 +245,14 @@ export default function ProjectScreen() {
           onRunProcessing={handleRunProcessing}
           onComputeCorrelation={handleComputeCorrelation}
           onFinalizeCalibration={handleFinalizeCalibration}
-          onRecordingNext={() => setCalibrationStep("trimming")}
-          onTrimmingBack={() => setCalibrationStep("recording")}
-          onProcessingBack={() => setCalibrationStep("trimming")}
-          onCorrelatingBack={() => setCalibrationStep("processing")}
-          onFinalizingBack={() => setCalibrationStep("correlating")}
+          onRecordingNext={onRecordingNext}
+          onTrimmingBack={onTrimmingBack}
+          onTrimmingSkip={onTrimmingSkip}
+          onProcessingBack={onProcessingBack}
+          onProcessingSkip={onProcessingSkip}
+          onCorrelatingBack={onCorrelatingBack}
+          onFinalizingBack={onFinalizingBack}
+          onFinalizingSkip={onFinalizingSkip}
         />
       )}
 

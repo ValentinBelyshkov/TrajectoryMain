@@ -72,9 +72,12 @@ interface CalibrationWorkflowProps {
   onFinalizeCalibration: () => void;
   onRecordingNext: () => void;
   onTrimmingBack: () => void;
+  onTrimmingSkip?: () => void;
   onProcessingBack: () => void;
+  onProcessingSkip?: () => void;
   onCorrelatingBack: () => void;
   onFinalizingBack: () => void;
+  onFinalizingSkip?: () => void;
 }
 
 export function CalibrationWorkflow({
@@ -127,9 +130,12 @@ export function CalibrationWorkflow({
   onFinalizeCalibration,
   onRecordingNext,
   onTrimmingBack,
+  onTrimmingSkip,
   onProcessingBack,
+  onProcessingSkip,
   onCorrelatingBack,
   onFinalizingBack,
+  onFinalizingSkip,
 }: CalibrationWorkflowProps) {
   const wrapOverlay = (content: React.ReactNode) => (
     <div className="fixed inset-0 z-[1200] bg-slate-50 flex flex-col">
@@ -269,6 +275,7 @@ export function CalibrationWorkflow({
       <VideoUploadStep
         onComplete={onRecordingNext}
         onBack={onCalibrationCancel}
+        onSkip={onRecordingNext}
         sessionId={calibrationSessionId}
         onSessionIdChange={onSessionIdChange}
         onRecordingStatusChange={onRecordingStatusChange}
@@ -282,6 +289,7 @@ export function CalibrationWorkflow({
       <VideoRecordingStep
         onComplete={onRecordingNext}
         onBack={onCalibrationCancel}
+        onSkip={onRecordingNext}
         recordingStatus={recordingStatus}
         recordingDuration={recordingDuration}
         onRecordingDurationChange={onRecordingDurationChange}
@@ -298,6 +306,7 @@ export function CalibrationWorkflow({
         sessionId={calibrationSessionId || ""}
         onApplyTrim={onApplyTrim}
         onBack={onTrimmingBack}
+        onSkip={onTrimmingSkip}
       />
     );
   }
@@ -309,6 +318,7 @@ export function CalibrationWorkflow({
         progress={processingProgress}
         onComplete={onRunProcessing}
         onBack={onProcessingBack}
+        onSkip={onProcessingSkip}
       />
     );
   }
@@ -331,6 +341,7 @@ export function CalibrationWorkflow({
         transform={transform}
         onComplete={onFinalizeCalibration}
         onBack={onFinalizingBack}
+        onSkip={onFinalizingSkip}
       />
     );
   }

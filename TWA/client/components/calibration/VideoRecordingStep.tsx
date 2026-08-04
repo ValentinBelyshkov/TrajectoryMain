@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 interface VideoRecordingStepProps {
   onComplete: () => void;
   onBack: () => void;
+  onSkip?: () => void;
   recordingStatus: "idle" | "recording" | "stopped";
   recordingDuration: number;
   onRecordingDurationChange: (duration: number) => void;
@@ -14,6 +15,7 @@ interface VideoRecordingStepProps {
 export function VideoRecordingStep({
   onComplete,
   onBack,
+  onSkip,
   recordingStatus,
   recordingDuration,
   onRecordingDurationChange,
@@ -195,6 +197,11 @@ export function VideoRecordingStep({
               <button onClick={onBack} className="px-6 py-3 border border-border rounded-lg hover:bg-slate-50 transition-colors">
                 Отмена
               </button>
+              {onSkip && !isRecording && (
+                <button onClick={onSkip} className="px-6 py-3 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
+                  Пропустить →
+                </button>
+              )}
             </div>
             {recordingStatus === "stopped" && (
               <div className="mt-4">

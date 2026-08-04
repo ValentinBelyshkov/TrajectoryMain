@@ -10,9 +10,10 @@ interface VideoTrimmingStepProps {
   trimmedVideoPath?: string;
   onApplyTrim: (segments: Segment[]) => void;
   onBack: () => void;
+  onSkip?: () => void;
 }
 
-export function VideoTrimmingStep({ sessionId, trimmedVideoPath, onApplyTrim, onBack }: VideoTrimmingStepProps) {
+export function VideoTrimmingStep({ sessionId, trimmedVideoPath, onApplyTrim, onBack, onSkip }: VideoTrimmingStepProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -142,9 +143,16 @@ export function VideoTrimmingStep({ sessionId, trimmedVideoPath, onApplyTrim, on
             <button onClick={onBack} className="px-4 py-2 border border-border rounded-lg hover:bg-slate-50 transition-colors">
               ← Назад
             </button>
-            <button onClick={handleApply} disabled={segments.length === 0} className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-              Применить обрезку
-            </button>
+            <div className="flex gap-2">
+              {onSkip && (
+                <button onClick={onSkip} className="px-6 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
+                  Пропустить →
+                </button>
+              )}
+              <button onClick={handleApply} disabled={segments.length === 0} className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                Применить обрезку
+              </button>
+            </div>
           </div>
         </div>
       </div>

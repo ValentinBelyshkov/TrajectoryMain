@@ -5,9 +5,10 @@ interface FinalizeStepProps {
   transform: any;
   onComplete: () => void;
   onBack: () => void;
+  onSkip?: () => void;
 }
 
-export function FinalizeStep({ sessionId, transform, onComplete, onBack }: FinalizeStepProps) {
+export function FinalizeStep({ sessionId, transform, onComplete, onBack, onSkip }: FinalizeStepProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +82,11 @@ export function FinalizeStep({ sessionId, transform, onComplete, onBack }: Final
             <button onClick={onBack} className="px-6 py-3 border border-border rounded-lg hover:bg-slate-50 transition-colors">
               ← Назад
             </button>
+            {onSkip && !isGenerating && (
+              <button onClick={onSkip} className="px-6 py-3 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
+                Пропустить →
+              </button>
+            )}
           </div>
         </div>
       </div>

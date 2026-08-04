@@ -4,6 +4,7 @@ import { uploadCalibrationVideo } from "@/lib/api";
 interface VideoUploadStepProps {
   onComplete: () => void;
   onBack: () => void;
+  onSkip?: () => void;
   sessionId: string | null;
   onSessionIdChange: (id: string) => void;
   onRecordingStatusChange: (status: "idle" | "recording" | "stopped") => void;
@@ -15,6 +16,7 @@ interface VideoUploadStepProps {
 export function VideoUploadStep({
   onComplete,
   onBack,
+  onSkip,
   sessionId,
   onSessionIdChange,
   onRecordingStatusChange,
@@ -142,6 +144,11 @@ export function VideoUploadStep({
             <button onClick={onBack} className="px-6 py-3 border border-border rounded-lg hover:bg-slate-50 transition-colors">
               Отмена
             </button>
+            {onSkip && (
+              <button onClick={onSkip} className="px-6 py-3 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
+                Пропустить →
+              </button>
+            )}
           </div>
         </div>
       </div>

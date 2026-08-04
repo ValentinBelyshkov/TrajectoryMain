@@ -5,9 +5,10 @@ interface ProcessingStepProps {
   progress: string;
   onComplete: () => void;
   onBack: () => void;
+  onSkip?: () => void;
 }
 
-export function ProcessingStep({ sessionId, progress, onComplete, onBack }: ProcessingStepProps) {
+export function ProcessingStep({ sessionId, progress, onComplete, onBack, onSkip }: ProcessingStepProps) {
   const [isRunning, setIsRunning] = useState(false);
 
   const runProcessing = async () => {
@@ -57,6 +58,11 @@ export function ProcessingStep({ sessionId, progress, onComplete, onBack }: Proc
             <button onClick={onBack} className="px-6 py-3 border border-border rounded-lg hover:bg-slate-50 transition-colors">
               ← Назад
             </button>
+            {onSkip && !isRunning && (
+              <button onClick={onSkip} className="px-6 py-3 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
+                Пропустить →
+              </button>
+            )}
           </div>
         </div>
       </div>
