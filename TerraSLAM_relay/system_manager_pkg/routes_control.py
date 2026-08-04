@@ -21,7 +21,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 TERRASLAM_GATEWAY_URL = os.getenv("TERRASLAM_GATEWAY_URL", "http://host.docker.internal:9000")
-SLAM_DB = "/home/orb/Database"
+SLAM_DB = os.getenv("SLAM_DB", "/home/orb/Database")
 
 COMPONENT_MAPPING = {
     "slam": "slam",
@@ -179,12 +179,13 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
     project_type = project.type if project else None
 
     if action.action in ("start", "restart") and action.component in ("slam", "all") and action.project_id:
-        yaml_path = "/app/trajectory-db/real.yaml"
+        yaml_path = os.getenv("YAML_PATH", "/app/trajectory-db/real.yaml")
         load_path = None
         save_path = None
         if project and project.calibration_status == "calibrated":
-            load_path = f"/home/orb/Database/projects/{action.project_id}/calibrations/map"
-            save_path = f"/home/orb/Database/projects/{action.project_id}/calibrations/map"
+            projects_dir = os.getenv("PROJECTS_DIR", "/home/orb/Database/projects")
+            load_path = f"{projects_dir}/{action.project_id}/calibrations/map"
+            save_path = f"{projects_dir}/{action.project_id}/calibrations/map"
         logger.info(
             f"Updating SLAM YAML before {action.action}: load_filename={load_path}, save_filename={save_path}"
         )

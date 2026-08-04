@@ -14,11 +14,11 @@ import aiofiles
 
 router = APIRouter()
 
-SESSIONS_DIR = Path("/home/orb/Database/calibration_sessions")
+SESSIONS_DIR = Path(os.getenv("CALIBRATION_SESSIONS_DIR", "/home/orb/Database/calibration_sessions"))
 SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 
-PROCFRAME_DIR = Path("/opt/main/Trajectory/output/procframe")
-PROJECTS_DIR = Path("/home/orb/Database/projects")
+PROCFRAME_DIR = Path(os.getenv("PROCFRAME_DIR", "/opt/main/Trajectory/output/procframe"))
+PROJECTS_DIR = Path(os.getenv("PROJECTS_DIR", "/home/orb/Database/projects"))
 
 
 class SessionStatus(str):

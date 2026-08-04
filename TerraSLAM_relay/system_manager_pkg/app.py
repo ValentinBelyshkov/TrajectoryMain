@@ -20,6 +20,9 @@ from fastapi import Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from . import routes_components, routes_ros, routes_slam, routes_gps, routes_calibration, ws_routes
 from . import routes_projects, routes_calibration_twa, routes_control, routes_telemetry, routes_video, routes_settings
@@ -108,7 +111,7 @@ async def serve_tile_alias(z: int, x: int, y: int, request: Request):
 @app.on_event("startup")
 async def startup():
     try:
-        projects_path = Path("/home/orb/Database/projects")
+        projects_path = Path(os.getenv("PROJECTS_DIR", "/home/orb/Database/projects"))
         projects_path.mkdir(parents=True, exist_ok=True)
         app.state.projects_path = projects_path
     except Exception as e:

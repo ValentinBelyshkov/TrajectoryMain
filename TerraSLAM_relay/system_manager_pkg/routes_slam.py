@@ -38,13 +38,13 @@ _slam_status = {
 
 @router.post("/slam/run")
 async def slam_run(req: RunReq):
-    frames_dir = f"/home/orb/Database/projects/{req.project_id}/frames"
+    frames_dir = f"{os.getenv('PROJECTS_DIR', '/home/orb/Database/projects')}/{req.project_id}/frames"
     if req.mode == "folder" and not os.path.isdir(frames_dir):
         raise HTTPException(status_code=400, detail=f"Frames dir missing: {frames_dir}")
 
     results = []
-    yaml_path = "/home/orb/Database/real.yaml"
-    save_path = f"/home/orb/Database/projects/{req.project_id}/calibrations/map"
+    yaml_path = os.getenv("YAML_PATH", "/home/orb/Database/real.yaml")
+    save_path = f"{os.getenv('PROJECTS_DIR', '/home/orb/Database/projects')}/{req.project_id}/calibrations/map"
 
     try:
         update_yaml(yaml_path, save_path)
@@ -89,7 +89,7 @@ async def slam_run(req: RunReq):
     except Exception as e:
         results.append(f"slam stop error: {e}")
 
-    calib_dir = f"/home/orb/Database/projects/{req.project_id}/calibrations"
+    calib_dir = f"{os.getenv('PROJECTS_DIR', '/home/orb/Database/projects')}/{req.project_id}/calibrations"
     expected_osa = os.path.join(calib_dir, "map.osa")
     osa_found = None
 
