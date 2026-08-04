@@ -38,6 +38,7 @@ interface CalibrationWorkflowProps {
   onUploadErrorDismiss: () => void;
   projectId?: string;
   projectType?: "камера" | "симуляция";
+  publisherMode?: string;
   projectVideoFilename?: string | null;
   hasVideoStream: boolean;
   videoCanvasRef: RefObject<HTMLCanvasElement | null>;
@@ -94,6 +95,7 @@ export function CalibrationWorkflow({
   onUploadErrorDismiss,
   projectId,
   projectType,
+  publisherMode,
   projectVideoFilename,
   hasVideoStream,
   videoCanvasRef,
@@ -260,7 +262,9 @@ export function CalibrationWorkflow({
   }
 
   if (calibrationStep === "recording") {
-    if (projectType === "симуляция") {
+    const isSimulation =
+      projectType === "симуляция" || publisherMode === "folder";
+    if (isSimulation) {
       return wrapOverlay(
       <VideoUploadStep
         onComplete={onRecordingNext}
