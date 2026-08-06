@@ -32,6 +32,18 @@ interface PendingPoint {
   lng?: number;
 }
 
+const pointFromDragEvent = (
+  info: { point: { x: number; y: number } },
+  container: React.RefObject<HTMLDivElement | null>,
+): { x: number; y: number } | null => {
+  const rect = container.current?.getBoundingClientRect();
+  if (!rect) return null;
+  return {
+    x: Math.round(info.point.x - rect.left),
+    y: Math.round(info.point.y - rect.top),
+  };
+};
+
 export function CalibrationPointSelector({
   imageUrl,
   images = [],
@@ -321,12 +333,8 @@ export function CalibrationPointSelector({
                       dragConstraints={imageContainerRef}
                       dragMomentum={false}
                       onDragEnd={(_, info) => {
-                        const rect = imageContainerRef.current?.getBoundingClientRect();
-                        if (rect) {
-                          const x = Math.round(info.point.x - rect.left);
-                          const y = Math.round(info.point.y - rect.top);
-                          updatePointPosition(point.id, x, y);
-                        }
+                        const p = pointFromDragEvent(info, imageContainerRef);
+                        if (p) updatePointPosition(point.id, p.x, p.y);
                       }}
                       onClick={(e) => e.stopPropagation()}
                       initial={{ scale: 0, opacity: 0 }}
@@ -353,12 +361,8 @@ export function CalibrationPointSelector({
                     dragConstraints={imageContainerRef}
                     dragMomentum={false}
                     onDragEnd={(_, info) => {
-                      const rect = imageContainerRef.current?.getBoundingClientRect();
-                      if (rect) {
-                        const x = Math.round(info.point.x - rect.left);
-                        const y = Math.round(info.point.y - rect.top);
-                        updatePendingPointPosition(x, y);
-                      }
+                      const p = pointFromDragEvent(info, imageContainerRef);
+                      if (p) updatePendingPointPosition(p.x, p.y);
                     }}
                     animate={{ x: 0, y: 0 }}
                     transition={{ duration: 0 }}

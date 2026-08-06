@@ -77,6 +77,25 @@ async function request<T>(
   return response.json();
 }
 
+async function uploadForm<T>(
+  endpoint: string,
+  field: string,
+  file: Blob,
+  fileName?: string,
+): Promise<T> {
+  const formData = new FormData();
+  formData.append(field, file, fileName);
+  const response = await fetch(getFullUrl(endpoint), {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || `Upload failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function getProjects(): Promise<Project[]> {
   const data = await request<ProjectBackend[]>("/api/projects");
   return data.map(fromBackendProject);
@@ -120,23 +139,7 @@ export async function uploadProjectVideo(
   projectId: string,
   file: File,
 ): Promise<{ message: string; filename: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch(
-    getFullUrl(`/api/projects/${projectId}/video`),
-    {
-      method: "POST",
-      body: formData,
-    },
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || `Upload failed: ${response.status}`);
-  }
-
-  return response.json();
+  return uploadForm(`/api/projects/${projectId}/video`, "file", file);
 }
 
 // Calibration API
@@ -153,22 +156,7 @@ export async function uploadCalibrationImage(
   projectId: string,
   file: File,
 ): Promise<{ success: boolean; image_filename: string; image_url: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const url = getFullUrl(`/api/projects/${projectId}/upload-image`);
-
-  const response = await fetch(url, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || `Upload failed: ${response.status}`);
-  }
-
-  return response.json();
+  return uploadForm(`/api/projects/${projectId}/upload-image`, "file", file);
 }
 
 export async function procframe(
@@ -396,8 +384,38 @@ export async function matchImageToGeotiff(
 export async function getProjectFrames(
   projectId: string
 ): Promise<{ filename: string; url: string }[]> {
-  return request<{ filename: string; url: string }[]>(
-    `/api/projects/${projectId}/frames`
+  const data = await request<any>(`/api/projects/${projectId}/frames`);
+  // The backend may still serve the legacy object shape
+  // ({ has_frames, frame_count }) until it is restarted; guard against that
+  // so the trimming step degrades gracefully instead of crashing.
+  if (!Array.isArray(data)) return [];
+  return data as { filename: string; url: string }[];
+}
+
+export interface ProjectFramesCheck {
+  has_frames: boolean;
+  frame_count: number;
+}
+
+export async function checkProjectHasFrames(
+  projectId: string
+): Promise<ProjectFramesCheck> {
+  return request<ProjectFramesCheck>(
+    `/api/projects/${projectId}/has-frames`
+  );
+}
+
+export async function trimProjectFrames(
+  projectId: string,
+  keep: string[],
+): Promise<{ deleted: number; remaining: number }> {
+  return request<{ deleted: number; remaining: number }>(
+    `/api/projects/${projectId}/frames/trim`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keep }),
+    }
   );
 }
 
@@ -419,9 +437,17 @@ export interface CalibrationSession {
   calib_gpc_path?: string;
 }
 
-export async function startCalibrationSession(): Promise<{ success: boolean; session: CalibrationSession }> {
+export async function startCalibrationSession(
+  projectId?: string,
+  clearExistingFrames: boolean = true,
+): Promise<{ success: boolean; session: CalibrationSession }> {
   return request<{ success: boolean; session: CalibrationSession }>("/api/v1/calibration/video/start", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...(projectId ? { project_id: projectId } : {}),
+      clear_existing_frames: clearExistingFrames,
+    }),
   });
 }
 
@@ -435,34 +461,19 @@ export async function uploadCalibrationChunk(
   sessionId: string,
   chunk: Blob
 ): Promise<{ success: boolean; bytes_written: number }> {
-  const formData = new FormData();
-  formData.append("chunk", chunk, "chunk.webm");
-  const response = await fetch(`/api/v1/calibration/video/${sessionId}/chunk`, {
-    method: "POST",
-    body: formData,
-  });
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || `Upload failed: ${response.status}`);
-  }
-  return response.json();
+  return uploadForm(
+    `/api/v1/calibration/video/${sessionId}/chunk`,
+    "chunk",
+    chunk,
+    "chunk.webm",
+  );
 }
 
 export async function uploadCalibrationVideo(
   sessionId: string,
   file: File
 ): Promise<{ success: boolean; bytes_written: number; session: CalibrationSession }> {
-  const formData = new FormData();
-  formData.append("file", file);
-  const response = await fetch(`/api/v1/calibration/video/${sessionId}/upload`, {
-    method: "POST",
-    body: formData,
-  });
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || `Upload failed: ${response.status}`);
-  }
-  return response.json();
+  return uploadForm(`/api/v1/calibration/video/${sessionId}/upload`, "file", file);
 }
 
 export async function stopCalibrationSession(sessionId: string): Promise<{ success: boolean; session: CalibrationSession }> {
@@ -499,6 +510,26 @@ export async function processCalibrationSession(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ session_id: sessionId, project_id: projectId }),
   });
+}
+
+export interface CalibrationProgress {
+  found: boolean;
+  session_status?: string;
+  started_at?: number;
+  elapsed?: number;
+  step?: string;
+  step_label?: string;
+  frames_total?: number;
+  frames_done?: number;
+  slam_running?: boolean;
+  slam_crashed?: boolean;
+  error?: string;
+  poses_saved?: number;
+  procframe_dir?: string;
+}
+
+export async function getCalibrationProgress(sessionId: string): Promise<CalibrationProgress> {
+  return request<CalibrationProgress>(`/api/v1/calibration/session/${sessionId}/progress`);
 }
 
 export async function correlateCalibrationPoints(

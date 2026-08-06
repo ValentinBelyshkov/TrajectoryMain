@@ -106,9 +106,9 @@ class SlamModeManager(Node):
                 if cmd == "reset":
                     self.send_map_control(0)
                 elif cmd == "save_map":
-                    self.send_map_control(1, filepath or "/home/orb/Database/map.osa")
+                    self.send_map_control(1, filepath or f"{os.getenv('PROJECTS_DIR', '/opt/main/Trajectory/Database/projects')}/calibrations/map.osa")
                 elif cmd == "load_map":
-                    self.send_map_control(2, filepath or "/home/orb/Database/map.osa")
+                    self.send_map_control(2, filepath or f"{os.getenv('PROJECTS_DIR', '/opt/main/Trajectory/Database/projects')}/calibrations/map.osa")
                 
                 os.remove(self.cmd_file)
                 if os.path.exists(self.path_file):

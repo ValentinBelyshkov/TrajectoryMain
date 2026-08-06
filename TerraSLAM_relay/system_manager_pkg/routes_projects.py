@@ -61,7 +61,7 @@ async def process_video_with_progress(project_id, input_file, output_pattern):
                 else:
                     remaining_time = 0
                 
-                from .telemetry import telemetry_manager
+                from .routes_telemetry import telemetry_manager
                 await telemetry_manager.broadcast(project_id, {
                     "type": "ffmpeg_progress",
                     "progress": progress,
@@ -72,7 +72,7 @@ async def process_video_with_progress(project_id, input_file, output_pattern):
                 
     await process.wait()
     
-    from .telemetry import telemetry_manager
+    from .routes_telemetry import telemetry_manager
     await telemetry_manager.broadcast(project_id, {
         "type": "ffmpeg_progress",
         "progress": 1.0,
@@ -97,6 +97,9 @@ class Project(ProjectBase):
     video_filename: Optional[str] = None
     frames_path: Optional[str] = None
     calibration_status: str = "not_calibrated"
+
+class FrameTrimRequest(BaseModel):
+    keep: List[str]
 
 def ensure_projects_directory(projects_root: Path):
     """Ensure the projects directory exists."""
@@ -244,6 +247,32 @@ async def upload_video(request: Request, project_id: str, file: UploadFile = Fil
     return {"message": "Video uploaded and processed", "filename": str(save_path), "frames_path": project.frames_path}
 
 @router.get("/{project_id}/frames")
+async def project_frames_list(request: Request, project_id: str):
+    """List of frame files (filename + url) for a project. Used by the
+    trimming editor and the recording-skip check in the calibration UI."""
+    return await get_project_frames(request, project_id)
+
+
+@router.get("/{project_id}/has-frames")
+async def project_has_frames(request: Request, project_id: str):
+    """Lightweight check used by the calibration UI to decide whether the
+    recording step can be skipped (frames already exist on disk)."""
+    projects_root = get_projects_root(request)
+    project = read_project_metadata(projects_root, project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project_path = get_project_path(projects_root, project_id)
+    frames_dir = project_path / "frames"
+
+    count = 0
+    if frames_dir.exists():
+        for ext in ("*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG", "*.PNG", "*.webp", "*.WEBP"):
+            count += len(list(frames_dir.glob(ext)))
+
+    return {"has_frames": count > 0, "frame_count": count}
+
+
 async def get_project_frames(request: Request, project_id: str):
     """Get list of frames for a project."""
     projects_root = get_projects_root(request)
@@ -271,6 +300,47 @@ async def get_project_frames(request: Request, project_id: str):
     
     frames.sort(key=lambda x: x["filename"])
     return frames
+
+
+@router.post("/{project_id}/frames/trim")
+async def trim_project_frames(request: Request, project_id: str, body: FrameTrimRequest):
+    """
+    Keep only the frames whose filenames are in `body.keep`; delete the rest
+    from the project's frames folder. Used by the frame-based trimming editor
+    (camera recording mode) so that only the trimmed frames remain for the
+    downstream SLAM processing step.
+    """
+    projects_root = get_projects_root(request)
+    project = read_project_metadata(projects_root, project_id)
+
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project_path = get_project_path(projects_root, project_id)
+    frames_dir = project_path / "frames"
+
+    if not frames_dir.exists():
+        frames_dir = project_path / "procframe"
+
+    if not frames_dir.exists():
+        return {"deleted": 0, "remaining": 0}
+
+    keep_set = set(body.keep)
+    deleted = 0
+    remaining = 0
+    for ext in ['*.jpg', '*.jpeg', '*.png', '*.JPG', '*.JPEG', '*.PNG', '*.webp', '*.WEBP']:
+        for fp in frames_dir.glob(ext):
+            if fp.name in keep_set:
+                remaining += 1
+            else:
+                try:
+                    fp.unlink()
+                    deleted += 1
+                except Exception:
+                    pass
+
+    return {"deleted": deleted, "remaining": remaining}
+
 
 @router.get("/{project_id}/frames/{frame_name}")
 async def get_project_frame(request: Request, project_id: str, frame_name: str):

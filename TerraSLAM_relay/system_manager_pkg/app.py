@@ -24,11 +24,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Install the rclpy shutdown guard BEFORE any rclpy-using module is imported, so
+# the shared rclpy context cannot be torn down by a single subscriber.
+from . import rclpy_guard  # noqa: F401
+
 from . import routes_components, routes_ros, routes_slam, routes_gps, routes_calibration, ws_routes
 from . import routes_projects, routes_calibration_twa, routes_control, routes_telemetry, routes_video, routes_settings
 from .pose_monitor import pose_monitor
 from .process_manager import manager
 from . import camera_stream
+from . import session_manager
+from .fallback_controller import fallback_controller
 
 app = FastAPI(title="TerraSLAM System Manager")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -117,11 +123,28 @@ async def startup():
     except Exception as e:
         print(f"[startup] projects_path init error: {e}")
 
+    # Load persisted desired-state + failsafe config before anything starts.
+    manager.ensure_state(app.state.projects_path)
+    fallback_controller.reload()
+
     try:
         res = await manager.start("rosbridge")
         print(f"[startup] {res}")
     except Exception as e:
         print(f"[startup] Failed to start rosbridge: {e}")
+
+    # Reconcile desired-state: bring up any component that should be running
+    # (e.g. gps_bridge, or anything an operator left running before a restart).
+    try:
+        await manager.reconcile()
+    except Exception as e:
+        print(f"[startup] reconcile error: {e}")
+
+    # Resume any SLAM session that was in-flight when the manager restarted.
+    try:
+        await session_manager.maybe_resume_session()
+    except Exception as e:
+        print(f"[startup] session resume error: {e}")
 
     try:
         pose_monitor.start()

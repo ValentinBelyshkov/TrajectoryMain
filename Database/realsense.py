@@ -19,7 +19,7 @@ except ImportError:
 
 
 class RealSensePublisher(Node):
-    def __init__(self, serial=None):
+    def __init__(self, serial=None, frames_dir=None):
         super().__init__('realsense_publisher')
         
         qos = QoSProfile(
@@ -42,9 +42,14 @@ class RealSensePublisher(Node):
         
         self.bridge = CvBridge()
         
-        # Создаём папку new_frames рядом со скриптом
+        # Папка для сохранения кадров. По умолчанию — new_frames рядом со
+        # скриптом; при записи проекта передаётся --frames-dir (путь к
+        # /opt/main/Database/projects/{id}/frames).
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.frames_dir = os.path.join(script_dir, 'new_frames')
+        if frames_dir:
+            self.frames_dir = frames_dir
+        else:
+            self.frames_dir = os.path.join(script_dir, 'new_frames')
         os.makedirs(self.frames_dir, exist_ok=True)
         self.get_logger().info(f'=== FRAMES DIR: {self.frames_dir} ===')
         self.get_logger().info(f'=== SCRIPT DIR: {script_dir} ===')
@@ -115,16 +120,13 @@ class RealSensePublisher(Node):
                 self.publisher_compressed.publish(compressed_msg)
             
             # --- Сохранение кадра и позы ---
+            # ВАЖНО: кадр сохраняем ВСЕГДА (даже без позы SLAM), иначе на
+            # этапе записи калибровки, когда SLAM ещё не инициализирован,
+            # не будет ни одного сохранённого кадра.
             self.get_logger().info(
                 f'=== FRAME {self.frame_count:04d} | pose={self.current_pose} ==='
             )
-            
-            if self.current_pose is not None:
-                self.save_frame(color_image)
-            else:
-                self.get_logger().warn(
-                    f'=== SKIPPING frame {self.frame_count:04d}: NO POSE DATA ==='
-                )
+            self.save_frame(color_image)
             
             self.frame_count += 1
             if self.frame_count % 300 == 0:
@@ -139,31 +141,25 @@ class RealSensePublisher(Node):
     def save_frame(self, color_image):
         filename_base = f'frame_{self.frame_count:04d}'
         jpg_path = os.path.join(self.frames_dir, f'{filename_base}.jpg')
-        txt_path = os.path.join(self.frames_dir, f'{filename_base}.txt')
-        
+
         self.get_logger().info(f'=== SAVING: {jpg_path} ===')
-        
+
         # Проверяем что изображение валидно
         self.get_logger().info(
             f'=== IMAGE shape={color_image.shape}, dtype={color_image.dtype} ==='
         )
-        
+
         # Сохраняем JPEG
         ok = cv2.imwrite(jpg_path, color_image)
         self.get_logger().info(f'=== cv2.imwrite returned: {ok} ===')
-        
+
         if not ok:
             self.get_logger().error(f'=== FAILED to save {jpg_path} ===')
             return
-        
-        # Сохраняем позу в txt
-        x, y, z = self.current_pose
-        with open(txt_path, 'w') as f:
-            f.write(f'{x:.6f} {y:.6f} {z:.6f}\n')
-        
+
         self.saved_count += 1
         self.get_logger().info(
-            f'=== OK: saved {filename_base}.jpg + .txt '
+            f'=== OK: saved {filename_base}.jpg '
             f'(total saved: {self.saved_count}) ==='
         )
     
@@ -184,14 +180,26 @@ def main(args=None):
         return 1
     
     rclpy.init(args=args)
-    serial = sys.argv[1] if len(sys.argv) > 1 else None
+    
+    # Аргументы: [serial] [--frames-dir PATH]
+    serial = None
+    frames_dir = None
+    argv = sys.argv[1:]
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--frames-dir" and i + 1 < len(argv):
+            frames_dir = argv[i + 1]
+            i += 2
+        else:
+            serial = argv[i]
+            i += 1
     
     publisher = None
     executor = None
     
     try:
         print(" Starting RealSense Publisher...")
-        publisher = RealSensePublisher(serial)
+        publisher = RealSensePublisher(serial, frames_dir)
         print(" Node ready. Press Ctrl+C to exit.")
         
         executor = rclpy.executors.SingleThreadedExecutor()

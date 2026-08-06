@@ -26,6 +26,10 @@
 #include <iostream> 
 #include<mutex>
 #include <iomanip>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <cerrno>
+#include <cstring>
 namespace ORB_SLAM3
 {
 
@@ -238,7 +242,21 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
         // --- Запись только по запросу (ROS-сервис) и только при успешном трекинге ---
     if (state == Tracking::OK && mbSaveFrameRequest.exchange(false))
     {
-        std::string prefix = msOutputBasePath + "/procframe/frame_" 
+        if (msOutputBasePath.empty())
+        {
+            std::cerr << "[FrameDrawer] Cannot save proc frame: output base path is empty"
+                      << std::endl;
+        }
+        else
+        {
+        const std::string procDir = msOutputBasePath + "/procframe";
+        if (mkdir(procDir.c_str(), 0777) != 0 && errno != EEXIST)
+        {
+            std::cerr << "[FrameDrawer] Cannot create " << procDir << ": "
+                      << std::strerror(errno) << std::endl;
+        }
+
+        std::string prefix = procDir + "/frame_"
                              + std::to_string(currentFrame.mnId);
         std::string imgfilename = prefix + ".jpg";
         std::string txtfilename = prefix + ".txt";
@@ -248,6 +266,9 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
             if (!success) {
                 std::cerr << "Failed to write proc frame (imwrite returned false): " 
                           << imgfilename << std::endl;
+            } else {
+                std::cout << "[FrameDrawer] Saved proc frame: " << imgfilename
+                          << " (" << im.cols << "x" << im.rows << ")" << std::endl;
             }
         } catch (const cv::Exception& e) {
             std::cerr << "OpenCV exception while writing proc frame: " 
@@ -261,6 +282,7 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
         SaveCameraPose(currentFrame.GetPose(),
                        currentFrame.mTimeStamp,
                        txtfilename);
+        }
     }
     cv::Mat imWithInfo;
     DrawTextInfo(im,state, imWithInfo);

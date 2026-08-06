@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import maplibregl from "maplibre-gl";
 import { MapPin } from "lucide-react";
+import { procframe } from "@/lib/api";
 
 interface CorrelationStepProps {
   sessionId: string;
+  projectId: string;
   frames: Array<{ frame: string; pose_file?: string; pose?: { x: number; y: number; z: number }; timestamp: number }>;
   onCompute: (points: any[]) => void;
   onBack: () => void;
+  sessionStatus?: string;
 }
 
 interface CorrelationPoint {
@@ -17,21 +22,43 @@ interface CorrelationPoint {
   alt: number;
 }
 
-export function CorrelationStep({ sessionId, frames, onCompute, onBack }: CorrelationStepProps) {
+export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBack, sessionStatus }: CorrelationStepProps) {
   const [selectedFrame, setSelectedFrame] = useState<number | null>(null);
   const [pixelPoint, setPixelPoint] = useState<{ x: number; y: number } | null>(null);
   const [gpsPoint, setGpsPoint] = useState<{ lat: number; lon: number; alt: number } | null>(null);
   const [points, setPoints] = useState<CorrelationPoint[]>([]);
   const [map, setMap] = useState<maplibregl.Map | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+
+  const { data: procframeData = [] } = useQuery({
+    queryKey: ["procframe-frames", projectId],
+    queryFn: () => procframe(projectId),
+    enabled: !!projectId && frames.length === 0,
+  });
+
+  const procframeFrames = Array.isArray(procframeData)
+    ? procframeData
+    : (procframeData as any)?.frames || [];
+
+  const displayFrames =
+    frames.length > 0
+      ? frames.map((f) => ({ frame: f.frame, pose_file: f.pose_file, pose: f.pose, timestamp: f.timestamp }))
+      : procframeFrames.map((f) => ({ frame: f.filename, url: f.url }));
+
+  useEffect(() => {
+    if (displayFrames.length > 0) {
+      setIsInitialLoad(false);
+    }
+  }, [displayFrames]);
 
   const initMap = () => {
     if (!mapContainerRef.current || map) return;
     try {
       const m = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: {
+        style: ({
           version: 8,
           name: "Offline Central Russia",
           center: [38.634, 55.492],
@@ -47,7 +74,7 @@ export function CorrelationStep({ sessionId, frames, onCompute, onBack }: Correl
             { id: "background", type: "background", paint: { "background-color": "#f2efe9" } },
             { id: "road", type: "line", source: "local-tiles", "source-layer": "transportation", filter: ["has", "class"], paint: { "line-color": "#ffffff", "line-width": { base: 1.5, stops: [[5, 1], [14, 8]] }, "line-opacity": 0.9 } },
           ],
-        },
+        }) as any,
       });
       m.addControl(new maplibregl.NavigationControl());
       m.on("click", (e: any) => {
@@ -71,15 +98,16 @@ export function CorrelationStep({ sessionId, frames, onCompute, onBack }: Correl
   }, [selectedFrame]);
 
   const handleFrameClick = (e: React.MouseEvent<HTMLDivElement>, frameIdx: number) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setPixelPoint({ x, y });
     setSelectedFrame(frameIdx);
   };
 
   const confirmPoint = () => {
     if (selectedFrame === null || !pixelPoint || !gpsPoint) return;
+    const selectedFrameData = displayFrames[selectedFrame];
+    if (selectedFrameData && !selectedFrameData.pose) {
+      alert("Для выбранного кадра отсутствуют данные позы. Выберите другой кадр.");
+      return;
+    }
     const newPoint: CorrelationPoint = {
       frame_idx: selectedFrame,
       pixel_x: pixelPoint.x,
@@ -89,9 +117,6 @@ export function CorrelationStep({ sessionId, frames, onCompute, onBack }: Correl
     setPoints((prev) => [...prev, newPoint]);
     setPixelPoint(null);
     setGpsPoint(null);
-    if (markerRef.current) markerRef.current.remove();
-    markerRef.current = null;
-    setSelectedFrame(null);
   };
 
   const handleCompute = () => {
@@ -109,14 +134,29 @@ export function CorrelationStep({ sessionId, frames, onCompute, onBack }: Correl
           </div>
 
           <div className="flex gap-2 flex-wrap justify-center">
-            {frames.slice(0, 10).map((frame, idx) => (
+            {isInitialLoad && displayFrames.length === 0 && (
+              <div className="col-span-full text-center text-muted-foreground py-8">
+                Загрузка кадров...
+              </div>
+            )}
+            {!isInitialLoad && displayFrames.length === 0 && sessionStatus === "error" && (
+              <div className="col-span-full text-center text-red-500 py-8">
+                Ошибка обработки: не найдено кадров с валидными позами. Карта не создана.
+              </div>
+            )}
+            {!isInitialLoad && displayFrames.length === 0 && sessionStatus !== "error" && (
+              <div className="col-span-full text-center text-muted-foreground py-8">
+                Кадры не найдены
+              </div>
+            )}
+            {displayFrames.map((frame, idx) => (
               <div
                 key={idx}
                 onClick={(e) => handleFrameClick(e, idx)}
                 className="w-24 h-24 border-2 border-border rounded-lg overflow-hidden cursor-crosshair hover:border-blue-500 transition-colors relative"
               >
                 <img
-                  src={frame.frame}
+                  src={`/api/projects/${projectId}/procframe/${frame.frame}`}
                   alt={`Frame ${idx + 1}`}
                   className="w-full h-full object-cover"
                 />
@@ -133,9 +173,9 @@ export function CorrelationStep({ sessionId, frames, onCompute, onBack }: Correl
             <div className="border border-border rounded-lg p-4 bg-white">
               <h4 className="font-bold mb-3">Кадр {selectedFrame + 1}</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                   <img
-                    src={frames[selectedFrame].frame}
+                    src={`/api/projects/${projectId}/procframe/${displayFrames[selectedFrame].frame}`}
                     alt={`Frame ${selectedFrame}`}
                     className="w-full aspect-video object-contain border border-border rounded cursor-crosshair"
                     onClick={(e) => {
@@ -145,9 +185,15 @@ export function CorrelationStep({ sessionId, frames, onCompute, onBack }: Correl
                       setPixelPoint({ x, y });
                     }}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Кликните для выбора точки. {pixelPoint ? `(${pixelPoint.x.toFixed(1)}%, ${pixelPoint.y.toFixed(1)}%)` : "Не выбрано"}
-                  </p>
+                  {pixelPoint && (
+                    <div
+                      className="absolute w-3 h-3 bg-red-500 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                      style={{
+                        left: `${pixelPoint.x}%`,
+                        top: `${pixelPoint.y}%`,
+                      }}
+                    />
+                  )}
                 </div>
                 <div>
                   <div ref={mapContainerRef} className="w-full h-[300px] border border-border rounded" />
@@ -159,7 +205,7 @@ export function CorrelationStep({ sessionId, frames, onCompute, onBack }: Correl
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={confirmPoint}
-                  disabled={!pixelPoint || !gpsPoint}
+                  disabled={!pixelPoint || !gpsPoint || (selectedFrame !== null && !displayFrames[selectedFrame]?.pose)}
                   className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   ✓ Подтвердить точку

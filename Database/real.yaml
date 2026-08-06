@@ -1,8 +1,7 @@
 %YAML:1.0
 
 # #System.LoadAtlasFromFile: "mapc"
-#System.SaveAtlasToFile: "/home/orb/Database/projects/ce00d49e-1b99-40c0-a30c-e4b4e34214f7/calibrations/map"
-#System.LoadAtlasFromFile: "/home/orb/Database/projects/ce00d49e-1b99-40c0-a30c-e4b4e34214f7/calibrations/map"
+System.SaveAtlasToFile: "/opt/main/Trajectory/Database/projects/cc6494d4-2177-4812-b08e-e4cb4c2bd4e4/calibrations/map"
 #------------------------------------------------------
 # Camera Parameters
 #-----------------------------------------------------------------------------

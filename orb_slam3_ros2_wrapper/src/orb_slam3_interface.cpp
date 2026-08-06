@@ -577,6 +577,23 @@ if (!orbAtlas_) {
             calculateReferencePoses();
             correctTrackedPose(Tcw);
             hasTracked_ = true;
+            // === Сохранение кадра по запросу (procframe) ===
+            if (saveFrameRequest_.exchange(false)) {
+                auto fd = mSLAM_->GetFrameDrawer();
+                if (fd) {
+                    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"),
+                                "SaveFrame triggered (MONO), base='%s'",
+                                ORB_SLAM3::FrameDrawer::GetOutputBasePath().c_str());
+                    fd->RequestSaveFrame();
+                    auto drawn = fd->DrawFrame(1.0f);
+                    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"),
+                                "DrawFrame done (MONO), mat empty=%d", drawn.empty());
+                } else {
+                    RCLCPP_WARN(rclcpp::get_logger("ORBSLAM3Interface"),
+                                "FrameDrawer is null (MONO)!");
+                }
+            }
+            // ==============================================
         }
         else
         {

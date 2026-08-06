@@ -14,10 +14,6 @@ import aiofiles
 
 router = APIRouter()
 
-SESSIONS_DIR = Path(os.getenv("CALIBRATION_SESSIONS_DIR", "/home/orb/Database/calibration_sessions"))
-SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
-
-PROCFRAME_DIR = Path(os.getenv("PROCFRAME_DIR", "/opt/main/Trajectory/output/procframe"))
 PROJECTS_DIR = Path(os.getenv("PROJECTS_DIR", "/home/orb/Database/projects"))
 
 
@@ -50,28 +46,6 @@ class CorrelatePoint(BaseModel):
 
 class CorrelateReq(BaseModel):
     points: List[CorrelatePoint]
-
-
-def _session_path(session_id: str) -> Path:
-    return SESSIONS_DIR / f"{session_id}.json"
-
-
-def _load_session(session_id: str) -> dict:
-    path = _session_path(session_id)
-    if not path.exists():
-        raise HTTPException(404, detail=f"Session {session_id} not found")
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_session(session: dict):
-    path = _session_path(session["id"])
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(session, f, ensure_ascii=False, indent=2)
-
-
-def _new_session_id() -> str:
-    return f"calib_{time.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
 
 # Legacy endpoints for backward compatibility (mounted under /api/projects)

@@ -1,4 +1,5 @@
 import { Upload } from "lucide-react";
+import { ErrorBanner } from "./ErrorBanner";
 
 interface ImageUploadStepProps {
   onUpload: (file: File) => void;
@@ -29,17 +30,7 @@ export function ImageUploadStep({
         </p>
       </div>
 
-        {uploadError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">{uploadError}</p>
-            <button
-              onClick={onErrorDismiss}
-              className="text-xs text-red-500 underline mt-2"
-            >
-              Закрыть
-            </button>
-          </div>
-        )}
+        <ErrorBanner message={uploadError} onDismiss={onErrorDismiss} />
 
         <div className="space-y-6">
           <div

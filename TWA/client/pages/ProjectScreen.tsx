@@ -8,6 +8,8 @@ import { ProjectHeader } from "@/components/ProjectHeader";
 import { CalibrationWorkflow } from "@/components/calibration/CalibrationWorkflow";
 import { OperationScreen } from "@/components/operation/OperationScreen";
 import { SettingsModal } from "@/components/SettingsModal";
+import { CalibrationProvider } from "@/contexts/CalibrationContext";
+import { controlTerraSLAMComponent } from "@/lib/api";
 
 const RESTORABLE_STEPS: CalibrationStep[] = [
   "type-selection",
@@ -25,6 +27,7 @@ export default function ProjectScreen() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const hasRestoredRef = useRef(false);
 
+  const controller = useProject(projectId);
   const {
     project,
     isLoading,
@@ -34,67 +37,15 @@ export default function ProjectScreen() {
     dronePath,
     telemetry,
     showCalibration,
-    calibrationStep,
-    setCalibrationStep,
-    uploadedImage,
-    selectedFrames,
-    uploadError,
-    isUploading,
     hasVideoStream,
     videoCanvasRef,
-    startRecording,
-    stopRecording,
-    handleCalibrate,
-    handleCalibrationTypeSelect,
-    handleInstructionsNext,
-    handleTestRunSuccess,
-    handleTestRunBack,
-    handleFrameSelectionBack,
-    handleFramesSelected,
-    handleImageUpload,
-    handleCalibrationComplete,
-    handleCalibrationCancel,
-    clearUploadError,
     gpsStatus,
     systemStatus,
-    // Auto calibration
-    autoCalibrationRegion,
-    autoCalibrationFrames,
-    autoCalibrationError,
-    autoCalibrationProgress,
-    autoCalibrationMessage,
-    handleAutoRegionConfirm,
-    handleAutoImageSelect,
-    handleAutoCalibrationBack,
-    // NEW calibration workflow
+    calibrationStep,
+    setCalibrationStep,
     calibrationSessionId,
     setCalibrationSessionId,
-    calibrationSession,
-    recordingStatus,
-    recordingDuration,
-    setRecordingDuration,
-    setRecordingStatus,
-    trimSegments,
-    processingProgress,
-    correlationPoints,
-    transform,
-    handleStartRecording,
-    handleStopRecording,
-    handleApplyTrim,
-    handleRunProcessing,
-    handleComputeCorrelation,
-    handleFinalizeCalibration,
-  } = useProject(projectId);
-
-  // ── Step transitions ──────────────────────────────────────────────────
-  const onRecordingNext   = () => setCalibrationStep("trimming");
-  const onTrimmingBack    = () => setCalibrationStep("recording");
-  const onTrimmingSkip    = () => setCalibrationStep("processing");
-  const onProcessingBack  = () => setCalibrationStep("trimming");
-  const onProcessingSkip  = () => setCalibrationStep("correlating");
-  const onCorrelatingBack = () => setCalibrationStep("processing");
-  const onFinalizingBack  = () => setCalibrationStep("correlating");
-  const onFinalizingSkip  = () => setCalibrationStep("complete");
+  } = controller;
 
   // ── Restore calibration step from URL on project load (once) ─────────
   useEffect(() => {
@@ -105,15 +56,26 @@ export default function ProjectScreen() {
     const sessionParam = searchParams.get("session");
 
     if (calibParam && RESTORABLE_STEPS.includes(calibParam)) {
-      setCalibrationStep(calibParam);
-      if (sessionParam) setCalibrationSessionId(sessionParam);
+      if (sessionParam) {
+        setCalibrationSessionId(sessionParam);
+        controller
+          .resumeCalibrationSession(sessionParam)
+          .then(() => {
+            setCalibrationStep(calibParam);
+          })
+          .catch((e) => {
+            console.error("Failed to resume calibration session:", e);
+            setCalibrationStep(calibParam);
+          });
+      } else {
+        setCalibrationStep(calibParam);
+      }
     }
-  }, [project]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [project, searchParams, setCalibrationStep, setCalibrationSessionId, controller]);
 
   // ── Sync calibration step → URL ───────────────────────────────────────
   useEffect(() => {
     if (!RESTORABLE_STEPS.includes(calibrationStep)) {
-      // Clear calib params when idle / complete
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -121,7 +83,7 @@ export default function ProjectScreen() {
           next.delete("session");
           return next;
         },
-        { replace: true }
+        { replace: true },
       );
     } else {
       setSearchParams(
@@ -135,7 +97,7 @@ export default function ProjectScreen() {
           }
           return next;
         },
-        { replace: true }
+        { replace: true },
       );
     }
   }, [calibrationStep, calibrationSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -184,12 +146,12 @@ export default function ProjectScreen() {
       {calibrationStep === "idle" || calibrationStep === "complete" ? (
         <OperationScreen
           isRecording={isRecording}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
+          onStartRecording={controller.startRecording}
+          onStopRecording={controller.stopRecording}
           dronePosition={dronePosition}
           dronePath={dronePath}
           showCalibration={showCalibration}
-          onCalibrate={handleCalibrate}
+          onCalibrate={controller.handleCalibrate}
           hasVideoStream={hasVideoStream}
           videoCanvasRef={videoCanvasRef}
           gpsStatus={gpsStatus}
@@ -197,69 +159,16 @@ export default function ProjectScreen() {
           systemStatus={systemStatus}
         />
       ) : (
-        <CalibrationWorkflow
-          calibrationStep={calibrationStep}
-          uploadedImage={uploadedImage}
-          selectedFrames={selectedFrames}
-          uploadError={uploadError}
-          isUploading={isUploading}
-          onTypeSelect={handleCalibrationTypeSelect}
-          onInstructionsNext={handleInstructionsNext}
-          onTestRunSuccess={handleTestRunSuccess}
-          onTestRunBack={handleTestRunBack}
-          onFrameSelectionBack={handleFrameSelectionBack}
-          onFramesSelected={handleFramesSelected}
-          onImageUpload={handleImageUpload}
-          onCalibrationComplete={handleCalibrationComplete}
-          onCalibrationCancel={handleCalibrationCancel}
-          onUploadErrorDismiss={clearUploadError}
-          projectId={projectId}
-          projectType={project?.type}
-          publisherMode={systemStatus?.publisher_mode}
-          projectVideoFilename={project?.videoFilename}
-          hasVideoStream={hasVideoStream}
-          videoCanvasRef={videoCanvasRef}
-          dronePosition={dronePosition}
-          autoCalibrationRegion={autoCalibrationRegion}
-          autoCalibrationFrames={autoCalibrationFrames}
-          autoCalibrationError={autoCalibrationError}
-          autoCalibrationProgress={autoCalibrationProgress}
-          autoCalibrationMessage={autoCalibrationMessage}
-          onAutoRegionConfirm={handleAutoRegionConfirm}
-          onAutoImageSelect={handleAutoImageSelect}
-          onAutoCalibrationBack={handleAutoCalibrationBack}
-          calibrationSessionId={calibrationSessionId}
-          onSessionIdChange={setCalibrationSessionId}
-          calibrationSession={calibrationSession}
-          recordingStatus={recordingStatus}
-          recordingDuration={recordingDuration}
-          onRecordingDurationChange={setRecordingDuration}
-          onRecordingStatusChange={setRecordingStatus}
-          trimSegments={trimSegments}
-          processingProgress={processingProgress}
-          correlationPoints={correlationPoints}
-          transform={transform}
-          onStartRecording={handleStartRecording}
-          onStopRecording={handleStopRecording}
-          onApplyTrim={handleApplyTrim}
-          onRunProcessing={handleRunProcessing}
-          onComputeCorrelation={handleComputeCorrelation}
-          onFinalizeCalibration={handleFinalizeCalibration}
-          onRecordingNext={onRecordingNext}
-          onTrimmingBack={onTrimmingBack}
-          onTrimmingSkip={onTrimmingSkip}
-          onProcessingBack={onProcessingBack}
-          onProcessingSkip={onProcessingSkip}
-          onCorrelatingBack={onCorrelatingBack}
-          onFinalizingBack={onFinalizingBack}
-          onFinalizingSkip={onFinalizingSkip}
-        />
+        <CalibrationProvider value={controller}>
+          <CalibrationWorkflow
+            onStartPublisher={async (pid: string) => {
+              await controlTerraSLAMComponent("publisher:realsense", "start", pid);
+            }}
+          />
+        </CalibrationProvider>
       )}
 
-      <SettingsModal
-        open={isSettingsOpen}
-        onOpenChange={setIsSettingsOpen}
-      />
+      <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </div>
   );
 }

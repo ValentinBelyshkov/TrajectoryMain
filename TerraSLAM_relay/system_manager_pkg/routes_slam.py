@@ -23,6 +23,8 @@ from .hardware_calibration import HardwareCalibrationError, run_hardware_calibra
 from .pose_monitor import pose_monitor
 from .process_manager import manager, update_yaml
 from .ros_utils import ros2_run
+from .session_manager import run_slam_session, get_session
+from .state_store import atomic_write
 
 router = APIRouter()
 
@@ -38,115 +40,65 @@ _slam_status = {
 
 @router.post("/slam/run")
 async def slam_run(req: RunReq):
-    frames_dir = f"{os.getenv('PROJECTS_DIR', '/home/orb/Database/projects')}/{req.project_id}/frames"
-    if req.mode == "folder" and not os.path.isdir(frames_dir):
-        raise HTTPException(status_code=400, detail=f"Frames dir missing: {frames_dir}")
-
-    results = []
-    yaml_path = os.getenv("YAML_PATH", "/home/orb/Database/real.yaml")
-    save_path = f"{os.getenv('PROJECTS_DIR', '/home/orb/Database/projects')}/{req.project_id}/calibrations/map"
-
-    try:
-        update_yaml(yaml_path, save_path)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"YAML update failed: {e}")
-
-    publisher_name = f"publisher_{req.mode}"
-    try:
-        if req.mode == "folder":
-            out = await manager.start("publisher_folder", extra={"path": frames_dir})
-        else:
-            out = await manager.start("publisher_realsense")
-        results.append(f"publisher: {out}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Publisher failed: {e}")
-
-    await asyncio.sleep(2)
-
-    try:
-        out = await manager.start("slam")
-        results.append(f"slam: {out}")
-    except Exception as e:
-        try:
-            await manager.stop(publisher_name)
-        except Exception:
-            pass
-        raise HTTPException(status_code=500, detail=f"SLAM failed: {e}")
-
-    await asyncio.sleep(req.duration)
-
-    try:
-        out = await manager.stop(publisher_name)
-        results.append(f"publisher stop: {out}")
-    except Exception as e:
-        results.append(f"publisher stop error: {e}")
-
-    await asyncio.sleep(2)
-
-    try:
-        out = await manager.stop("slam")
-        results.append(f"slam stop: {out}")
-    except Exception as e:
-        results.append(f"slam stop error: {e}")
-
-    calib_dir = f"{os.getenv('PROJECTS_DIR', '/home/orb/Database/projects')}/{req.project_id}/calibrations"
-    expected_osa = os.path.join(calib_dir, "map.osa")
-    osa_found = None
-
-    if os.path.exists(expected_osa):
-        osa_found = expected_osa
-    else:
-        try:
-            recent = sorted(
-                glob.glob(os.path.join(calib_dir, "*.osa")),
-                key=os.path.getmtime,
-                reverse=True,
-            )
-            if recent:
-                osa_found = recent[0]
-        except Exception:
-            pass
-
+    """Start a SLAM run as a background session. Returns immediately with a
+    session id; poll GET /api/v1/slam/session/{id} for progress. The session
+    survives a manager restart (components are restored via reconcile and the
+    stop-timer is resumed on startup)."""
+    rec = await run_slam_session(req)
     return {
         "success": True,
-        "results": results,
-        "osa_file": osa_found,
+        "session_id": rec["id"],
+        "phase": rec["phase"],
         "project_id": req.project_id,
+        "message": "SLAM run started in background — poll /api/v1/slam/session/" + rec["id"],
     }
+
+
+@router.get("/api/v1/slam/session/{session_id}")
+def get_slam_session(session_id: str):
+    rec = get_session(session_id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="session not found")
+    return {"success": True, "session": rec}
 
 
 @router.get("/api/v1/slam/status")
 def get_slam_status():
-    """Получить текущий статус SLAM (который приходит из ROS2 по /slam/mode_status)"""
+    """Получить текущий статус SLAM (который приходит из ROS2 по /slam/mode_status)
+
+    The status is read from the /tmp file written by slam_mode_manager. To avoid
+    trusting a stale value after a manager/OS restart, the file is only honored
+    when written within STATUS_TTL seconds; otherwise we return the last known
+    value marked stale without blocking on a `ros2 topic echo` subprocess (which
+    reintroduces the jitter the pose subscriber was built to avoid).
+    """
     global _slam_status
 
+    STATUS_TTL = 10.0
     status_file = "/tmp/terraslam_slam_status"
+    stale = False
+    source = "default"
     if os.path.exists(status_file):
         try:
+            mtime = os.path.getmtime(status_file)
+            if time.time() - mtime > STATUS_TTL:
+                stale = True
             with open(status_file, "r") as f:
                 content = f.read().strip()
             if content:
                 parsed = json.loads(content)
                 _slam_status.update(parsed)
-                return {"success": True, "status": _slam_status, "manager_time": time.time()}
+                source = "file"
         except Exception as e:
             print(f"[get_slam_status] Error reading status file: {e}")
 
-    stdout, stderr, rc = ros2_run(["topic", "echo", "--once", "/slam/mode_status"], timeout=2)
-    if rc == 0 and stdout:
-        try:
-            content = stdout.strip()
-            if content.startswith("data:"):
-                data_str = content[5:].strip()
-                if (data_str.startswith("'") and data_str.endswith("'")) or (data_str.startswith('"') and data_str.endswith('"')):
-                    data_str = data_str[1:-1]
-                data_str = data_str.replace("\\'", "'").replace('\\"', '"')
-                parsed = json.loads(data_str)
-                _slam_status.update(parsed)
-        except Exception as e:
-            print(f"[get_slam_status] Error parsing: {e}. Raw stdout: {stdout}")
-
-    return {"success": True, "status": _slam_status, "manager_time": time.time()}
+    return {
+        "success": True,
+        "status": _slam_status,
+        "manager_time": time.time(),
+        "stale": stale,
+        "source": source,
+    }
 
 
 @router.post("/api/v1/slam/mode")
@@ -161,8 +113,7 @@ async def set_slam_mode(req: ModeReq):
 
     try:
         mode_file = "/tmp/terraslam_slam_mode"
-        with open(mode_file, "w") as f:
-            f.write(req.mode)
+        atomic_write(mode_file, req.mode)
 
         return {
             "success": True,
@@ -194,13 +145,11 @@ async def slam_command(req: ValueReq):
 
     try:
         cmd_file = "/tmp/terraslam_slam_cmd"
-        with open(cmd_file, "w") as f:
-            f.write(f"{cmd}\n")
+        atomic_write(cmd_file, f"{cmd}\n")
 
         if cmd in ["save_map", "load_map"]:
             path_file = "/tmp/terraslam_slam_path"
-            with open(path_file, "w") as f:
-                f.write(filepath)
+            atomic_write(path_file, filepath)
 
         return {
             "success": True,

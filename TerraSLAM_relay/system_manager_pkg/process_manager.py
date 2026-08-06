@@ -13,10 +13,14 @@ from typing import Any, Dict, List, Optional
 from fastapi import WebSocket
 
 from .config import COMPONENT_CONFIG
+from .state_store import state_store, atomic_write
 
 
 # YAML updater moved to utils/yaml_editor.py
 from .utils.yaml_editor import update_yaml
+
+# Publishers are mutually exclusive — only one may run at a time.
+PUBLISHER_GROUP = ("publisher_folder", "publisher_realsense")
 
 
 # --- Log Hub ---
@@ -66,6 +70,36 @@ class ProcessManager:
         self._procs: Dict[str, Dict[str, Any]] = {}
         self._log_tasks: Dict[str, List[asyncio.Task]] = {}
         self._shutting_down = False
+        self._state = state_store
+        self._projects_path = os.getenv("PROJECTS_DIR", "/opt/main/Trajectory/Database/projects")
+
+    # --- desired-state / persistence ---
+    def ensure_state(self, projects_path: Optional[str] = None):
+        if projects_path:
+            self._projects_path = str(projects_path)
+        if not self._state._loaded:
+            self._state.init(self._projects_path)
+
+    def _publisher_sibling(self, name: str) -> Optional[str]:
+        if name == "publisher_folder":
+            return "publisher_realsense"
+        if name == "publisher_realsense":
+            return "publisher_folder"
+        return None
+
+    async def _enforce_exclusivity(self, name: str):
+        """Stop the sibling publisher if running and clear its desired flag."""
+        sibling = self._publisher_sibling(name)
+        if not sibling:
+            return
+        info = self._procs.get(sibling)
+        if info and info.get("proc") and info["proc"].returncode is None:
+            await self.stop(sibling)
+        self._state.set_desired(sibling, False)
+
+    def set_autostart(self, name: str, enabled: bool) -> None:
+        self.ensure_state()
+        self._state.set_autostart(name, enabled)
 
     def _build_cmd(self, name: str, extra: Optional[Dict[str, Any]] = None) -> List[str]:
         cfg = COMPONENT_CONFIG[name]
@@ -73,11 +107,26 @@ class ProcessManager:
             path = (extra or {}).get("path", "")
             if not path:
                 raise ValueError("publisher_folder requires path")
-            return [
-                "bash", "-lc",
-                f"source /opt/ros/humble/setup.bash && source /home/orb/colcon_ws/install/setup.bash && "
-                f"cd /home/orb/Database && exec python3 image_publish.py {shlex.quote(path)}"
-            ]
+            procframe_dir = (extra or {}).get("procframe_dir")
+            cmd = (
+                "source /opt/ros/humble/setup.bash && "
+                f"cd /opt/main/Trajectory/Database && exec python3 -u image_publish.py {shlex.quote(path)}"
+            )
+            if procframe_dir:
+                cmd += f" --procframe-dir {shlex.quote(procframe_dir)}"
+            if (extra or {}).get("once"):
+                cmd += " --once"
+            return ["bash", "-lc", cmd]
+        if name == "publisher_realsense":
+            frames_dir = (extra or {}).get("frames_dir")
+            cmd = (
+                "source /opt/ros/humble/setup.bash && "
+                "source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
+                "exec python3 /opt/main/Trajectory/Database/realsense.py"
+            )
+            if frames_dir:
+                cmd += f" --frames-dir {shlex.quote(frames_dir)}"
+            return ["bash", "-lc", cmd]
         if name == "relay":
             calib_path = (extra or {}).get("calib_path", "")
             if not calib_path:
@@ -85,21 +134,31 @@ class ProcessManager:
             return [
                 "bash", "-lc",
                 f"source /opt/ros/humble/setup.bash && "
-                f"source /home/orb/colcon_ws/install/setup.bash && "
-                f"cd /home/orb/TerraSLAM_relay && "
+                f"source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
+                f"cd /opt/main/Trajectory/TerraSLAM_relay && "
                 f"exec python3 gps_client.py {shlex.quote(calib_path)}"
             ]
         return list(cfg["cmd"])
 
     async def start(self, name: str, extra: Optional[Dict[str, Any]] = None) -> str:
+        self.ensure_state()
+
         if name in self._procs:
             proc = self._procs[name].get("proc")
             if proc and proc.returncode is None:
+                self._state.set_desired(name, True, extra or {})
                 return f"{name}: already running"
 
         cfg = COMPONENT_CONFIG.get(name)
         if not cfg:
             raise ValueError(f"Unknown component: {name}")
+
+        # Publishers are mutually exclusive.
+        if name in PUBLISHER_GROUP:
+            await self._enforce_exclusivity(name)
+            self._state.set_publisher_mode(
+                "folder" if name == "publisher_folder" else "realsense"
+            )
 
         cmd = self._build_cmd(name, extra)
         env = {**os.environ, **cfg.get("env", {})}
@@ -117,16 +176,20 @@ class ProcessManager:
             raise RuntimeError(f"Failed to start {name}: {e}")
 
         now = time.time()
+        prev = self._procs.get(name, {})
         self._procs[name] = {
             "proc": proc,
             "cmd": cmd,
             "start_time": now,
-            "restarts": self._procs.get(name, {}).get("restarts", 0) + 1,
-            "restart_times": self._procs.get(name, {}).get("restart_times", []) + [now],
+            "restarts": prev.get("restarts", 0),
+            "restart_times": prev.get("restart_times", []),
             "autorestart": cfg.get("autorestart", False),
             "max_restarts": cfg.get("max_restarts", 0),
             "restart_window": cfg.get("restart_window", 60),
         }
+
+        # Record that this component is now desired to be running.
+        self._state.set_desired(name, True, extra or {})
 
         t1 = asyncio.create_task(self._pipe_logs(name, proc.stdout, "stdout"))
         t2 = asyncio.create_task(self._pipe_logs(name, proc.stderr, "stderr"))
@@ -135,13 +198,18 @@ class ProcessManager:
         asyncio.create_task(self._watchdog(name))
         return f"{name}: started (pid {proc.pid})"
 
-    async def stop(self, name: str, force: bool = False) -> str:
+    async def stop(self, name: str, force: bool = False, clear_desired: bool = True) -> str:
+        self.ensure_state()
         info = self._procs.get(name)
         if not info or not info.get("proc"):
+            if clear_desired:
+                self._state.set_desired(name, False)
             return f"{name}: not running"
 
         proc: asyncio.subprocess.Process = info["proc"]
         if proc.returncode is not None:
+            if clear_desired:
+                self._state.set_desired(name, False)
             return f"{name}: already exited ({proc.returncode})"
 
         for t in self._log_tasks.pop(name, []):
@@ -172,10 +240,16 @@ class ProcessManager:
         except Exception:
             pass
 
+        # A normal stop means the component is no longer desired (so it won't be
+        # auto-restarted or recovered on a manager restart). restart() and
+        # stop_all() pass clear_desired=False to preserve desired-state.
+        if clear_desired:
+            self._state.set_desired(name, False)
+
         return f"{name}: stopped"
 
     async def restart(self, name: str, extra: Optional[Dict[str, Any]] = None) -> str:
-        await self.stop(name, force=True)
+        await self.stop(name, force=True, clear_desired=False)
         await asyncio.sleep(1)
         return await self.start(name, extra)
 
@@ -218,15 +292,26 @@ class ProcessManager:
         if self._shutting_down:
             return
 
-        if not info["autorestart"]:
-            await log_hub.push(name, "watchdog", "WARN", f"Exited ({returncode}), autorestart disabled")
+        # Only auto-restart components that are *desired* to be running. Crash
+        # recovery is now driven by desired-state, not the old `autorestart`
+        # flag, so a manually stopped component is left stopped.
+        desired = self._state.get_component(name).get("desired", False)
+        if not desired:
+            await log_hub.push(name, "watchdog", "WARN",
+                               f"Exited ({returncode}), not desired — not restarting")
             return
 
+        # Crash-restart budget: count ONLY crashes (this path), never manual
+        # starts, so operator restarts don't exhaust the recovery budget.
         window = info["restart_window"]
         max_restarts = info["max_restarts"]
-        recent = [t for t in info.get("restart_times", []) if time.time() - t < window]
+        info["restart_times"] = info.get("restart_times", []) + [time.time()]
+        info["restarts"] = info.get("restarts", 0) + 1
+        recent = [t for t in info["restart_times"] if time.time() - t < window]
         if len(recent) > max_restarts:
-            await log_hub.push(name, "watchdog", "ERROR", f"Too many restarts ({len(recent)} in {window}s)")
+            await log_hub.push(name, "watchdog", "ERROR",
+                               f"Too many restarts ({len(recent)} in {window}s) — giving up")
+            self._state.set_desired(name, False)
             return
 
         await log_hub.push(name, "watchdog", "WARN", f"Exited ({returncode}), restarting in 1s...")
@@ -236,31 +321,52 @@ class ProcessManager:
         except Exception as e:
             await log_hub.push(name, "watchdog", "ERROR", f"Restart failed: {e}")
 
+    async def reconcile(self) -> None:
+        """Bring desired components up to match persisted desired-state. Called
+        on startup so the manager recovers after a process or OS restart."""
+        self.ensure_state()
+        for name, comp in self._state.all_components().items():
+            if not comp.get("desired", False):
+                continue
+            info = self._procs.get(name)
+            running = info and info.get("proc") and info["proc"].returncode is None
+            if running:
+                continue
+            extra = comp.get("extra") or None
+            try:
+                await self.start(name, extra)
+            except Exception as e:
+                await log_hub.push(name, "reconcile", "ERROR", f"reconcile start failed: {e}")
+
     def get_status(self) -> List[Dict[str, Any]]:
         components = []
         for name in COMPONENT_CONFIG.keys():
             info = self._procs.get(name, {})
             proc = info.get("proc")
             running = proc is not None and proc.returncode is None
+            desired = self._state.get_component(name).get("desired", False)
+            autostart = self._state.get_component(name).get("autostart", False)
 
             if running:
                 level = 0
                 level_name = "OK"
                 message = f"RUNNING (pid {proc.pid})"
-            elif info.get("restarts", 0) > 0 and not self._shutting_down:
-                level = 1
-                level_name = "WARN"
-                message = "STOPPED"
-            else:
+            elif desired:
                 level = 2
                 level_name = "ERROR"
-                message = "NOT RUNNING"
+                message = "STOPPED (expected running)"
+            else:
+                level = 0
+                level_name = "OK"
+                message = "NOT RUNNING (idle)"
 
             components.append({
                 "name": f"terraslam/{name}",
                 "level": level,
                 "level_name": level_name,
                 "message": message,
+                "desired": desired,
+                "autostart": autostart,
                 "values": {
                     "program": name,
                     "pid": proc.pid if running else None,
@@ -273,7 +379,7 @@ class ProcessManager:
     async def stop_all(self):
         self._shutting_down = True
         for name in list(self._procs.keys()):
-            await self.stop(name, force=True)
+            await self.stop(name, force=True, clear_desired=False)
 
 
 manager = ProcessManager()

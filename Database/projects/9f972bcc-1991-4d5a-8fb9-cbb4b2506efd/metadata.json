@@ -1,0 +1,9 @@
+{
+  "name": "22",
+  "type": "симуляция",
+  "id": "9f972bcc-1991-4d5a-8fb9-cbb4b2506efd",
+  "created_at": "2026-08-04T14:27:38.712891",
+  "video_filename": "/opt/main/Trajectory/Database/projects/9f972bcc-1991-4d5a-8fb9-cbb4b2506efd/videos/ebal2.mp4",
+  "frames_path": null,
+  "calibration_status": "not_calibrated"
+}

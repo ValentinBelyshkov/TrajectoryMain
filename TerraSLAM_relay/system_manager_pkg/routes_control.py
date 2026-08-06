@@ -5,6 +5,7 @@ import shutil
 import time
 from pathlib import Path
 from typing import Literal, Optional, Union
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
@@ -15,13 +16,15 @@ from .routes_projects import (
     get_projects_root,
     read_project_metadata,
 )
+from .routes_components import component_action as _gateway_component_action
 from .utils.yaml_editor import update_yaml
+from .config import ValueReq as _ValueReq
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-TERRASLAM_GATEWAY_URL = os.getenv("TERRASLAM_GATEWAY_URL", "http://host.docker.internal:9000")
-SLAM_DB = os.getenv("SLAM_DB", "/home/orb/Database")
+TERRASLAM_GATEWAY_URL = os.getenv("TERRASLAM_GATEWAY_URL", "http://127.0.0.1:9000")
+PROJECTS_DIR = os.getenv("PROJECTS_DIR", "/opt/main/Trajectory/Database/projects")
 
 COMPONENT_MAPPING = {
     "slam": "slam",
@@ -118,6 +121,44 @@ def _gateway_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(base_url=TERRASLAM_GATEWAY_URL, timeout=30.0)
 
 
+def _is_loopback_gateway() -> bool:
+    """True when the configured gateway is this same process."""
+    try:
+        host = urlparse(TERRASLAM_GATEWAY_URL).hostname or ""
+    except Exception:
+        return False
+    return (
+        host in ("localhost", "127.0.0.1", "::1")
+        or host == os.getenv("HOSTNAME")
+    )
+
+
+async def _call_component_action(component: str, action: str, value: Optional[str] = None) -> list[str]:
+    """Invoke a component action. When the gateway points at this same
+    process we call the FastAPI handler directly (no self-HTTP, no DNS needed
+    so it works from the LAN host too). Otherwise fall back to HTTP."""
+    if _is_loopback_gateway():
+        try:
+            result = await _gateway_component_action(
+                component, action, _ValueReq(value=value)
+            )
+            return result.get("results", []) or [str(result)]
+        except HTTPException as e:
+            return [f"{component}: error: {e.detail}"]
+        except Exception as e:  # pragma: no cover - defensive
+            return [f"{component}: error: {e}"]
+
+    async with _gateway_client() as client:
+        r = await client.post(
+            f"/api/v1/components/{component}/{action}",
+            json={"value": value} if value else {},
+        )
+        r.raise_for_status()
+        data = r.json()
+    results = data.get("results", [])
+    return results if isinstance(results, list) else [str(results)]
+
+
 async def _gateway_health() -> dict:
     """Check gateway health, returns empty dict on error."""
     async with _gateway_client() as client:
@@ -138,14 +179,9 @@ def _resolve_component(comp: str, project_type: Optional[str] = None) -> str:
     return mapped
 
 
-async def _gateway_action(component: str, action: str) -> list[str]:
+async def _gateway_action(component: str, action: str, value: Optional[str] = None) -> list[str]:
     """Call gateway /api/v1/components/{component}/{action} and return list of result strings."""
-    async with _gateway_client() as client:
-        r = await client.post(f"/api/v1/components/{component}/{action}", json={})
-        r.raise_for_status()
-        data = r.json()
-    results = data.get("results", [])
-    return results if isinstance(results, list) else [str(results)]
+    return await _call_component_action(component, action, value=value)
 
 
 async def _gateway_status() -> dict:
@@ -183,9 +219,8 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
         load_path = None
         save_path = None
         if project and project.calibration_status == "calibrated":
-            projects_dir = os.getenv("PROJECTS_DIR", "/home/orb/Database/projects")
-            load_path = f"{projects_dir}/{action.project_id}/calibrations/map"
-            save_path = f"{projects_dir}/{action.project_id}/calibrations/map"
+            load_path = f"{PROJECTS_DIR}/{action.project_id}/calibrations/map"
+            save_path = f"{PROJECTS_DIR}/{action.project_id}/calibrations/map"
         logger.info(
             f"Updating SLAM YAML before {action.action}: load_filename={load_path}, save_filename={save_path}"
         )
@@ -213,9 +248,15 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
             try:
                 if comp.startswith("publisher_") and action.action in ("start", "restart"):
                     if action.project_id:
-                        frames_dir = f"{SLAM_DB}/projects/{action.project_id}/frames"
-                        async with _gateway_client() as client:
-                            await client.post("/api/v1/publisher/path", json={"path": frames_dir})
+                        frames_dir = f"{PROJECTS_DIR}/{action.project_id}/frames"
+                        os.makedirs(frames_dir, exist_ok=True)
+                        # publisher_folder expects the path via the dedicated
+                        # /api/v1/publisher/path endpoint; publisher_realsense
+                        # receives it as the component start value (--frames-dir).
+                        if comp == "publisher_folder":
+                            pub_res = await _call_component_action("publisher_folder", "start", value=frames_dir)
+                            combined_output += "\n".join(pub_res) + "\n"
+                            continue
                     else:
                         combined_output += f"{comp}: skipped (no project_id)\n"
                         success = False
@@ -224,7 +265,7 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
                 if action.action == "restart":
                     kill_res = await _gateway_action(comp, "kill")
                     combined_output += "\n".join(kill_res) + "\n"
-                    start_res = await _gateway_action(comp, "start")
+                    start_res = await _gateway_action(comp, "start", value=frames_dir if comp == "publisher_realsense" else None)
                     combined_output += "\n".join(start_res) + "\n"
                 else:
                     results = await _gateway_action(comp, action.action)
@@ -240,9 +281,22 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
     if gateway_component.startswith("publisher_") and action.action in ("start", "restart"):
         if not action.project_id:
             raise HTTPException(400, "project_id is required to start publisher")
-        frames_dir = f"{SLAM_DB}/projects/{action.project_id}/frames"
-        async with _gateway_client() as client:
-            await client.post("/api/v1/publisher/path", json={"path": frames_dir})
+        frames_dir = f"{PROJECTS_DIR}/{action.project_id}/frames"
+        os.makedirs(frames_dir, exist_ok=True)
+        if gateway_component == "publisher_folder":
+            # publisher_folder expects the path via the dedicated endpoint
+            async with _gateway_client() as client:
+                r = await client.post("/api/v1/publisher/path", json={"path": frames_dir})
+                r.raise_for_status()
+            return CommandResponse(success=True, output="publisher_folder path set")
+        # publisher_realsense receives the frames dir as its start value
+        try:
+            results = await _call_component_action(
+                "publisher_realsense", action.action, value=frames_dir
+            )
+            return CommandResponse(success=True, output="\n".join(results))
+        except Exception as e:
+            raise HTTPException(500, str(e))
 
     try:
         if action.action == "restart":
@@ -408,17 +462,24 @@ async def slam_test_run(request: Request, project_id: Optional[str] = None):
         print(f"[TEST-RUN] Publisher mode: {publisher_mode}")
 
         print("[TEST-RUN] Starting SLAM run via TerraSLAM...")
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            res = await client.post(
-                f"{TERRASLAM_GATEWAY_URL}/slam/run",
-                json={
-                    "project_id": project_id,
-                    "mode": publisher_mode,
-                    "duration": 15
-                }
-            )
-            result = res.json()
+        try:
+            async with httpx.AsyncClient(timeout=300.0) as client:
+                res = await client.post(
+                    f"{TERRASLAM_GATEWAY_URL}/slam/run",
+                    json={
+                        "project_id": project_id,
+                        "mode": publisher_mode,
+                        "duration": 15
+                    }
+                )
+                result = res.json()
             print(f"[TEST-RUN] TerraSLAM response: {result}")
+        except Exception as e:
+            print(f"[TEST-RUN] ERROR contacting gateway {TERRASLAM_GATEWAY_URL}: {e}")
+            return CommandResponse(
+                success=False, output="",
+                error=f"Gateway {TERRASLAM_GATEWAY_URL} unreachable: {e}",
+            )
 
         if not result.get("success"):
             error = result.get("results", ["Unknown error"])[0]

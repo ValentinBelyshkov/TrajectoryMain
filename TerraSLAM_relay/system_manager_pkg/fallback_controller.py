@@ -17,6 +17,7 @@ import time
 from typing import Any, Dict, Optional
 
 from .config import DEFAULT_FALLBACK_CONNECTION, DEFAULT_FALLBACK_METHOD, VALID_FALLBACK_METHODS
+from .state_store import state_store
 
 try:
     from pymavlink import mavutil
@@ -44,9 +45,19 @@ class FallbackController:
 
     def __init__(self, method: str = DEFAULT_FALLBACK_METHOD, connection: str = DEFAULT_FALLBACK_CONNECTION):
         self._method = DEFAULT_FALLBACK_METHOD
-        self.set_method(method)
         self.connection_str = connection
         self._last_trigger: Optional[Dict[str, Any]] = None
+
+    def reload(self) -> None:
+        """Load persisted method/connection from the state store. Called on
+        startup so a configured failsafe survives a manager restart."""
+        fb = state_store.get_fallback()
+        m = (fb.get("method") or DEFAULT_FALLBACK_METHOD).strip().upper()
+        if m in VALID_FALLBACK_METHODS:
+            self._method = m
+        c = fb.get("connection") or DEFAULT_FALLBACK_CONNECTION
+        if c:
+            self.connection_str = c
 
     # --- getter/setter for the fallback method ---
     def get_method(self) -> str:
@@ -57,6 +68,7 @@ class FallbackController:
         if method not in VALID_FALLBACK_METHODS:
             raise FallbackError(f"method must be one of {VALID_FALLBACK_METHODS}, got {method!r}")
         self._method = method
+        state_store.set_fallback(method=method, connection=self.connection_str)
         return self._method
 
     # --- getter/setter for the MAVLink connection string ---
@@ -67,6 +79,7 @@ class FallbackController:
         if not connection:
             raise FallbackError("connection must be a non-empty MAVLink connection string")
         self.connection_str = connection
+        state_store.set_fallback(method=self._method, connection=connection)
         return self.connection_str
 
     def last_trigger(self) -> Optional[Dict[str, Any]]:

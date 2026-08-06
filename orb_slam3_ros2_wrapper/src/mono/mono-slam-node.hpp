@@ -133,7 +133,18 @@ void handleMapControl(const std::shared_ptr<orb_slam3_ros2_wrapper::srv::MapCont
         geometry_msgs::msg::TransformStamped tfMapOdom_;
             std::atomic<bool> save_next_frame_{false};
     std::atomic<uint64_t> frame_save_counter_{0};
-    std::string save_frame_dir_ = "/opt/main/Trajectory/output/procframe";
+    // When true (default) every successfully tracked frame is written into
+    // procframe by ORB-SLAM3's FrameDrawer. Set the `save_every_frame` ROS
+    // param to false to only save on explicit MapControl cmd=5 requests.
+    bool save_every_frame_{true};
+    // Diagnostics for the periodic MONO heartbeat log.
+    uint64_t frames_received_{0};
+    uint64_t frames_tracked_{0};
+    std::chrono::steady_clock::time_point last_report_{std::chrono::steady_clock::now()};
+    // Per-project procframe path. Must be set explicitly to
+    // /opt/main/Trajectory/projects/<id>/procframe — never a shared global
+    // path. Left empty by default; saveFrame refuses to run until set.
+    std::string save_frame_dir_;
 
     void saveFrame(const sensor_msgs::msg::Image::SharedPtr msgRGB, 
                    const Sophus::SE3f& Tcw);

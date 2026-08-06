@@ -1,4 +1,3 @@
-import type { CalibrationStep } from "@/hooks/useProject";
 import React from "react";
 import { CalibrationTypeSelection } from "./CalibrationTypeSelection";
 import { AutoCalibrationRegion } from "./AutoCalibrationRegion";
@@ -7,148 +6,43 @@ import { InstructionsStep } from "./InstructionsStep";
 import { ImageUploadStep } from "./ImageUploadStep";
 import { TestRunStep } from "./TestRunStep";
 import { FrameSelectionStep } from "./FrameSelectionStep";
-import { VideoRecordingStep } from "./VideoRecordingStep";
+import { CameraRecordingStep } from "./CameraRecordingStep";
+import { FrameTrimmingStep } from "./FrameTrimmingStep";
 import { VideoTrimmingStep } from "./VideoTrimmingStep";
 import { VideoUploadStep } from "./VideoUploadStep";
 import { ProcessingStep } from "./ProcessingStep";
 import { CorrelationStep } from "./CorrelationStep";
 import { FinalizeStep } from "./FinalizeStep";
-import {
-  CalibrationPointSelector,
-  type CalibrationPoint,
-} from "@/components/CalibrationPointSelector";
-import type { AutoCalibrationRegion as AutoCalibrationRegionType } from "@/lib/api";
-import type { RefObject } from "react";
+import { CalibrationPointSelector } from "@/components/CalibrationPointSelector";
+import { useCalibration } from "@/contexts/CalibrationContext";
 
 interface CalibrationWorkflowProps {
-  calibrationStep: CalibrationStep;
-  uploadedImage: { filename: string; url: string } | null;
-  selectedFrames: { filename: string; url: string }[];
-  uploadError: string | null;
-  isUploading: boolean;
-  onTypeSelect: (type: "manual" | "auto") => void;
-  onInstructionsNext: () => void;
-  onTestRunSuccess: () => void;
-  onTestRunBack: () => void;
-  onFrameSelectionBack: () => void;
-  onFramesSelected: (frames: { filename: string; url: string }[]) => void;
-  onImageUpload: (file: File) => void;
-  onCalibrationComplete: () => void;
-  onCalibrationCancel: () => void;
-  onUploadErrorDismiss: () => void;
-  projectId?: string;
-  projectType?: "камера" | "симуляция";
-  publisherMode?: string;
-  projectVideoFilename?: string | null;
-  hasVideoStream: boolean;
-  videoCanvasRef: RefObject<HTMLCanvasElement | null>;
-  // Auto calibration props
-  dronePosition: { lat: number; lng: number };
-  autoCalibrationRegion: AutoCalibrationRegionType | null;
-  autoCalibrationFrames: { filename: string; url: string }[];
-  autoCalibrationError: string | null;
-  autoCalibrationProgress: "idle" | "downloading" | "matching" | "success" | "error";
-  autoCalibrationMessage: string | null;
-  onAutoRegionConfirm: (region: AutoCalibrationRegionType) => void;
-  onAutoImageSelect: (imageFilename: string) => void;
-  onAutoCalibrationBack: () => void;
-  // NEW manual calibration props
-  calibrationSessionId: string | null;
-  onSessionIdChange: (id: string) => void;
-  calibrationSession: any;
-  recordingStatus: "idle" | "recording" | "stopped";
-  recordingDuration: number;
-  onRecordingDurationChange: (duration: number) => void;
-  onRecordingStatusChange: (status: "idle" | "recording" | "stopped") => void;
-  trimSegments: Array<{ start: number; end: number }>;
-  processingProgress: string;
-  correlationPoints: any[];
-  transform: any;
-  onStartRecording: () => void;
-  onStopRecording: () => void;
-  onApplyTrim: (segments: Array<{ start: number; end: number }>) => void;
-  onRunProcessing: () => void;
-  onComputeCorrelation: (points: any[]) => void;
-  onFinalizeCalibration: () => void;
-  onRecordingNext: () => void;
-  onTrimmingBack: () => void;
-  onTrimmingSkip?: () => void;
-  onProcessingBack: () => void;
-  onProcessingSkip?: () => void;
-  onCorrelatingBack: () => void;
-  onFinalizingBack: () => void;
-  onFinalizingSkip?: () => void;
+  onStartPublisher?: (projectId: string) => Promise<void>;
 }
 
 export function CalibrationWorkflow({
-  calibrationStep,
-  uploadedImage,
-  selectedFrames,
-  uploadError,
-  isUploading,
-  onTypeSelect,
-  onInstructionsNext,
-  onTestRunSuccess,
-  onTestRunBack,
-  onFrameSelectionBack,
-  onFramesSelected,
-  onImageUpload,
-  onCalibrationComplete,
-  onCalibrationCancel,
-  onUploadErrorDismiss,
-  projectId,
-  projectType,
-  publisherMode,
-  projectVideoFilename,
-  hasVideoStream,
-  videoCanvasRef,
-  dronePosition,
-  autoCalibrationRegion,
-  autoCalibrationFrames,
-  autoCalibrationError,
-  autoCalibrationProgress,
-  autoCalibrationMessage,
-  onAutoRegionConfirm,
-  onAutoImageSelect,
-  onAutoCalibrationBack,
-  calibrationSessionId,
-  onSessionIdChange,
-  calibrationSession,
-  recordingStatus,
-  recordingDuration,
-  onRecordingDurationChange,
-  onRecordingStatusChange,
-  trimSegments,
-  processingProgress,
-  correlationPoints,
-  transform,
-  onStartRecording,
-  onStopRecording,
-  onApplyTrim,
-  onRunProcessing,
-  onComputeCorrelation,
-  onFinalizeCalibration,
-  onRecordingNext,
-  onTrimmingBack,
-  onTrimmingSkip,
-  onProcessingBack,
-  onProcessingSkip,
-  onCorrelatingBack,
-  onFinalizingBack,
-  onFinalizingSkip,
+  onStartPublisher,
 }: CalibrationWorkflowProps) {
+  const c = useCalibration();
+
+  const calibrationStep = c.calibrationStep;
+  const projectId = c.project?.id;
+  const projectType = c.project?.type;
+  const publisherMode = c.systemStatus?.publisher_mode;
+  const projectVideoFilename = c.project?.videoFilename;
+
+  const goTo = c.setCalibrationStep;
+
   const wrapOverlay = (content: React.ReactNode) => (
     <div className="fixed inset-0 z-[1200] bg-slate-50 flex flex-col">
       <div className="h-full w-full bg-white shadow-xl relative overflow-hidden flex flex-col">
         <button
-          onClick={onCalibrationCancel}
+          onClick={c.handleCalibrationCancel}
           className="absolute top-4 right-4 text-muted-foreground hover:text-foreground z-10 p-2 hover:bg-slate-100 rounded-full transition-colors"
         >
           <span className="text-xl">✕</span>
         </button>
-        <div className="flex-1 min-h-0">
-          {content}
-        </div>
+        <div className="flex-1 min-h-0">{content}</div>
       </div>
     </div>
   );
@@ -157,9 +51,9 @@ export function CalibrationWorkflow({
   if (calibrationStep === "type-selection") {
     return wrapOverlay(
       <CalibrationTypeSelection
-        onSelect={onTypeSelect}
-        onBack={onCalibrationCancel}
-      />
+        onSelect={c.handleCalibrationTypeSelect}
+        onBack={c.handleCalibrationCancel}
+      />,
     );
   }
 
@@ -167,26 +61,26 @@ export function CalibrationWorkflow({
   if (calibrationStep === "auto-region") {
     return wrapOverlay(
       <AutoCalibrationRegion
-        onConfirm={onAutoRegionConfirm}
-        onBack={onAutoCalibrationBack}
-        dronePosition={dronePosition}
-        error={autoCalibrationError}
-        progress={autoCalibrationProgress}
-        message={autoCalibrationMessage}
-      />
+        onConfirm={c.handleAutoRegionConfirm}
+        onBack={c.handleAutoCalibrationBack}
+        dronePosition={c.dronePosition}
+        error={c.autoCalibrationError}
+        progress={c.autoCalibrationProgress}
+        message={c.autoCalibrationMessage}
+      />,
     );
   }
 
   if (calibrationStep === "auto-image-select") {
     return wrapOverlay(
       <AutoCalibrationImageSelect
-        frames={autoCalibrationFrames}
-        onSelect={onAutoImageSelect}
-        onBack={onAutoCalibrationBack}
-        error={autoCalibrationError}
-        progress={autoCalibrationProgress}
-        message={autoCalibrationMessage}
-      />
+        frames={c.autoCalibrationFrames}
+        onSelect={c.handleAutoImageSelect}
+        onBack={c.handleAutoCalibrationBack}
+        error={c.autoCalibrationError}
+        progress={c.autoCalibrationProgress}
+        message={c.autoCalibrationMessage}
+      />,
     );
   }
 
@@ -198,14 +92,14 @@ export function CalibrationWorkflow({
         </div>
         <div className="p-6 border-t bg-slate-50 flex justify-center shrink-0">
           <button
-            onClick={onInstructionsNext}
+            onClick={c.handleInstructionsNext}
             className="w-full max-w-md bg-primary text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
           >
             <span className="w-4 h-4">▶</span>
             Продолжить
           </button>
         </div>
-      </div>
+      </div>,
     );
   }
 
@@ -213,11 +107,11 @@ export function CalibrationWorkflow({
     return wrapOverlay(
       <TestRunStep
         projectId={projectId}
-        onSuccess={onTestRunSuccess}
-        onBack={onTestRunBack}
-        hasVideoStream={hasVideoStream}
-        videoCanvasRef={videoCanvasRef}
-      />
+        onSuccess={c.handleTestRunSuccess}
+        onBack={c.handleTestRunBack}
+        hasVideoStream={c.hasVideoStream}
+        videoCanvasRef={c.videoCanvasRef}
+      />,
     );
   }
 
@@ -225,124 +119,156 @@ export function CalibrationWorkflow({
     return wrapOverlay(
       <FrameSelectionStep
         projectId={projectId}
-        onFramesSelected={onFramesSelected}
-        onBack={onFrameSelectionBack}
-      />
+        onFramesSelected={c.handleFramesSelected}
+        onBack={c.handleFrameSelectionBack}
+      />,
     );
   }
 
   if (calibrationStep === "upload") {
     return wrapOverlay(
       <ImageUploadStep
-        onUpload={onImageUpload}
-        uploadError={uploadError}
-        isUploading={isUploading}
-        onErrorDismiss={onUploadErrorDismiss}
+        onUpload={c.handleImageUpload}
+        uploadError={c.uploadError}
+        isUploading={c.isUploading}
+        onErrorDismiss={c.clearUploadError}
         onFileSelect={() => {}}
-      />
+      />,
     );
   }
 
   if (calibrationStep === "pairing") {
-    if (selectedFrames.length > 0) {
+    if (c.selectedFrames.length > 0) {
       return (
         <CalibrationPointSelector
-          images={selectedFrames}
-          onComplete={onCalibrationComplete}
-          onCancel={onCalibrationCancel}
+          images={c.selectedFrames}
+          onComplete={c.handleCalibrationComplete}
+          onCancel={c.handleCalibrationCancel}
           projectId={projectId}
         />
       );
     }
-    if (uploadedImage) {
+    if (c.uploadedImage) {
       return (
         <CalibrationPointSelector
-          imageUrl={uploadedImage.url}
-          onComplete={onCalibrationComplete}
-          onCancel={onCalibrationCancel}
+          imageUrl={c.uploadedImage.url}
+          onComplete={c.handleCalibrationComplete}
+          onCancel={c.handleCalibrationCancel}
           projectId={projectId}
-          imageFilename={uploadedImage.filename}
+          imageFilename={c.uploadedImage.filename}
         />
       );
     }
   }
 
   if (calibrationStep === "recording") {
-    const isSimulation =
-      projectType === "симуляция" || publisherMode === "folder";
-    if (isSimulation) {
+    const isCamera =
+      projectType === "камера" || publisherMode === "realsense";
+    if (!isCamera) {
       return wrapOverlay(
-      <VideoUploadStep
-        onComplete={onRecordingNext}
-        onBack={onCalibrationCancel}
-        onSkip={onRecordingNext}
-        sessionId={calibrationSessionId}
-        onSessionIdChange={onSessionIdChange}
-        onRecordingStatusChange={onRecordingStatusChange}
-        onRecordingDurationChange={onRecordingDurationChange}
-        projectId={projectId}
-        projectVideoFilename={projectVideoFilename}
-      />
+        <VideoUploadStep
+          onComplete={goTo.bind(null, "trimming") as () => void}
+          onBack={c.handleCalibrationCancel}
+          onSkip={goTo.bind(null, "trimming") as () => void}
+          sessionId={c.calibrationSessionId}
+          onSessionIdChange={c.setCalibrationSessionId}
+          onRecordingStatusChange={c.setRecordingStatus}
+          onRecordingDurationChange={c.setRecordingDuration}
+          projectId={projectId}
+          projectVideoFilename={projectVideoFilename}
+        />,
       );
     }
     return wrapOverlay(
-      <VideoRecordingStep
-        onComplete={onRecordingNext}
-        onBack={onCalibrationCancel}
-        onSkip={onRecordingNext}
-        recordingStatus={recordingStatus}
-        recordingDuration={recordingDuration}
-        onRecordingDurationChange={onRecordingDurationChange}
-        onRecordingStatusChange={onRecordingStatusChange}
-        sessionId={calibrationSessionId}
-        onSessionIdChange={onSessionIdChange}
-      />
+      <CameraRecordingStep
+        onStart={c.handleStartRecording}
+        onStop={c.handleStopRecording}
+        videoCanvasRef={c.videoCanvasRef}
+        hasVideoStream={c.hasVideoStream}
+        calibrationSessionId={c.calibrationSessionId}
+        startSession={c.startNewCalibrationSession}
+        onComplete={goTo.bind(null, "processing") as () => void}
+        onBack={c.handleCalibrationCancel}
+        onSkip={async () => {
+          if (!c.calibrationSessionId && projectId) {
+            try {
+              // Не очищаем папку frames: при пропуске записи кадры уже есть
+              // на диске и их нельзя удалять.
+              await c.startNewCalibrationSession(false);
+            } catch (err) {
+              console.error("Failed to start calibration session on skip:", err);
+            }
+          }
+          goTo("processing");
+        }}
+        error={c.recordingError}
+        projectId={projectId}
+        onStartPublisher={onStartPublisher}
+      />,
     );
   }
 
   if (calibrationStep === "trimming") {
+    const isCamera =
+      projectType === "камера" || publisherMode === "realsense";
+
+    // Camera (RealSense) recording produces frames on disk, not a video file,
+    // so use the frame-based trimming editor that deletes the extra frames.
+    if (isCamera) {
+      return wrapOverlay(
+        <FrameTrimmingStep
+          projectId={projectId}
+          onApplyTrim={c.handleApplyFrameTrim}
+          onBack={goTo.bind(null, "recording") as () => void}
+          onSkip={goTo.bind(null, "processing") as () => void}
+        />,
+      );
+    }
+
     return wrapOverlay(
       <VideoTrimmingStep
-        sessionId={calibrationSessionId || ""}
-        onApplyTrim={onApplyTrim}
-        onBack={onTrimmingBack}
-        onSkip={onTrimmingSkip}
-      />
+        sessionId={c.calibrationSessionId || ""}
+        onApplyTrim={c.handleApplyTrim}
+        onBack={goTo.bind(null, "recording") as () => void}
+        onSkip={goTo.bind(null, "processing") as () => void}
+      />,
     );
   }
 
   if (calibrationStep === "processing") {
     return wrapOverlay(
       <ProcessingStep
-        sessionId={calibrationSessionId || ""}
-        progress={processingProgress}
-        onComplete={onRunProcessing}
-        onBack={onProcessingBack}
-        onSkip={onProcessingSkip}
-      />
+        sessionId={c.calibrationSessionId || ""}
+        progress={c.processingProgress}
+        onComplete={c.handleRunProcessing}
+        onBack={goTo.bind(null, "trimming") as () => void}
+        onSkip={goTo.bind(null, "correlating") as () => void}
+      />,
     );
   }
 
   if (calibrationStep === "correlating") {
     return wrapOverlay(
       <CorrelationStep
-        sessionId={calibrationSessionId || ""}
-        frames={calibrationSession?.frame_pose_data || []}
-        onCompute={onComputeCorrelation}
-        onBack={onCorrelatingBack}
-      />
+        sessionId={c.calibrationSessionId || ""}
+        projectId={projectId || ""}
+        frames={c.calibrationSession?.frame_pose_data || []}
+        onCompute={c.handleComputeCorrelation}
+        onBack={goTo.bind(null, "processing") as () => void}
+        sessionStatus={c.calibrationSession?.status}
+      />,
     );
   }
 
   if (calibrationStep === "finalizing") {
     return wrapOverlay(
       <FinalizeStep
-        sessionId={calibrationSessionId || ""}
-        transform={transform}
-        onComplete={onFinalizeCalibration}
-        onBack={onFinalizingBack}
-        onSkip={onFinalizingSkip}
-      />
+        sessionId={c.calibrationSessionId || ""}
+        transform={c.transform}
+        onComplete={c.handleFinalizeCalibration}
+        onBack={goTo.bind(null, "correlating") as () => void}
+        onSkip={goTo.bind(null, "complete") as () => void}
+      />,
     );
   }
 

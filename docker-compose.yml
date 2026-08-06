@@ -54,9 +54,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=all
       - ROSBRIDGE_PORT=9091
       - PROJECTS_DIR=/home/orb/Database/projects
-      - CALIBRATION_SESSIONS_DIR=/home/orb/Database/calibration_sessions
-      - PROCFRAME_DIR=/opt/main/Trajectory/output/procframe
-    
+
     # Health check: Verify ROS2 is responsive
     healthcheck:
       test: ["CMD", "ros2", "topic", "list"]

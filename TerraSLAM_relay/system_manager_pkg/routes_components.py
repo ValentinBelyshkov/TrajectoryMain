@@ -6,11 +6,13 @@ import asyncio
 import os
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
 from typing import Optional
 
 from . import process_manager as pm
 from .config import COMPONENT_CONFIG, PUBLISHER_MODE_FILE, CalibPathReq, ModeReq, PathReq, ValueReq
 from .process_manager import log_hub, manager
+from .state_store import state_store
 
 router = APIRouter()
 
@@ -39,13 +41,14 @@ async def component_action(component: str, action: str, req: Optional[ValueReq] 
     else:
         raise HTTPException(status_code=400, detail=f"Unknown component: {component}")
 
+    manager.ensure_state()
     results = []
     for comp in targets:
         try:
-            if action == "kill":
-                out = await manager.stop(comp, force=True)
-            elif action == "stop":
-                out = await manager.stop(comp)
+            if action in ("kill", "stop"):
+                # manager.stop clears the desired flag so the component is NOT
+                # auto-restarted by the watchdog or on a manager restart.
+                out = await manager.stop(comp, force=(action == "kill"))
             elif action == "start":
                 extra = _extra_for(comp, req)
                 out = await manager.start(comp, extra)
@@ -59,12 +62,47 @@ async def component_action(component: str, action: str, req: Optional[ValueReq] 
     return {"success": True, "results": results}
 
 
+class AutostartReq(BaseModel):
+    enabled: bool
+
+
+@router.post("/api/v1/components/{component}/autostart")
+async def component_autostart(component: str, req: AutostartReq):
+    if component not in COMPONENT_CONFIG:
+        raise HTTPException(status_code=400, detail=f"Unknown component: {component}")
+
+    manager.ensure_state()
+    manager.set_autostart(component, req.enabled)
+
+    # When enabling, bring the component up now if it isn't already running.
+    if req.enabled:
+        info = manager._procs.get(component)
+        running = info and info.get("proc") and info["proc"].returncode is None
+        if not running:
+            try:
+                extra = state_store.get_component(component).get("extra") or None
+                await manager.start(component, extra)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Start failed: {e}")
+
+    return {
+        "success": True,
+        "component": component,
+        "autostart": req.enabled,
+        "desired": state_store.get_component(component).get("desired", False),
+    }
+
+
 def _extra_for(comp: str, req: Optional[ValueReq]):
     if comp == "publisher_folder":
         path = (req.value if req and req.value else None) or pm.publisher_folder_path
         if not path:
             raise ValueError("publisher_folder requires path — call POST /api/v1/publisher/path first")
         return {"path": path}
+    if comp == "publisher_realsense":
+        if req and req.value:
+            return {"frames_dir": req.value}
+        return None
     if comp == "relay":
         if not pm.relay_calib_path:
             raise ValueError("relay calib_path not set — call POST /api/v1/relay/path first")

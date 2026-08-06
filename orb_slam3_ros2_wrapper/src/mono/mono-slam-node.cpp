@@ -15,6 +15,11 @@
 
 namespace ORB_SLAM3_Wrapper
 {
+    // Runtime flag (created by system_manager only during a calibration run)
+    // that enables writing processed frames into procframe. Absent during
+    // normal recording / flight, so nothing is ever persisted then.
+    static const char* SAVE_FRAMES_FLAG_FILE = "/tmp/terraslam_save_frames";
+
     MonoSlamNode::MonoSlamNode(const std::string &strVocFile,
                                const std::string &strSettingsFile,
                                ORB_SLAM3::System::eSensor sensor)
@@ -28,7 +33,7 @@ namespace ORB_SLAM3_Wrapper
         cameraPosePub_ = this->create_publisher<geometry_msgs::msg::Pose>("camera_pose", 10);
         trackingStatePub_ = this->create_publisher<std_msgs::msg::Int8>("orb_slam3/tracking_state", 10);
 
-        bool bUseViewer =false;
+        bool bUseViewer =true;
         this->declare_parameter("visualization", rclcpp::ParameterValue(false));
         this->get_parameter("visualization", bUseViewer);
 
@@ -58,6 +63,12 @@ namespace ORB_SLAM3_Wrapper
 
         this->declare_parameter("landmark_publish_frequency", rclcpp::ParameterValue(1000));
         this->get_parameter("landmark_publish_frequency", landmark_publish_frequency_);
+
+        // Save every successfully tracked frame into procframe (default on).
+        this->declare_parameter("save_every_frame", rclcpp::ParameterValue(true));
+        this->get_parameter("save_every_frame", save_every_frame_);
+        RCLCPP_INFO(this->get_logger(), "save_every_frame = %s",
+                    save_every_frame_ ? "true" : "false");
         
 	    mapPointsCallbackGroup_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         mapCurrentPointsTimer_ = this->create_wall_timer(std::chrono::milliseconds(5 * landmark_publish_frequency_), std::bind(&MonoSlamNode::saveCurrentMapPointCloud, this));
@@ -66,15 +77,35 @@ namespace ORB_SLAM3_Wrapper
         interface_ = std::make_shared<ORB_SLAM3_Wrapper::ORBSLAM3Interface>(strVocFile, strSettingsFile,
                                                                             sensor, bUseViewer, rosViz_, robot_x_,
                                                                             robot_y_, global_frame_, odom_frame_id_, robot_base_frame_id_);
+
+        // ORB-SLAM3 derives the procframe base from the atlas save path
+        // (<project>/calibrations/map -> <project>/procframe). Report it now so
+        // a misconfigured YAML is obvious at startup rather than after a run.
+        {
+            const std::string base = ORB_SLAM3::FrameDrawer::GetOutputBasePath();
+            if (base.empty()) {
+                RCLCPP_ERROR(this->get_logger(),
+                             "procframe base path is EMPTY. Check System.SaveAtlasToFile in the "
+                             "settings YAML -- it must point at <project>/calibrations/map.");
+            } else {
+                const std::string dir = base + "/procframe";
+                std::error_code pec;
+                std::filesystem::create_directories(dir, pec);
+                RCLCPP_INFO(this->get_logger(), "procframe output dir: %s (exists=%d)",
+                            dir.c_str(), (int)std::filesystem::exists(dir));
+            }
+        }
         map_control_srv_ = this->create_service<orb_slam3_ros2_wrapper::srv::MapControl>(
             "orb_slam3/map_control",
             std::bind(&MonoSlamNode::handleMapControl, this, std::placeholders::_1, std::placeholders::_2));
         RCLCPP_INFO(this->get_logger(), "✅ Map control service registered: /orb_slam3/map_control");
         
         std::error_code ec;
-        std::filesystem::create_directories(save_frame_dir_, ec);
-        if (ec) {
-            RCLCPP_WARN(this->get_logger(), "Cannot create save dir: %s", ec.message().c_str());
+        if (!save_frame_dir_.empty()) {
+            std::filesystem::create_directories(save_frame_dir_, ec);
+            if (ec) {
+                RCLCPP_WARN(this->get_logger(), "Cannot create save dir: %s", ec.message().c_str());
+            }
         }
         
         frequency_tracker_count_ = 0;
@@ -110,6 +141,18 @@ namespace ORB_SLAM3_Wrapper
                                  const Sophus::SE3f& Tcw)
     {
         try {
+            if (save_frame_dir_.empty()) {
+                RCLCPP_ERROR(this->get_logger(),
+                    "saveFrame: procframe dir not set. Results must be saved under "
+                    "/opt/main/Trajectory/projects/<id>/procframe. Set save_frame_dir_ first.");
+                return;
+            }
+            std::error_code ec;
+            std::filesystem::create_directories(save_frame_dir_, ec);
+            if (ec) {
+                RCLCPP_ERROR(this->get_logger(), "Cannot create save dir: %s", ec.message().c_str());
+                return;
+            }
             uint64_t id = frame_save_counter_.fetch_add(1);
             std::string prefix = save_frame_dir_ + "/frame_" + std::to_string(id);
             std::string imgfile = prefix + ".jpg";
@@ -155,9 +198,45 @@ namespace ORB_SLAM3_Wrapper
 
     void MonoSlamNode::MONOCallback(const sensor_msgs::msg::Image::SharedPtr msgRGB)
     {
+        // Ask the interface to persist this frame into procframe. Saving only
+        // happens when tracking is OK (state 2), which is exactly the set of
+        // frames that carry a usable pose.
+        //
+        // Frames must be written ONLY during calibration. The orchestrator
+        // (system_manager) creates the flag file below at the start of a
+        // calibration run and removes it afterwards, so normal operation
+        // (recording / flight) never writes into procframe. `save_every_frame_`
+        // is the master switch (ROS param, default true) — the flag file is the
+        // per-run gate on top of it.
+        if (save_every_frame_ && std::filesystem::exists(SAVE_FRAMES_FLAG_FILE)) {
+            interface_->RequestSaveFrame();
+        }
+
         Sophus::SE3f Tcw;
         int trackingState = interface_->trackMONO(msgRGB, Tcw);
-        
+
+        // Periodic heartbeat so it is obvious whether frames arrive at all and
+        // how tracking behaves over time.
+        ++frames_received_;
+        if (trackingState == 2) {
+            ++frames_tracked_;
+        }
+        auto now = std::chrono::steady_clock::now();
+        if (now - last_report_ >= std::chrono::seconds(2)) {
+            last_report_ = now;
+            RCLCPP_INFO(this->get_logger(),
+                        "MONO stats: received=%lu tracked=%lu state=%d procframe_base='%s'",
+                        (unsigned long)frames_received_,
+                        (unsigned long)frames_tracked_,
+                        trackingState,
+                        ORB_SLAM3::FrameDrawer::GetOutputBasePath().c_str());
+            if (ORB_SLAM3::FrameDrawer::GetOutputBasePath().empty()) {
+                RCLCPP_ERROR(this->get_logger(),
+                             "procframe base path is EMPTY -- frames cannot be saved. "
+                             "The map save path must contain '/calibrations/'.");
+            }
+        }
+
         std_msgs::msg::Int8 stateMsg;
         stateMsg.data = trackingState;
         trackingStatePub_->publish(stateMsg);
