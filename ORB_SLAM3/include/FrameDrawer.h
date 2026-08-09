@@ -23,7 +23,7 @@
 #include "Tracking.h"
 #include "MapPoint.h"
 #include "Atlas.h"
-#include <atomic>
+
 #include<opencv2/core/core.hpp>
 #include<opencv2/features2d/features2d.hpp>
 
@@ -45,12 +45,11 @@ public:
 
     // Update info from the last processed frame.
     void Update(Tracking *pTracker);
-    static void SetOutputBasePath(const std::string& path);
-    void RequestSaveFrame() { mbSaveFrameRequest.store(true); }
+
     // Draw last processed frame.
     cv::Mat DrawFrame(float imageScale=1.f);
     cv::Mat DrawRightFrame(float imageScale=1.f);
-    static std::string GetOutputBasePath() { return msOutputBasePath; } 
+
     bool both;
 
 protected:
@@ -74,17 +73,17 @@ protected:
 
     std::mutex mMutex;
     vector<pair<cv::Point2f, cv::Point2f> > mvTracks;
-    std::atomic<bool> mbSaveFrameRequest{false};
+
     Frame mCurrentFrame;
     vector<MapPoint*> mvpLocalMap;
     vector<cv::KeyPoint> mvMatchedKeys;
     vector<MapPoint*> mvpMatchedMPs;
     vector<cv::KeyPoint> mvOutlierKeys;
     vector<MapPoint*> mvpOutlierMPs;
-    static std::string msOutputBasePath;
+
     map<long unsigned int, cv::Point2f> mmProjectPoints;
     map<long unsigned int, cv::Point2f> mmMatchedInImage;
-    void SaveCameraPose(const Sophus::SE3f &Tcw, double timestamp, std::string filename );
+
 };
 
 } //namespace ORB_SLAM

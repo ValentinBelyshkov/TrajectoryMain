@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from . import process_manager as pm
-from .config import COMPONENT_CONFIG, PUBLISHER_MODE_FILE, CalibPathReq, ModeReq, PathReq, ValueReq
+from .config import COMPONENT_CONFIG, PUBLISHER_MODE_FILE, ModeReq, PathReq, ValueReq
 from .process_manager import log_hub, manager
 from .state_store import state_store
 
@@ -101,12 +101,10 @@ def _extra_for(comp: str, req: Optional[ValueReq]):
         return {"path": path}
     if comp == "publisher_realsense":
         if req and req.value:
+            if req.value == "__nosave__":
+                return {"save_frames": False}
             return {"frames_dir": req.value}
         return None
-    if comp == "relay":
-        if not pm.relay_calib_path:
-            raise ValueError("relay calib_path not set — call POST /api/v1/relay/path first")
-        return {"calib_path": pm.relay_calib_path}
     return None
 
 
@@ -132,14 +130,6 @@ async def pub_mode(req: ModeReq):
         return {"success": True, "message": f"Switched to {req.mode}: {out}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/api/v1/relay/path")
-async def relay_path(req: CalibPathReq):
-    if not os.path.isfile(req.calib_path):
-        raise HTTPException(status_code=400, detail=f"File does not exist: {req.calib_path}")
-    pm.relay_calib_path = req.calib_path
-    return {"success": True, "calib_path": req.calib_path}
 
 
 @router.post("/api/v1/publisher/path")

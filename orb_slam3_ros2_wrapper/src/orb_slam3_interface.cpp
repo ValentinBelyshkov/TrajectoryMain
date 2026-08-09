@@ -5,21 +5,15 @@
  */
 #include "orb_slam3_ros2_wrapper/orb_slam3_interface.hpp"
 
-
 namespace ORB_SLAM3_Wrapper
 {
-
-// В начало файла, после #include:
-inline bool ORBSLAM3Interface::isMapValid() const {
-    return orbAtlas_ && orbAtlas_->GetCurrentMap();
-}
+    using namespace WrapperTypeConversions;
     ORBSLAM3Interface::ORBSLAM3Interface(const std::string &strVocFile,
                                          const std::string &strSettingsFile,
                                          ORB_SLAM3::System::eSensor sensor,
                                          bool bUseViewer,
-                                         bool rosViz,
-                                         double robotX,
-                                         double robotY,
+                                         bool loopClosing,
+                                         geometry_msgs::msg::Pose initialRobotPose,
                                          std::string globalFrame,
                                          std::string odomFrame,
                                          std::string robotFrame)
@@ -27,38 +21,34 @@ inline bool ORBSLAM3Interface::isMapValid() const {
           strSettingsFile_(strSettingsFile),
           sensor_(sensor),
           bUseViewer_(bUseViewer),
-          rosViz_(rosViz),
-          robotX_(robotX),
-          robotY_(robotY),
+          loopClosing_(loopClosing),
+          initialRobotPose_(initialRobotPose),
           globalFrame_(globalFrame),
           odomFrame_(odomFrame),
           robotFrame_(robotFrame)
     {
         std::cout << "Interface constructor started" << endl;
-        
-        // std::cout << robotX_ << robotY_ << endl;
-        mSLAM_ = std::make_shared<ORB_SLAM3::System>(strVocFile_, strSettingsFile_, sensor_, bUseViewer_);
-        typeConversions_ = std::make_shared<WrapperTypeConversions>();
-        orbAtlas_ = mSLAM_->GetAtlas();  // ✅ Гарантируем, что не nullptr
-if (!orbAtlas_) {
-    std::cerr << "[ERROR] Failed to get Atlas from ORB-SLAM3!" << std::endl;
-}
+        mSLAM_ = std::make_shared<ORB_SLAM3::System>(strVocFile_, strSettingsFile_, sensor_, bUseViewer_, loopClosing);
+        orbAtlas_ = mSLAM_->GetAtlas();
+        time_profiler_ = TimeProfiler::getInstance();
         std::cout << "Interface constructor complete" << endl;
+        robotBase_to_cameraLink_ = Eigen::Affine3f(
+            Eigen::Translation3f(initialRobotPose_.position.x, initialRobotPose_.position.y, initialRobotPose_.position.z) *
+            Eigen::Quaternionf(initialRobotPose_.orientation.w, initialRobotPose_.orientation.x, initialRobotPose_.orientation.y, initialRobotPose_.orientation.z));
+        std::cout << "Robot X: " << initialRobotPose_.position.x << " Robot Y: " << initialRobotPose_.position.y << std::endl;
     }
 
     ORBSLAM3Interface::~ORBSLAM3Interface()
     {
         std::cout << "Interface destructor" << endl;
-        mSLAM_->Shutdown();
+        // Only shutdown if not already shut down (e.g., if shutdown was called explicitly)
+        if (mSLAM_ && !mSLAM_->isShutDown())
+        {
+            mSLAM_->Shutdown();
+        }
         mSLAM_.reset();
-        typeConversions_.reset();
         mapReferencePoses_.clear();
         allKFs_.clear();
-        
-        // Close CSV file
-        if (csvFile_.is_open()) {
-            csvFile_.close();
-        }
     }
 
     std::unordered_map<long unsigned int, ORB_SLAM3::KeyFrame *> ORBSLAM3Interface::makeKFIdPair(std::vector<ORB_SLAM3::Map *> mapsList)
@@ -93,144 +83,227 @@ if (!orbAtlas_) {
         // sort the map array in init kf id order.
         std::sort(mapsList.begin(), mapsList.end(), compareInitKFid());
         allKFs_ = makeKFIdPair(mapsList);
+        // std::vector<ORB_SLAM3::Map *> mapsList2 = orbAtlas_->GetAllMaps();
+        // std::cout << "Current map id: " << orbAtlas_->GetCurrentMap()->GetId() << std::endl;
+        // for (auto mp : mapsList2)
+        // {
+        //     if (mp != nullptr && mp->GetOriginKF() != nullptr)
+        //     {
+        //         std::cout << "Map id: " << mp->GetId() << std::endl;
+        //         std::cout << "Map init id: " << mp->GetInitKFid() << std::endl;
+        //         std::cout << "Map origin kf id: " << mp->GetOriginKF()->mnId << std::endl;
+        //         std::cout << "Map max kf id: " << mp->GetMaxKFid() << std::endl;
+        //         std::cout << "================" << std::endl;
+        //     }
+        // }
         // std::cout << "+++++++++++++++++++++++++++++++++" << std::endl;
         for (size_t c = 0; c < mapsList.size(); c++)
         {
             // std::cout << "Map ID: " << mapsList[c]->GetId() << " origin kf ID: " << mapsList[c]->GetOriginKF()->mnId << " init kf id: " << mapsList[c]->GetInitKFid() << " max kf id: " << mapsList[c]->GetMaxKFid() << std::endl;
             if (c == 0)
             {
-                auto poseWithoutOffset = typeConversions_->se3ToAffine(mapsList[c]->GetOriginKF()->GetPose());
-                auto poseOffset = Eigen::Affine3d(
-                    Eigen::Translation3d(robotX_, robotY_, 0.0) *
-                    Eigen::Quaterniond(1.0, 0.0, 0.0, 0.0));
-                mapReferencePoses_[mapsList[c]] = poseOffset * poseWithoutOffset;
+                auto poseWithoutOffset = se3ToAffine(mapsList[c]->GetOriginKF()->GetPose());
+                // transform from map_orb -> camera
+                mapReferencePoses_[mapsList[c]] = poseWithoutOffset;
             }
             else
             {
-                if (static_cast<int64_t>(mapsList[c]->GetInitKFid()) - 1 < 0)
+                bool parentMapFound = false;
+                int parentMapID = mapsList[c]->GetInitKFid() - 1;
+                while (!parentMapFound)
                 {
-                    throw std::runtime_error("The init KF id - 1 is lesser than 0. This should not happen");
+                    if (parentMapID < 0)
+                    {
+                        throw std::runtime_error("The init KF id - 1 is lesser than 0. This should not happen");
+                    }
+                    if (allKFs_.count(parentMapID) > 0)
+                    {
+                        parentMapFound = true;
+                        break;
+                    }
+                    parentMapID -= 1;
                 }
-                else if (allKFs_.count(mapsList[c]->GetInitKFid() - 1) == 0)
-                {
-                    throw std::runtime_error("The KF was not found in allKFs_. This should not happen");
-                }
-                else if (mapReferencePoses_.count(allKFs_[mapsList[c]->GetInitKFid() - 1]->GetMap()) == 0)
+                if (mapReferencePoses_.count(allKFs_[parentMapID]->GetMap()) == 0)
                 {
                     throw std::runtime_error("The parent map pose for this map ID does not exist. This should not happen.");
                 }
-                auto parentMapORBPose = allKFs_[mapsList[c]->GetInitKFid() - 1]->GetPose();
-                mapReferencePoses_[mapsList[c]] = typeConversions_->transformPoseWithReference<Eigen::Affine3d>(mapReferencePoses_[allKFs_[mapsList[c]->GetInitKFid() - 1]->GetMap()], parentMapORBPose);
+                auto parentMapORBPose = allKFs_[parentMapID]->GetPose();
+                // transform from map_orb -> camera
+                mapReferencePoses_[mapsList[c]] = transformPoseWithReference<Eigen::Affine3f>(mapReferencePoses_[allKFs_[parentMapID]->GetMap()], parentMapORBPose);
             }
+        }
+        // used for reset map service. To contonue tracking where it was left off. 
+        for (auto& overridenRefPoses : mapReferencePosesOverrides_)
+        {
+            mapReferencePoses_[overridenRefPoses.first] = overridenRefPoses.second;
         }
         // std::cout << "+++++++++++++++++++++++++++++++++" << std::endl;
         mapReferencesMutex_.unlock();
     }
-    // Confirmed
 
-    // All Mappoints
     void ORBSLAM3Interface::getCurrentMapPoints(sensor_msgs::msg::PointCloud2 &mapPointCloud)
     {
         std::lock_guard<std::mutex> lock(currentMapPointsMutex_);
         // this flag serves to support
         std::vector<Eigen::Vector3f> trackedMapPoints;
         auto atlasAllKFs_ = orbAtlas_->GetAllKeyFrames();
-        for (auto& KF : atlasAllKFs_)
+        for (auto &KF : atlasAllKFs_)
         {
-            for (auto& mapPoint : KF->GetMapPoints())
+            for (auto &mapPoint : KF->GetMapPoints())
             {
                 if (!mapPoint->isBad())
                 {
-                    auto worldPos = typeConversions_->vector3fORBToROS(mapPoint->GetWorldPos());
+                    auto worldPos = vector3fORBToROS(mapPoint->GetWorldPos());
                     mapReferencesMutex_.lock();
-                    if(allKFs_.count(KF->mnId) == 0)
+                    if (allKFs_.count(KF->mnId) == 0)
                     {
                         mapReferencesMutex_.unlock();
                         continue;
                     }
-                    auto mapPointWorld = typeConversions_->transformPointWithReference<Eigen::Vector3f>(mapReferencePoses_[allKFs_[KF->mnId]->GetMap()], worldPos);
+                    auto mapPointWorld = transformPointWithReference<Eigen::Vector3f>(mapReferencePoses_[allKFs_[KF->mnId]->GetMap()], worldPos);
+                    // robotBase_to_cameraLink_ is map_ros->map_orb
+                    mapPointWorld = robotBase_to_cameraLink_ * mapPointWorld;
                     mapReferencesMutex_.unlock();
                     trackedMapPoints.push_back(mapPointWorld);
                 }
             }
         }
-        mapPointCloud = typeConversions_->MapPointsToPCL(trackedMapPoints);
+        mapPointCloud = MapPointsToPCL(trackedMapPoints);
     }
 
-    void ORBSLAM3Interface::getCurrentMapPointsToSave(std::vector<Eigen::Vector3f> &trackedMapPoints)
+    void ORBSLAM3Interface::mapPointsVisibleFromPose(geometry_msgs::msg::Pose cameraPose, std::vector<ORB_SLAM3::MapPoint*>& points, int maxLandmarks, float maxDistance, float maxAngle)
     {
-        std::lock_guard<std::mutex> lock(currentMapPointsMutex_);
-        // auto atlasAllKFs_ = orbAtlas_->GetAllKeyFrames();
-        // for (auto& KF : atlasAllKFs_)
-        // {
-        //     for (auto& mapPoint : KF->GetMapPoints())
-        //     {
-        //         if (!mapPoint->isBad())
-        //         {
-        //             auto worldPos = typeConversions_->vector3fORBToROS(mapPoint->GetWorldPos());
-        //             mapReferencesMutex_.lock();
-        //             if(allKFs_.count(KF->mnId) == 0)
-        //             {
-        //                 mapReferencesMutex_.unlock();
-        //                 continue;
-        //             }
-        //             auto mapPointWorld = typeConversions_->transformPointWithReference<Eigen::Vector3f>(mapReferencePoses_[allKFs_[KF->mnId]->GetMap()], worldPos);
-        //             mapReferencesMutex_.unlock();
-        //             trackedMapPoints.push_back(mapPointWorld);
-        //         }
-        //     }
-        // }
-        ORB_SLAM3::Map* pActiveMap = orbAtlas_->GetCurrentMap();
-        // this flag serves to support
-        // std::vector<Eigen::Vector3f> referenceMapPoints;
-        // auto trackedMapPoints_ = mSLAM_->GetTrackedMapPoints();
-        for (auto& mapPoint : pActiveMap->GetAllMapPoints())
-        {
-            if (!mapPoint->isBad())
-            {
-                auto worldPos = typeConversions_->vector3fORBToROS(mapPoint->GetWorldPos());
-                mapReferencesMutex_.lock();
-                if(allKFs_.count(pActiveMap->GetInitKFid()) == 0)
-                {
-                    mapReferencesMutex_.unlock();
-                    continue;
-                }
-                // auto mapPointWorld = typeConversions_->transformPointWithReference<Eigen::Vector3f>(mapReferencePoses_[allKFs_[pActiveMap->GetInitKFid()]->GetMap()], worldPos);
-                auto mapPointWorld = typeConversions_->transformPointWithReference<Eigen::Vector3f>(mapReferencePoses_[pActiveMap], worldPos);
-                mapReferencesMutex_.unlock();
-                trackedMapPoints.push_back(mapPointWorld);
-            }
-        }
+        auto T_mapros_base = poseToAffine(cameraPose);
+        auto T_maporb_cam = robotBase_to_cameraLink_.inverse() * T_mapros_base * robotBase_to_cameraLink_;
+        auto camPose = se3ROSToORB(T_maporb_cam);
+        mapPointsVisibleFromPose(camPose, points, maxLandmarks, maxDistance, maxAngle);
     }
 
-
-
-    //get current reference map points
-    void ORBSLAM3Interface::getReferenceMapPoints(sensor_msgs::msg::PointCloud2 &mapPointCloud)
+    void ORBSLAM3Interface::mapPointsVisibleFromPose(Sophus::SE3f& cameraPose, std::vector<ORB_SLAM3::MapPoint*>& points, int maxLandmarks, float maxDistance, float maxAngle)
     {
-        std::lock_guard<std::mutex> lock(currentMapPointsMutex_);
-        ORB_SLAM3::Map* pActiveMap = orbAtlas_->GetCurrentMap();
-        // this flag serves to support
-        std::vector<Eigen::Vector3f> referenceMapPoints;
-        // auto trackedMapPoints_ = mSLAM_->GetTrackedMapPoints();
-        for (auto& mapPoint : pActiveMap->GetReferenceMapPoints())
+        while(loopClosing_ && mSLAM_->GetLoopClosing()->loopDetected())
         {
-            if (!mapPoint->isBad())
+            std::cout << "Waiting for loop closure to finish" << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        }
+        auto Tcw = cameraPose;
+        auto Twc = Tcw.inverse();
+
+        std::cout << "Input camera pose: " << std::endl; 
+        auto eulerAngles = rotationORBToEulerROS(Twc.rotationMatrix());
+        std::cout << "Translation:" << Twc.translation().transpose() << std::endl;
+        std::cout << "Roll ROS coord: " << eulerAngles(0) << std::endl;
+        std::cout << "Pitch ROS coord: " << eulerAngles(1) << std::endl;
+        std::cout << "Yaw ROS coord: " << eulerAngles(2) << std::endl;
+        std::cout << "===" << std::endl;
+
+        auto mRwc = Twc.rotationMatrix();
+        auto mOw = Twc.translation();
+
+        auto mRcw = Tcw.rotationMatrix();
+        auto mtcw = Tcw.translation();
+        if(orbAtlas_->GetAllCameras().size() > 1)
+        {
+            throw std::runtime_error("The number of cameras is greater than 1. This will be catered later. You cannot check if a map point is visible within a keyframe in this version. Check if there have been version updates.");
+        }
+        auto pCameraModel = orbAtlas_->GetAllCameras()[0];
+
+        float mnMinX = 0.0f;
+        float mnMaxX = 640.0f;
+        float mnMinY = 0.0f;
+        float mnMaxY = 480.0f;
+        int numVisibleMapPoints = 0;
+        int numKFsChecked = 0;
+
+        auto mapKFs_ = orbAtlas_->GetCurrentMap()->GetAllKeyFrames();
+
+        std::unordered_set<ORB_SLAM3::MapPoint*> processedMapPoints;
+        for(auto pKFMp : mapKFs_)
+        {
+            auto rel_T_CamToKF = Tcw * pKFMp->GetPoseInverse();
+            auto relEulerAngles = rotationORBToEulerROS(rel_T_CamToKF.rotationMatrix());
+            float distBwKfs = rel_T_CamToKF.translation().norm();
+
+            // checks ......
+            // continue if the distance is too large
+            if(distBwKfs >= maxDistance * 2.0)
             {
-                auto worldPos = typeConversions_->vector3fORBToROS(mapPoint->GetWorldPos());
-                mapReferencesMutex_.lock();
-                if(allKFs_.count(pActiveMap->GetInitKFid()) == 0)
+                continue;
+            }
+            if(distBwKfs > maxDistance)
+            {
+                // if distance is large but in range, check if behind. If behind, continue.
+                if(rel_T_CamToKF.translation()[2] < 0.0)
                 {
-                    mapReferencesMutex_.unlock();
                     continue;
                 }
-                // auto mapPointWorld = typeConversions_->transformPointWithReference<Eigen::Vector3f>(mapReferencePoses_[allKFs_[pActiveMap->GetInitKFid()]->GetMap()], worldPos);
-                auto mapPointWorld = typeConversions_->transformPointWithReference<Eigen::Vector3f>(mapReferencePoses_[pActiveMap], worldPos);
-                mapReferencesMutex_.unlock();
-                referenceMapPoints.push_back(mapPointWorld);
+                else if(rel_T_CamToKF.translation()[2] > 0.0)
+                {
+                    if((relEulerAngles(2) >= 0 && relEulerAngles(2) < M_PI / 2.0) || (relEulerAngles(2) > 3.0 * M_PI / 2.0 && relEulerAngles(2) < 2 * M_PI))
+                    {
+                        continue;
+                    }
+                }
+            }
+            if(distBwKfs <= maxDistance)
+            {
+                // if distance is small but in range, check if behind. If behind, check angles.
+                if(rel_T_CamToKF.translation()[2] < 0.0)
+                {
+                    if((relEulerAngles(2) >= 2.0944 && relEulerAngles(2) < 4.18879))
+                    {
+                        continue;
+                    }
+                }
+            }
+            numKFsChecked++;
+            if(numVisibleMapPoints > maxLandmarks)
+                break;
+            auto currentKFMp = pKFMp->GetMapPoints();
+            for (auto pMP : currentKFMp)
+            {
+                if (processedMapPoints.find(pMP) != processedMapPoints.end())
+                    continue;
+                processedMapPoints.insert(pMP);
+                // 3D in absolute coordinates
+                Eigen::Matrix<float,3,1> P = pMP->GetWorldPos();
+
+                // 3D in camera coordinates
+                const Eigen::Matrix<float,3,1> Pc = mRcw * P + mtcw;
+
+                // Check positive depth
+                const float &PcZ = Pc(2);
+                if(PcZ<0.0f)
+                    continue;
+
+                const Eigen::Vector2f uv = pCameraModel->project(Pc);
+
+                if(uv(0)<mnMinX || uv(0)>mnMaxX)
+                    continue;
+                if(uv(1)<mnMinY || uv(1)>mnMaxY)
+                    continue;
+
+                // Check distance is in the scale invariance region of the MapPoint
+                const float maxDistance = pMP->GetMaxDistanceInvariance();
+                const float minDistance = pMP->GetMinDistanceInvariance();
+                const Eigen::Vector3f PO = P - mOw;
+                const float dist = PO.norm();
+
+                if(dist<minDistance || dist>maxDistance)
+                    continue;
+                points.push_back(pMP);
+                numVisibleMapPoints++;
             }
         }
-        mapPointCloud = typeConversions_->MapPointsToPCL(referenceMapPoints);
+        /**
+        Added the stuff below just to see prints if the num kfs become 0. */
+        std::cout << "******" << std::endl;
+        std::cout << "Number of visible map points: " << numVisibleMapPoints << std::endl;
+        std::cout << "Number of keyframes checked: " << numKFsChecked << std::endl;
+        
+        // Print the input camera pose translation and rotation
+        // std::cout << "Input camera pose translation: " << mOw.transpose() << std::endl;
+        // std::cout << "Input camera pose rotation:\n" << mRwc << std::endl;
     }
 
     void ORBSLAM3Interface::mapDataToMsg(slam_msgs::msg::MapData &mapDataMsg, bool currentMapKFOnly, bool includeMapPoints, std::vector<int> kFIDforMapPoints)
@@ -253,11 +326,13 @@ if (!orbAtlas_) {
                     {
                         if (!mapPoint->isBad())
                         {
-                            auto worldPos = typeConversions_->vector3fORBToROS(mapPoint->GetWorldPos());
+                            auto worldPos = vector3fORBToROS(mapPoint->GetWorldPos());
                             mapReferencesMutex_.lock();
-                            auto mapPointWorld = typeConversions_->transformPointWithReference<geometry_msgs::msg::Point>(mapReferencePoses_[allKFs_[kFId]->GetMap()], worldPos);
+                            auto mapPointWorld = transformPointWithReference<Eigen::Vector3f>(mapReferencePoses_[allKFs_[kFId]->GetMap()], worldPos);
+                            mapPointWorld = robotBase_to_cameraLink_ * mapPointWorld;
+                            auto mapPointWorldMsg = eigenToPointMsg(mapPointWorld);
                             mapReferencesMutex_.unlock();
-                            pushedKf.word_pts.push_back(mapPointWorld);
+                            pushedKf.word_pts.push_back(mapPointWorldMsg);
                         }
                     }
                     mapDataMsg.nodes.push_back(pushedKf);
@@ -268,63 +343,69 @@ if (!orbAtlas_) {
                 }
             }
         }
-        mapDataMutex_.unlock();
     }
 
-    void ORBSLAM3Interface::correctTrackedPose(Sophus::SE3f &s)
+    void ORBSLAM3Interface::correctTrackedPose(const Sophus::SE3f &s)
     {
+        std::lock_guard<std::mutex> lock(latestTrackedPoseMutex_);
         mapReferencesMutex_.lock();
-        latestTrackedPose_ = typeConversions_->transformPoseWithReference<Eigen::Affine3d>(
+        latestTrackedPoseORB_camera_ = transformPoseWithReference<Eigen::Affine3f>(
             mapReferencePoses_[orbAtlas_->GetCurrentMap()], s);
+        latestTrackedPose_ = robotBase_to_cameraLink_ * latestTrackedPoseORB_camera_ * robotBase_to_cameraLink_.inverse();
         mapReferencesMutex_.unlock();
     }
 
+    void ORBSLAM3Interface::resetLocalMapping()
+    {
+        std::lock_guard<std::mutex> lock(latestTrackedPoseMutex_);
+        mSLAM_->ResetActiveMap();
+        mapReferencesMutex_.lock();
+        mapReferencePosesOverrides_[orbAtlas_->GetCurrentMap()] = latestTrackedPoseORB_camera_;
+        mapReferencesMutex_.unlock();
+    };
+
     void ORBSLAM3Interface::getDirectMapToRobotTF(std_msgs::msg::Header headerToUse, geometry_msgs::msg::TransformStamped &tf)
     {
-        tf.header.frame_id = globalFrame_;
-        tf.child_frame_id = robotFrame_;
-        std::cout << "---###################################-------------------------------" << endl;
-        std::cout << globalFrame_ << endl;
-        std::cout << robotFrame_ << endl;
         if (hasTracked_)
         {
-            std::cout << "---###################################=======================" << endl;
+            std::lock_guard<std::mutex> lock(latestTrackedPoseMutex_);
             // get transform between map and odom and send the transform.
-            auto tfMapOdom = latestTrackedPose_;
-            geometry_msgs::msg::Pose poseMapOdom = tf2::toMsg(tfMapOdom);
+            auto poseInMap = latestTrackedPose_;
+            geometry_msgs::msg::Pose poseInMapROS = affine3fToPose(poseInMap);
             rclcpp::Duration transformTimeout_ = rclcpp::Duration::from_seconds(0.5);
             rclcpp::Time odomTimestamp = headerToUse.stamp;
             tf.header.stamp = odomTimestamp + transformTimeout_;
             tf.header.frame_id = globalFrame_;
             tf.child_frame_id = robotFrame_;
-            tf.transform.translation.x = poseMapOdom.position.x;
-            tf.transform.translation.y = poseMapOdom.position.y;
-            tf.transform.translation.z = poseMapOdom.position.z;
-            tf.transform.rotation = poseMapOdom.orientation;
+            tf.transform.translation.x = poseInMapROS.position.x;
+            tf.transform.translation.y = poseInMapROS.position.y;
+            tf.transform.translation.z = poseInMapROS.position.z;
+            tf.transform.rotation = poseInMapROS.orientation;
         }
     }
 
-    void ORBSLAM3Interface::getMapToOdomTF(const nav_msgs::msg::Odometry::SharedPtr msgOdom, geometry_msgs::msg::TransformStamped &tf)
+    void ORBSLAM3Interface::getMapToOdomTF(const geometry_msgs::msg::TransformStamped& odomToBaseTf, geometry_msgs::msg::TransformStamped &tf)
     {
         // tf.header.stamp;
         tf.header.frame_id = globalFrame_;
         tf.child_frame_id = odomFrame_;
         if (hasTracked_)
         {
-            // convert odom value to Eigen::Affine3d
-            auto latestOdomTransform_ = Eigen::Affine3d(
-                Eigen::Translation3d(msgOdom->pose.pose.position.x,
-                                     msgOdom->pose.pose.position.y,
-                                     msgOdom->pose.pose.position.z) *
-                Eigen::Quaterniond(msgOdom->pose.pose.orientation.w,
-                                   msgOdom->pose.pose.orientation.x,
-                                   msgOdom->pose.pose.orientation.y,
-                                   msgOdom->pose.pose.orientation.z));
+            // convert odom value to Eigen::Affine3f
+            auto latestOdomTransform_ = Eigen::Affine3f(
+                Eigen::Translation3f(odomToBaseTf.transform.translation.x,
+                                     odomToBaseTf.transform.translation.y,
+                                     odomToBaseTf.transform.translation.z) *
+                Eigen::Quaternionf(odomToBaseTf.transform.rotation.w,
+                                   odomToBaseTf.transform.rotation.x,
+                                   odomToBaseTf.transform.rotation.y,
+                                   odomToBaseTf.transform.rotation.z));
             // get transform between map and odom and send the transform.
+            std::lock_guard<std::mutex> lock(latestTrackedPoseMutex_);
             auto tfMapOdom = latestTrackedPose_ * latestOdomTransform_.inverse();
-            geometry_msgs::msg::Pose poseMapOdom = tf2::toMsg(tfMapOdom);
+            geometry_msgs::msg::Pose poseMapOdom = affine3fToPose(tfMapOdom);
             rclcpp::Duration transformTimeout_ = rclcpp::Duration::from_seconds(0.5);
-            rclcpp::Time odomTimestamp = msgOdom->header.stamp;
+            rclcpp::Time odomTimestamp = odomToBaseTf.header.stamp;
             tf.header.stamp = odomTimestamp + transformTimeout_;
             tf.header.frame_id = globalFrame_;
             tf.child_frame_id = odomFrame_;
@@ -333,6 +414,13 @@ if (!orbAtlas_) {
             tf.transform.translation.z = poseMapOdom.position.z;
             tf.transform.rotation = poseMapOdom.orientation;
         }
+    }
+
+    void ORBSLAM3Interface::getRobotPose(geometry_msgs::msg::PoseStamped& pose)
+    {
+        std::lock_guard<std::mutex> lock(latestTrackedPoseMutex_);
+        pose.header.frame_id = globalFrame_;
+        pose.pose = affine3fToPose(latestTrackedPose_);
     }
 
     void ORBSLAM3Interface::getOptimizedPoseGraph(slam_msgs::msg::MapGraph &graph, bool currentMapKFOnly)
@@ -345,10 +433,12 @@ if (!orbAtlas_) {
                 Sophus::SE3f kfPose = kf->GetPose();
                 geometry_msgs::msg::PoseStamped kfPoseStamped;
                 mapReferencesMutex_.lock();
-                kfPoseStamped.pose = typeConversions_->transformPoseWithReference<geometry_msgs::msg::Pose>(mapReferencePoses_[kf->GetMap()], kfPose);
+                auto affinePose = transformPoseWithReference<Eigen::Affine3f>(mapReferencePoses_[kf->GetMap()], kfPose);
+                affinePose = robotBase_to_cameraLink_ * affinePose * robotBase_to_cameraLink_.inverse();
+                kfPoseStamped.pose = affine3fToPose(affinePose);
                 mapReferencesMutex_.unlock();
                 kfPoseStamped.header.frame_id = globalFrame_;
-                kfPoseStamped.header.stamp = typeConversions_->secToStamp(kf->mTimeStamp);
+                kfPoseStamped.header.stamp = secToStamp(kf->mTimeStamp);
                 graph.poses.push_back(kfPoseStamped);
                 graph.poses_id.push_back(kf->mnId);
             }
@@ -365,9 +455,11 @@ if (!orbAtlas_) {
                 mapReferencesMutex_.unlock();
                 Sophus::SE3f kFPose = pKFcurr->GetPose();
                 geometry_msgs::msg::PoseStamped poseStamped;
-                poseStamped.pose = typeConversions_->transformPoseWithReference<geometry_msgs::msg::Pose>(currReferencePose_, kFPose);
+                auto affinePose = transformPoseWithReference<Eigen::Affine3f>(currReferencePose_, kFPose);
+                affinePose = robotBase_to_cameraLink_ * affinePose * robotBase_to_cameraLink_.inverse();
+                poseStamped.pose = affine3fToPose(affinePose);
                 poseStamped.header.frame_id = globalFrame_;
-                poseStamped.header.stamp = typeConversions_->secToStamp(pKFcurr->mTimeStamp);
+                poseStamped.header.stamp = secToStamp(pKFcurr->mTimeStamp);
                 // push to pose graph.
                 graph.poses.push_back(poseStamped);
                 graph.poses_id.push_back(pKFcurr->mnId);
@@ -375,142 +467,11 @@ if (!orbAtlas_) {
         }
     }
 
-    void ORBSLAM3Interface::handleIMU(const sensor_msgs::msg::Imu::SharedPtr msgIMU)
+    bool ORBSLAM3Interface::processTrackedPose(const Sophus::SE3f& Tcw)
     {
-        bufMutex_.lock();
-        imuBuf_.push(msgIMU);
-        bufMutex_.unlock();
-    }
-
-    bool ORBSLAM3Interface::trackRGBDi(const sensor_msgs::msg::Image::SharedPtr msgRGB, const sensor_msgs::msg::Image::SharedPtr msgD, Sophus::SE3f &Tcw)
-    {
-        orbAtlas_ = mSLAM_->GetAtlas();
-        cv_bridge::CvImageConstPtr cvRGB;
-        cv_bridge::CvImageConstPtr cvD;
-        // Copy the ros rgb image message to cv::Mat.
-        try
-        {
-            cvRGB = cv_bridge::toCvShare(msgRGB);
-        }
-        catch (cv_bridge::Exception &e)
-        {
-            std::cerr << "cv_bridge exception RGB!" << endl;
-            return false;
-        }
-
-        // Copy the ros depth image message to cv::Mat.
-        try
-        {
-            cvD = cv_bridge::toCvShare(msgD);
-        }
-        catch (cv_bridge::Exception &e)
-        {
-            std::cerr << "cv_bridge exception D!" << endl;
-            return false;
-        }
-
-        vector<ORB_SLAM3::IMU::Point> vImuMeas;
-        bufMutex_.lock();
-        if (!imuBuf_.empty())
-        {
-            // Load imu measurements from buffer
-            vImuMeas.clear();
-            while (!imuBuf_.empty() && typeConversions_->stampToSec(imuBuf_.front()->header.stamp) <= std::min(typeConversions_->stampToSec(msgRGB->header.stamp), typeConversions_->stampToSec(msgD->header.stamp)))
-            {
-                double t = typeConversions_->stampToSec(imuBuf_.front()->header.stamp);
-                cv::Point3f acc(imuBuf_.front()->linear_acceleration.x, imuBuf_.front()->linear_acceleration.y, imuBuf_.front()->linear_acceleration.z);
-                cv::Point3f gyr(imuBuf_.front()->angular_velocity.x, imuBuf_.front()->angular_velocity.y, imuBuf_.front()->angular_velocity.z);
-                vImuMeas.push_back(ORB_SLAM3::IMU::Point(acc, gyr, t));
-                imuBuf_.pop();
-            }
-        }
-        bufMutex_.unlock();
-        if (imuBuf_.size() > 0)
-        {
-            // track the frame.
-            Tcw = mSLAM_->TrackRGBD(cvRGB->image, cvD->image, typeConversions_->stampToSec(msgRGB->header.stamp), vImuMeas);
-            auto currentTrackingState = mSLAM_->GetTrackingState();
-            auto orbLoopClosing = mSLAM_->GetLoopClosing();
-            if (orbLoopClosing->mergeDetected())
-            {
-                // do not publish any values during map merging. This is because the reference poses change.
-                std::cout << "Waiting for merge to finish." << endl;
-                return false;
-            }
-                    if (currentTrackingState == 2) // OK
-        {
-            calculateReferencePoses();
-            correctTrackedPose(Tcw);
-            hasTracked_ = true;
-            RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"),"Log tracking state 2");
-            // === Сохранение кадра по запросу ===
-            if (saveFrameRequest_.exchange(false)) {
-                auto fd = mSLAM_->GetFrameDrawer();
-                if (fd) {
-                    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
-                                "🖼️ SaveFrame triggered, calling DrawFrame...");
-                    fd->RequestSaveFrame();
-                    auto drawn = fd->DrawFrame(1.0f);
-                    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
-                                "🖼️ DrawFrame done, mat empty=%d", drawn.empty());
-                } else {
-                    RCLCPP_WARN(rclcpp::get_logger("ORBSLAM3Interface"), 
-                                "🖼️ FrameDrawer is null!");
-                }
-            }
-            // ===================================
-        }
-            else
-            {
-                switch (currentTrackingState)
-                {
-                case 0:
-                    std::cerr << "ORB-SLAM failed: No images yet." << endl;
-                    break;
-                case 1:
-                    std::cerr << "ORB-SLAM failed: Not initialized." << endl;
-                    break;
-                case 3:
-                    std::cerr << "ORB-SLAM failed: Tracking LOST." << endl;
-                    break;
-                }
-                return false;
-            }
-        }
-        return false;
-    }
-
-    bool ORBSLAM3Interface::trackRGBD(const sensor_msgs::msg::Image::SharedPtr msgRGB, const sensor_msgs::msg::Image::SharedPtr msgD, Sophus::SE3f &Tcw)
-    {
-        orbAtlas_ = mSLAM_->GetAtlas();
-        cv_bridge::CvImageConstPtr cvRGB;
-        cv_bridge::CvImageConstPtr cvD;
-        // Copy the ros rgb image message to cv::Mat.
-        try
-        {
-            cvRGB = cv_bridge::toCvShare(msgRGB);
-        }
-        catch (cv_bridge::Exception &e)
-        {
-            std::cerr << "cv_bridge exception RGB!" << endl;
-            return false;
-        }
-
-        // Copy the ros depth image message to cv::Mat.
-        try
-        {
-            cvD = cv_bridge::toCvShare(msgD);
-        }
-        catch (cv_bridge::Exception &e)
-        {
-            std::cerr << "cv_bridge exception D!" << endl;
-            return false;
-        }
-        // track the frame.
-        Tcw = mSLAM_->TrackRGBD(cvRGB->image, cvD->image, typeConversions_->stampToSec(msgRGB->header.stamp));
         auto currentTrackingState = mSLAM_->GetTrackingState();
         auto orbLoopClosing = mSLAM_->GetLoopClosing();
-        if (orbLoopClosing->mergeDetected())
+        if (loopClosing_ && orbLoopClosing->mergeDetected())
         {
             // do not publish any values during map merging. This is because the reference poses change.
             std::cout << "Waiting for merge to finish." << endl;
@@ -518,8 +479,15 @@ if (!orbAtlas_) {
         }
         if (currentTrackingState == 2)
         {
+            // time_profiler_->startEvent("RefPosesCalc");
             calculateReferencePoses();
+            // time_profiler_->endEvent("RefPosesCalc");
+            // time_profiler_->startEvent("CorrectTracked");
             correctTrackedPose(Tcw);
+            // time_profiler_->endEvent("CorrectTracked");
+            // auto tempTwc = Tcw.inverse();
+            // std::vector<ORB_SLAM3::MapPoint *> tempMapPoints;
+            // mapPointsVisibleFromPose(tempTwc, tempMapPoints, 1000, 5.0, 2.0);
             hasTracked_ = true;
             return true;
         }
@@ -540,235 +508,4 @@ if (!orbAtlas_) {
             return false;
         }
     }
-    
-    int ORBSLAM3Interface::trackMONO(const sensor_msgs::msg::Image::SharedPtr msgRGB, Sophus::SE3f &Tcw)
-    {
-    if (tracking_paused_.load()) {
-        // Возвращаем "нет трекинга", пока идёт сброс
-        return 0;  // или 3 (LOST), как вам удобнее
-    }
-        orbAtlas_ = mSLAM_->GetAtlas();
-        cv_bridge::CvImageConstPtr cvRGB;
-        // Copy the ros rgb image message to cv::Mat.
-        try
-        {
-            cvRGB = cv_bridge::toCvShare(msgRGB);
-        }
-        catch (cv_bridge::Exception &e)
-        {
-            std::cerr << "cv_bridge exception RGB!" << endl;
-            return 0; // No images yet
-        }
-
-        // track the frame.
-        Tcw = mSLAM_->TrackMonocular(cvRGB->image, typeConversions_->stampToSec(msgRGB->header.stamp));
-        
-        auto currentTrackingState = mSLAM_->GetTrackingState();
-        auto orbLoopClosing = mSLAM_->GetLoopClosing();
-        if (orbLoopClosing->mergeDetected())
-        {
-            // do not publish any values during map merging. This is because the reference poses change.
-            std::cout << "Waiting for merge to finish." << endl;
-            return 0; // Return as "No images yet" since we can't track during merge
-        }
-        
-        if (currentTrackingState == 2) // OK
-        {
-            calculateReferencePoses();
-            correctTrackedPose(Tcw);
-            hasTracked_ = true;
-            // === Сохранение кадра по запросу (procframe) ===
-            if (saveFrameRequest_.exchange(false)) {
-                auto fd = mSLAM_->GetFrameDrawer();
-                if (fd) {
-                    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"),
-                                "SaveFrame triggered (MONO), base='%s'",
-                                ORB_SLAM3::FrameDrawer::GetOutputBasePath().c_str());
-                    fd->RequestSaveFrame();
-                    auto drawn = fd->DrawFrame(1.0f);
-                    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"),
-                                "DrawFrame done (MONO), mat empty=%d", drawn.empty());
-                } else {
-                    RCLCPP_WARN(rclcpp::get_logger("ORBSLAM3Interface"),
-                                "FrameDrawer is null (MONO)!");
-                }
-            }
-            // ==============================================
-        }
-        else
-        {
-            switch (currentTrackingState)
-            {
-            case 0:
-                std::cerr << "ORB-SLAM failed: No images yet." << endl;
-                break;
-            case 1:
-                std::cerr << "ORB-SLAM failed: Not initialized." << endl;
-                break;
-            case 3:
-                std::cerr << "ORB-SLAM failed: Tracking LOST." << endl;
-                break;
-            }
-            // return false;
-        }
-
-        return currentTrackingState;
-    }
-
-    bool ORBSLAM3Interface::checkSLAMShutdown()
-    {
-        return mSLAM_->isShutDown();
-    }
-
-    void ORBSLAM3Interface::triggerGlobalBundleAdjustment()
-    {
-        if (mSLAM_ && orbAtlas_) {
-            std::cout << "Triggering global bundle adjustment..." << std::endl;
-            ORB_SLAM3::Map* pActiveMap = orbAtlas_->GetCurrentMap();
-            if (pActiveMap) {
-                // Use 0 as the loop keyframe ID, or get the current keyframe ID if needed
-                mSLAM_->GetLoopClosing()->RunGlobalBundleAdjustment(pActiveMap, 0);
-                std::cout << "Global bundle adjustment completed" << std::endl;
-            } else {
-                std::cerr << "Cannot trigger global BA: No active map" << std::endl;
-            }
-        } else {
-            std::cerr << "Cannot trigger global BA: SLAM system not initialized" << std::endl;
-        }
-    }
-
-    void ORBSLAM3Interface::setupCameraPoseSubscriber(rclcpp::Node::SharedPtr node)
-    {
-        cameraPoseSub_ = node->create_subscription<geometry_msgs::msg::Pose>(
-            "camera_pose", 10, std::bind(&ORBSLAM3Interface::cameraPoseCallback, this, std::placeholders::_1));
-        
-        // Create CSV file
-        csvFile_.open("camera_pose.csv");
-        csvFile_ << "timestamp,x,y,z\n";
-    }
-
-    void ORBSLAM3Interface::cameraPoseCallback(const geometry_msgs::msg::Pose::SharedPtr msg)
-    {
-        // Get current timestamp
-        auto now = std::chrono::system_clock::now();
-        auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
-        auto epoch = now_ms.time_since_epoch();
-        auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
-        long timestamp = value.count();
-
-        // Write to CSV file
-        csvFile_ << timestamp << ","
-                << msg->position.x << ","
-                << msg->position.y << ","
-                << msg->position.z << "\n";
-        csvFile_.flush();
-    }
-    
-bool ORBSLAM3Interface::resetMap()
-{
-    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "🔄 Reset requested, pausing tracking...");
-    
-    // 1. Сигнализируем трекингу остановиться
-    tracking_paused_ = true;
-    
-    // 2. Ждём, пока текущий кадр завершится (макс. 500мс)
-    for (int i = 0; i < 50 && tracking_paused_; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    
-    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "⏸️ Tracking paused, calling Reset()...");
-    auto reset_start = std::chrono::high_resolution_clock::now();
-    
-    try {
-        if (mSLAM_) {
-            mSLAM_->Reset();  // ← Здесь может быть задержка 10-30с, это нормально
-            
-            // Очистка локальных кэшей
-            {
-                std::lock_guard<std::mutex> lock(mapReferencesMutex_);
-                mapReferencePoses_.clear();
-                allKFs_.clear();
-                hasTracked_ = false;
-            }
-            {
-                std::lock_guard<std::mutex> lock(bufMutex_);
-                while (!imuBuf_.empty()) imuBuf_.pop();
-            }
-            
-            auto reset_end = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(reset_end - reset_start).count();
-            RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "✅ Reset completed in %ld ms", duration);
-            
-            tracking_paused_ = false;
-            return true;
-        }
-    } catch (const std::exception& e) {
-        RCLCPP_ERROR(rclcpp::get_logger("ORBSLAM3Interface"), "Reset exception: %s", e.what());
-        tracking_paused_ = false;
-        return false;
-    }
-    
-    tracking_paused_ = false;
-    return false;
-}
-
-bool ORBSLAM3Interface::saveMap(const std::string& filepath, bool binary)
-{
-    if (!mSLAM_ || filepath.empty()) {
-        RCLCPP_ERROR(rclcpp::get_logger("ORBSLAM3Interface"), "Invalid args");
-        return false;
-    }
-    
-    // Диагностика директории
-    std::string dir = "/home/orb";  // или извлеките из filepath
-    if (access(dir.c_str(), W_OK) != 0) {
-        RCLCPP_ERROR(rclcpp::get_logger("ORBSLAM3Interface"), 
-                     "No write permission in %s (errno %d)", dir.c_str(), errno);
-    }
-    
-    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
-                "Calling SaveAtlasToFile(%s, binary=%d)...", filepath.c_str(), binary);
-    
-    bool result = mSLAM_->SaveAtlasToFile(filepath, binary);
-    
-    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
-                "SaveAtlasToFile returned: %s", result ? "true" : "false");
-    
-    return result;
-}
-
-bool ORBSLAM3Interface::loadMap(const std::string& filepath, bool binary)
-{
-    if (!mSLAM_ || filepath.empty()) return false;
-    
-    try {
-        bool result = mSLAM_->LoadAtlasFromFile(filepath, binary);
-        
-        if (result) {
-            orbAtlas_ = mSLAM_->GetAtlas();
-            calculateReferencePoses();
-            RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), 
-                        "✅ Map loaded from: %s", filepath.c_str());
-        }
-        return result;
-    } catch (const std::exception& e) {
-        RCLCPP_ERROR(rclcpp::get_logger("ORBSLAM3Interface"), 
-                     "Load exception: %s", e.what());
-        return false;
-    }
-}
-
-void ORBSLAM3Interface::enableLocalizationMode()
-{
-    if (!mSLAM_) return;
-    mSLAM_->ActivateLocalizationMode();
-    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "📍 Localization mode ENABLED (tracking only, no new mapping)");
-}
-
-void ORBSLAM3Interface::disableLocalizationMode()
-{
-    if (!mSLAM_) return;
-    mSLAM_->DeactivateLocalizationMode();
-    RCLCPP_INFO(rclcpp::get_logger("ORBSLAM3Interface"), "🗺️ Localization mode DISABLED (full SLAM resumed)");
-}
 }

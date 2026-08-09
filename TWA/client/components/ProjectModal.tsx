@@ -135,7 +135,7 @@ export function ProjectModal({
               <Input
                 id="project-name"
                 placeholder="Например: Проект-1"
-                value={projectName}
+                value={projectName ?? ""}
                 onChange={(e) => setProjectName(e.target.value)}
                 className="border-border"
               />
@@ -144,7 +144,7 @@ export function ProjectModal({
             <div className="space-y-2">
               <Label htmlFor="project-type">Тип проекта</Label>
               <Select
-                value={projectType}
+                value={projectType || undefined}
                 onValueChange={(value) =>
                   setProjectType(value as ProjectType | "")
                 }

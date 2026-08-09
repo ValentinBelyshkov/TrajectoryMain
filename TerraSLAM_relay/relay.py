@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped
 from cv_bridge import CvBridge
 import socket
 import struct
@@ -38,8 +38,8 @@ class ImageRelay(Node):
         # Initialize ROS2 publisher and subscriber
         self.publisher_ = self.create_publisher(Image, '/camera/image_raw', 10)
         self.subscription = self.create_subscription(
-            Pose,
-            '/camera_pose',
+            PoseStamped,
+            '/robot_pose_slam',
             self.pose_callback,
             10)
         self.subscription  # prevent unused variable warning
@@ -83,9 +83,9 @@ class ImageRelay(Node):
             if self.current_pose is not None:
                 try:
                     # Extract pose data
-                    x = self.current_pose.position.x
-                    y = self.current_pose.position.y
-                    z = self.current_pose.position.z
+                x = self.current_pose.pose.position.x
+                y = self.current_pose.pose.position.y
+                z = self.current_pose.pose.position.z
 
                     # Check for special tracking status values
                     # Use exact equality for primitive types

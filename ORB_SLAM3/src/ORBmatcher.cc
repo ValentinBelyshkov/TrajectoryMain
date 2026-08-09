@@ -436,7 +436,7 @@ namespace ORB_SLAM3
         Sophus::SE3f Tcw = Sophus::SE3f(Scw.rotationMatrix(),Scw.translation()/Scw.scale());
         Eigen::Vector3f Ow = Tcw.inverse().translation();
 
-        // Set of MapPoints already found in the KeyFrame ？spAlreadyFound没有更新，谈何丢弃
+        // Set of MapPoints already found in the KeyFrame
         set<MapPoint*> spAlreadyFound(vpMatched.begin(), vpMatched.end());
         spAlreadyFound.erase(static_cast<MapPoint*>(NULL));
 
@@ -469,8 +469,8 @@ namespace ORB_SLAM3
                 continue;
 
             // Depth must be inside the scale invariance region of the point
-            const float maxDistance = pMP->GetMaxDistanceInvariance();//获取地图点的最大距离*1.2
-            const float minDistance = pMP->GetMinDistanceInvariance();//获取地图点的最小距离*0.8
+            const float maxDistance = pMP->GetMaxDistanceInvariance();
+            const float minDistance = pMP->GetMinDistanceInvariance();
             Eigen::Vector3f PO = p3Dw-Ow;
             const float dist = PO.norm();
 
@@ -544,7 +544,7 @@ namespace ORB_SLAM3
         Eigen::Vector3f Ow = Tcw.inverse().translation();
 
         // Set of MapPoints already found in the KeyFrame
-        set<MapPoint*> spAlreadyFound(vpMatched.begin(), vpMatched.end());//地图点已找到对应的投影向量
+        set<MapPoint*> spAlreadyFound(vpMatched.begin(), vpMatched.end());
         spAlreadyFound.erase(static_cast<MapPoint*>(NULL));
 
         int nmatches=0;
@@ -578,7 +578,7 @@ namespace ORB_SLAM3
             const float v = fy*y+cy;
 
             // Point must be inside the image
-            if(!pKF->IsInImage(u,v))//地图点投影没有落在图像中
+            if(!pKF->IsInImage(u,v))
                 continue;
 
             // Depth must be inside the scale invariance region of the point
@@ -764,10 +764,10 @@ namespace ORB_SLAM3
 
     int ORBmatcher::SearchByBoW(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &vpMatches12)
     {
-        const vector<cv::KeyPoint> &vKeysUn1 = pKF1->mvKeysUn;//特征点像素坐标
-        const DBoW2::FeatureVector &vFeatVec1 = pKF1->mFeatVec;//特征向量 std::map<NodeId, std::vector<unsigned int> >
-        const vector<MapPoint*> vpMapPoints1 = pKF1->GetMapPointMatches();//对应的地图点
-        const cv::Mat &Descriptors1 = pKF1->mDescriptors;//描述子
+        const vector<cv::KeyPoint> &vKeysUn1 = pKF1->mvKeysUn;
+        const DBoW2::FeatureVector &vFeatVec1 = pKF1->mFeatVec;
+        const vector<MapPoint*> vpMapPoints1 = pKF1->GetMapPointMatches();
+        const cv::Mat &Descriptors1 = pKF1->mDescriptors;
 
         const vector<cv::KeyPoint> &vKeysUn2 = pKF2->mvKeysUn;
         const DBoW2::FeatureVector &vFeatVec2 = pKF2->mFeatVec;
@@ -792,7 +792,7 @@ namespace ORB_SLAM3
 
         while(f1it != f1end && f2it != f2end)
         {
-            if(f1it->first == f2it->first)//如果特征向量位于同一节点
+            if(f1it->first == f2it->first)
             {
                 for(size_t i1=0, iend1=f1it->second.size(); i1<iend1; i1++)
                 {
@@ -802,9 +802,9 @@ namespace ORB_SLAM3
                     }
 
                     MapPoint* pMP1 = vpMapPoints1[idx1];
-                    if(!pMP1)//无对应地图点
+                    if(!pMP1)
                         continue;
-                    if(pMP1->isBad())//地图点不好
+                    if(pMP1->isBad())
                         continue;
 
                     const cv::Mat &d1 = Descriptors1.row(idx1);
@@ -847,7 +847,7 @@ namespace ORB_SLAM3
 
                     if(bestDist1<TH_LOW)
                     {
-                        if(static_cast<float>(bestDist1)<mfNNratio*static_cast<float>(bestDist2))//最优要小于次优的多少
+                        if(static_cast<float>(bestDist1)<mfNNratio*static_cast<float>(bestDist2))
                         {
                             vpMatches12[idx1]=vpMapPoints2[bestIdx2];
                             vbMatched2[bestIdx2]=true;
@@ -1372,7 +1372,6 @@ namespace ORB_SLAM3
             Eigen::Vector3f p3Dc = Tcw * p3Dw;
 
             // Depth must be positive
-            // Z轴必须朝前
             if(p3Dc(2)<0.0f)
                 continue;
 
@@ -1690,7 +1689,7 @@ namespace ORB_SLAM3
         const Sophus::SE3f Tlw = LastFrame.GetPose();
         const Eigen::Vector3f tlc = Tlw * twc;
 
-        const bool bForward = tlc(2)>CurrentFrame.mb && !bMono;//当前车在前进或者后退
+        const bool bForward = tlc(2)>CurrentFrame.mb && !bMono;
         const bool bBackward = -tlc(2)>CurrentFrame.mb && !bMono;
 
         for(int i=0; i<LastFrame.N; i++)

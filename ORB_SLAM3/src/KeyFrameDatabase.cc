@@ -467,21 +467,15 @@ void KeyFrameDatabase::DetectCandidates(KeyFrame* pKF, float minScore,vector<Key
 
 void KeyFrameDatabase::DetectBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vpLoopCand, vector<KeyFrame*> &vpMergeCand, int nMinWords)
 {
-    /**
-     * @brief 获取和pKF最为相似的若干关键帧，若关键帧和pKF在同一地图，则放入vpLoopCand，否则放入vpMergeCand；
-     * nMinWords 为最小共视点数
-     */
     list<KeyFrame*> lKFsSharingWords;
     set<KeyFrame*> spConnectedKF;
 
     // Search all keyframes that share a word with current frame
-    //  1. 搜索非局部地图共单词关键帧：在地图中搜索所有和pKF有相同单词的关键帧，并剔除掉其中落在pKF局部地图的关键帧，然后计算剩余每一关键帧和pKF的相同单词个数
     {
         unique_lock<mutex> lock(mMutex);
 
-        //在局部地图有共视点的关键帧
         spConnectedKF = pKF->GetConnectedKeyFrames();
-        // 获取所有和pKF具有相同单词的关键帧，
+
         for(DBoW2::BowVector::const_iterator vit=pKF->mBowVec.begin(), vend=pKF->mBowVec.end(); vit != vend; vit++)
         {
             list<KeyFrame*> &lKFs =   mvInvertedFile[vit->first];
@@ -490,7 +484,6 @@ void KeyFrameDatabase::DetectBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vp
             {
                 KeyFrame* pKFi=*lit;
                 if(spConnectedKF.find(pKFi) != spConnectedKF.end())
-                // 剔除掉在局部地图具有共视点的关键帧
                 {
                     continue;
                 }
@@ -500,7 +493,7 @@ void KeyFrameDatabase::DetectBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vp
                     pKFi->mnPlaceRecognitionQuery=pKF->mnId;
                     lKFsSharingWords.push_back(pKFi);
                 }
-               pKFi->mnPlaceRecognitionWords++;//某一帧和当前帧的相同单词个数
+               pKFi->mnPlaceRecognitionWords++;
 
             }
         }
@@ -509,32 +502,30 @@ void KeyFrameDatabase::DetectBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vp
         return;
 
     // Only compare against those keyframes that share enough words
-    // 获取剩余关键帧中具有的共视点最大值
     int maxCommonWords=0;
     for(list<KeyFrame*>::iterator lit=lKFsSharingWords.begin(), lend= lKFsSharingWords.end(); lit!=lend; lit++)
     {
         if((*lit)->mnPlaceRecognitionWords>maxCommonWords)
             maxCommonWords=(*lit)->mnPlaceRecognitionWords;
     }
-    // 最小值设置为 最大值的0.8
+
     int minCommonWords = maxCommonWords*0.8f;
-    // 若最小值小于设定的阈值，将最小值调整至阈值
+
     if(minCommonWords < nMinWords)
     {
         minCommonWords = nMinWords;
     }
 
-    list<pair<float,KeyFrame*> > lScoreAndMatch;//相似度 帧 lKFsSharingWords中共视点数大于最低阈值的关键帧相似度集合
+    list<pair<float,KeyFrame*> > lScoreAndMatch;
 
-    int nscores=0;//似乎没用上
+    int nscores=0;
 
     // Compute similarity score.
-    // 遍历lKFsSharingWords中 共视点数大于最低阈值的关键帧 并利用BOW计算这些帧和当前帧的相似度
     for(list<KeyFrame*>::iterator lit=lKFsSharingWords.begin(), lend= lKFsSharingWords.end(); lit!=lend; lit++)
     {
         KeyFrame* pKFi = *lit;
 
-        if(pKFi->mnPlaceRecognitionWords>minCommonWords)//共视点数大于最低阈值的关键帧
+        if(pKFi->mnPlaceRecognitionWords>minCommonWords)
         {
             nscores++;
             float si = mpVoc->score(pKF->mBowVec,pKFi->mBowVec);
@@ -549,7 +540,6 @@ void KeyFrameDatabase::DetectBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vp
     list<pair<float,KeyFrame*> > lAccScoreAndMatch;
     float bestAccScore = 0;
 
-    // 将pKF依次和lScoreAndMatch中每一帧的共视图中的前10关键帧计算相似度，以得到相似的帧与相似度值
     // Lets now accumulate score by covisibility
     for(list<pair<float,KeyFrame*> >::iterator it=lScoreAndMatch.begin(), itend=lScoreAndMatch.end(); it!=itend; it++)
     {
@@ -571,6 +561,7 @@ void KeyFrameDatabase::DetectBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vp
                 pBestKF=pKF2;
                 bestScore = pKF2->mPlaceRecognitionScore;
             }
+
         }
         lAccScoreAndMatch.push_back(make_pair(accScore,pBestKF));
         if(accScore>bestAccScore)
@@ -590,13 +581,13 @@ void KeyFrameDatabase::DetectBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vp
             KeyFrame* pKFi = it->second;
             if(!spAlreadyAddedKF.count(pKFi))
             {
-                if(pKF->GetMap() == pKFi->GetMap())//如果是在同一地图，则加入回环检测候选
+                if(pKF->GetMap() == pKFi->GetMap())
                 {
                     vpLoopCand.push_back(pKFi);
                 }
                 else
                 {
-                    vpMergeCand.push_back(pKFi);//如果是在不同地图，则加入merge
+                    vpMergeCand.push_back(pKFi);
                 }
                 spAlreadyAddedKF.insert(pKFi);
             }
@@ -613,16 +604,16 @@ bool compFirst(const pair<float, KeyFrame*> & a, const pair<float, KeyFrame*> & 
 void KeyFrameDatabase::DetectNBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vpLoopCand, vector<KeyFrame*> &vpMergeCand, int nNumCandidates)
 {
     list<KeyFrame*> lKFsSharingWords;
-    set<KeyFrame*> spConnectedKF;//和当前帧相连的关键帧
+    set<KeyFrame*> spConnectedKF;
 
     // Search all keyframes that share a word with current frame
     {
         unique_lock<mutex> lock(mMutex);
 
-        spConnectedKF = pKF->GetConnectedKeyFrames();//
+        spConnectedKF = pKF->GetConnectedKeyFrames();
 
         for(DBoW2::BowVector::const_iterator vit=pKF->mBowVec.begin(), vend=pKF->mBowVec.end(); vit != vend; vit++)
-        { //vit <WordId, WordValue>
+        {
             list<KeyFrame*> &lKFs =   mvInvertedFile[vit->first];
 
             for(list<KeyFrame*>::iterator lit=lKFs.begin(), lend= lKFs.end(); lit!=lend; lit++)
@@ -632,14 +623,14 @@ void KeyFrameDatabase::DetectNBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &v
                 if(pKFi->mnPlaceRecognitionQuery!=pKF->mnId)
                 {
                     pKFi->mnPlaceRecognitionWords=0;
-                    if(!spConnectedKF.count(pKFi))//非共视图
+                    if(!spConnectedKF.count(pKFi))
                     {
 
-                        pKFi->mnPlaceRecognitionQuery=pKF->mnId;//和关键帧有共视点
+                        pKFi->mnPlaceRecognitionQuery=pKF->mnId;
                         lKFsSharingWords.push_back(pKFi);
                     }
                 }
-                pKFi->mnPlaceRecognitionWords++;//记录某一帧和当前帧共视点个数
+                pKFi->mnPlaceRecognitionWords++;
             }
         }
     }

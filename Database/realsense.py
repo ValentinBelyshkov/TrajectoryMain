@@ -19,7 +19,7 @@ except ImportError:
 
 
 class RealSensePublisher(Node):
-    def __init__(self, serial=None, frames_dir=None):
+    def __init__(self, serial=None, frames_dir=None, no_save_frames=False):
         super().__init__('realsense_publisher')
         
         qos = QoSProfile(
@@ -29,14 +29,14 @@ class RealSensePublisher(Node):
         )
         
         # Паблишеры
-        self.publisher = self.create_publisher(Image, '/camera/image_raw', qos)
+        self.publisher = self.create_publisher(Image, '/cam0/image_raw', qos)
         self.publisher_compressed = self.create_publisher(
             CompressedImage, '/camera/image_raw/compressed', qos
         )
         
         # Подписка на позу камеры (ORB-SLAM3)
         self.pose_sub = self.create_subscription(
-            PoseStamped, '/camera_pose', self.pose_callback, qos
+            PoseStamped, '/robot_pose_slam', self.pose_callback, qos
         )
         self.current_pose = None  # x, y, z
         
@@ -44,14 +44,17 @@ class RealSensePublisher(Node):
         
         # Папка для сохранения кадров. По умолчанию — new_frames рядом со
         # скриптом; при записи проекта передаётся --frames-dir (путь к
-        # /opt/main/Database/projects/{id}/frames).
+        # /opt/main/Database/projects/{id}/frames). Если передан флаг
+        # --no-save-frames, сохранение кадров отключается полностью.
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        if frames_dir:
-            self.frames_dir = frames_dir
+        self.save_frames = not no_save_frames
+        if self.save_frames:
+            self.frames_dir = frames_dir if frames_dir else os.path.join(script_dir, 'new_frames')
+            os.makedirs(self.frames_dir, exist_ok=True)
+            self.get_logger().info(f'=== FRAMES DIR: {self.frames_dir} ===')
         else:
-            self.frames_dir = os.path.join(script_dir, 'new_frames')
-        os.makedirs(self.frames_dir, exist_ok=True)
-        self.get_logger().info(f'=== FRAMES DIR: {self.frames_dir} ===')
+            self.frames_dir = None
+            self.get_logger().info('=== FRAME SAVING DISABLED (--no-save-frames) ===')
         self.get_logger().info(f'=== SCRIPT DIR: {script_dir} ===')
         
         if not REALSENSE_AVAILABLE:
@@ -120,13 +123,10 @@ class RealSensePublisher(Node):
                 self.publisher_compressed.publish(compressed_msg)
             
             # --- Сохранение кадра и позы ---
-            # ВАЖНО: кадр сохраняем ВСЕГДА (даже без позы SLAM), иначе на
-            # этапе записи калибровки, когда SLAM ещё не инициализирован,
-            # не будет ни одного сохранённого кадра.
-            self.get_logger().info(
-                f'=== FRAME {self.frame_count:04d} | pose={self.current_pose} ==='
-            )
-            self.save_frame(color_image)
+            # Кадр сохраняем только если включена запись кадров
+            # (флаг --no-save-frames отключает сохранение).
+            if self.save_frames:
+                self.save_frame(color_image)
             
             self.frame_count += 1
             if self.frame_count % 300 == 0:
@@ -181,15 +181,19 @@ def main(args=None):
     
     rclpy.init(args=args)
     
-    # Аргументы: [serial] [--frames-dir PATH]
+    # Аргументы: [serial] [--frames-dir PATH] [--no-save-frames]
     serial = None
     frames_dir = None
+    no_save_frames = False
     argv = sys.argv[1:]
     i = 0
     while i < len(argv):
         if argv[i] == "--frames-dir" and i + 1 < len(argv):
             frames_dir = argv[i + 1]
             i += 2
+        elif argv[i] == "--no-save-frames":
+            no_save_frames = True
+            i += 1
         else:
             serial = argv[i]
             i += 1
@@ -199,7 +203,7 @@ def main(args=None):
     
     try:
         print(" Starting RealSense Publisher...")
-        publisher = RealSensePublisher(serial, frames_dir)
+        publisher = RealSensePublisher(serial, frames_dir, no_save_frames)
         print(" Node ready. Press Ctrl+C to exit.")
         
         executor = rclpy.executors.SingleThreadedExecutor()

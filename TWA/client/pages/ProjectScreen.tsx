@@ -154,6 +154,8 @@ export default function ProjectScreen() {
           onCalibrate={controller.handleCalibrate}
           hasVideoStream={hasVideoStream}
           videoCanvasRef={videoCanvasRef}
+          saveFrames={controller.saveFrames}
+          onSaveFramesChange={controller.setSaveFrames}
           gpsStatus={gpsStatus}
           projectType={project?.type}
           systemStatus={systemStatus}

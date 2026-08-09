@@ -19,9 +19,7 @@ COMPONENT_CONFIG = {
             'export PATH="/usr/bin:/bin:/usr/local/bin:/opt/ros/humble/bin:$PATH" && '
             'export LD_LIBRARY_PATH="/opt/ros/humble/lib:/opt/main/Trajectory/lib:$LD_LIBRARY_PATH" && '
             'mkdir -p /opt/main/Trajectory/.ros/log && '
-            'ros2 run orb_slam3_ros2_wrapper mono '
-            '/opt/main/Trajectory/ORB_SLAM3/Vocabulary/ORBvoc.bin '
-            '/opt/main/Trajectory/Database/real.yaml --ros-args -r __ns:=/'
+            'ros2 launch orb_slam3_ros2_wrapper unirobot.launch.py'
         ],
         "cwd": "/opt/main/Trajectory",
         "env": {"ROS_DOMAIN_ID": "0", "QT_X11_NO_MITSHM": "1"},
@@ -30,12 +28,6 @@ COMPONENT_CONFIG = {
     },
     "publisher_folder": {
         "cwd": "/opt/main/Trajectory/Database",
-        "env": {"ROS_DOMAIN_ID": "0"},
-        "autorestart": False,
-        "max_restarts": 0,
-    },
-    "relay": {
-        "cwd": "/opt/main/Trajectory/TerraSLAM_relay",
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": False,
         "max_restarts": 0,
@@ -55,7 +47,8 @@ COMPONENT_CONFIG = {
             "bash", "-lc",
             "source /opt/ros/humble/setup.bash && source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
             "python3 /opt/main/Trajectory/TerraSLAM_relay/Serial/gps_bridge_node.py --ros-args "
-            "-p protocol:=msp -p hw_type:=uart -p port:=/dev/ttyTHS1 -p baudrate:=115200"
+            "-p protocol:=msp -p hw_type:=uart -p port:=/dev/ttyTHS1 -p baudrate:=115200 "
+            "-p pose_topic:=/robot_pose_slam -p pose_type:=pose_stamped"
         ],
         "cwd": "/opt/main/Trajectory/TerraSLAM_relay/Serial",
         "env": {"ROS_DOMAIN_ID": "0"},
@@ -92,7 +85,9 @@ COMPONENT_CONFIG = {
 }
 
 # --- Pose liveness config ---
-POSE_TOPIC = "/camera_pose"
+# ORB-SLAM3 now publishes the camera pose on /robot_pose_slam as
+# geometry_msgs/msg/PoseStamped (see wrapper update).
+POSE_TOPIC = "/robot_pose_slam"
 TRACKING_STATE_TOPIC = "/orb_slam3/tracking_state"
 POSE_STALE_AFTER_SECONDS = 3.0
 POSE_POLL_INTERVAL_SECONDS = 1.0

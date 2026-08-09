@@ -22,7 +22,7 @@ _DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(_
 
 ROS2_TOPICS = {
     "covariance": "/orb_slam3/covariance",
-    "camera_pose": "/camera_pose",
+    "camera_pose": "/robot_pose_slam",
     "imu": "/imu",
     "mavros_state": "/mavros/state",
     "mavros_imu": "/mavros/imu/data",

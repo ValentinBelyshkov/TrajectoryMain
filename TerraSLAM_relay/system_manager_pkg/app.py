@@ -32,6 +32,7 @@ from . import routes_components, routes_ros, routes_slam, routes_gps, routes_cal
 from . import routes_projects, routes_calibration_twa, routes_control, routes_telemetry, routes_video, routes_settings
 from .pose_monitor import pose_monitor
 from .process_manager import manager
+from .state_store import state_store
 from . import camera_stream
 from . import session_manager
 from .fallback_controller import fallback_controller
@@ -53,7 +54,8 @@ app.include_router(routes_video.router, prefix="/api/video", tags=["video"])
 app.include_router(routes_settings.router, prefix="/api/settings", tags=["settings"])
 
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-_RELAY_DIR = os.path.abspath(os.path.join(_THIS_DIR, "..", ".."))
+# app.py lives in <relay>/system_manager_pkg/, so the relay root is one level up.
+_RELAY_DIR = os.path.abspath(os.path.join(_THIS_DIR, ".."))
 _ASSETS_DIR = os.path.join(_RELAY_DIR, "assets")
 if os.path.isdir(_ASSETS_DIR):
     app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -126,6 +128,11 @@ async def startup():
     # Load persisted desired-state + failsafe config before anything starts.
     manager.ensure_state(app.state.projects_path)
     fallback_controller.reload()
+
+    # Reset component desired/autostart state so only rosbridge and
+    # slam_mode_manager are running at launch (with autorstart on crash);
+    # every other component is left off.
+    state_store.reset_components_to_defaults()
 
     try:
         res = await manager.start("rosbridge")

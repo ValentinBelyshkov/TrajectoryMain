@@ -235,7 +235,7 @@ void MapPoint::SetBadFlag()
         }
     }
 
-    // mpMap->EraseMapPoint(this);
+    mpMap->EraseMapPoint(this);
 }
 
 MapPoint* MapPoint::GetReplaced()
@@ -245,7 +245,7 @@ MapPoint* MapPoint::GetReplaced()
     return mpReplaced;
 }
 
-void MapPoint::Replace(MapPoint* pMP)//遍历当前地图点的关键帧，更新相关可视
+void MapPoint::Replace(MapPoint* pMP)
 {
     if(pMP->mnId==this->mnId)
         return;
@@ -519,7 +519,7 @@ int MapPoint::PredictScale(const float &currentDist, KeyFrame* pKF)
         ratio = mfMaxDistance/currentDist;
     }
 
-    int nScale = ceil(log(ratio)/pKF->mfLogScaleFactor);//换底公式 mfLogScaleFactor：缩放比例取log
+    int nScale = ceil(log(ratio)/pKF->mfLogScaleFactor);
     if(nScale<0)
         nScale = 0;
     else if(nScale>=pKF->mnScaleLevels)

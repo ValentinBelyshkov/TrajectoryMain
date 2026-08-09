@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import L from "leaflet";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 interface MapComponentProps {
   dronePosition?: {
@@ -13,26 +14,85 @@ interface MapComponentProps {
   followDrone?: boolean;
 }
 
-// Fix for default marker icons in Leaflet - moved inside component to avoid SSR issues
-const fixLeafletIcons = () => {
-  if (typeof window === "undefined") return;
-  try {
-    const proto = L.Icon.Default.prototype as any;
-    if (proto._getIconUrl) {
-      delete proto._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl:
-          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-        iconUrl:
-          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-        shadowUrl:
-          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-      });
-    }
-  } catch (e) {
-    console.warn("Leaflet icon fix failed:", e);
-  }
+// Reuse the exact same offline vector tiles that the :9000 relay serves.
+// CORS is already allowed by the relay tile endpoint (Access-Control-Allow-Origin: *).
+const OFFLINE_TILES_URL =
+  "http://192.168.0.1:9000/api/v1/map/tiles/{z}/{x}/{y}.pbf";
+
+// MapLibre style that renders the offline vector tiles (same as the relay's
+// offline-style.json), so TWA shows the identical offline map as :9000.
+const OFFLINE_STYLE: any = {
+  version: 8,
+  name: "Offline Central Russia",
+  center: [38.634, 55.492],
+  zoom: 7,
+  sources: {
+    "local-tiles": {
+      type: "vector",
+      tiles: [OFFLINE_TILES_URL],
+      maxzoom: 14,
+    },
+  },
+  layers: [
+    { id: "background", type: "background", paint: { "background-color": "#f2efe9" } },
+    { id: "water", type: "fill", source: "local-tiles", "source-layer": "water", paint: { "fill-color": "#aadaff" } },
+    { id: "waterway", type: "line", source: "local-tiles", "source-layer": "waterway", paint: { "line-color": "#aadaff", "line-width": { base: 1.2, stops: [[8, 0.8], [14, 2]] } } },
+    { id: "landcover", type: "fill", source: "local-tiles", "source-layer": "landcover", paint: { "fill-color": "#eef5e6" } },
+    { id: "landuse", type: "fill", source: "local-tiles", "source-layer": "landuse", paint: { "fill-color": "#dde8c4" } },
+    { id: "park", type: "fill", source: "local-tiles", "source-layer": "park", paint: { "fill-color": "#cde2a8" } },
+    { id: "aeroway", type: "fill", source: "local-tiles", "source-layer": "aeroway", filter: ["==", "class", "aerodrome"], paint: { "fill-color": "#d9d0c9", "fill-opacity": 0.6 } },
+    { id: "building", type: "fill", source: "local-tiles", "source-layer": "building", paint: { "fill-color": "#d9d0c9", "fill-opacity": 0.9 } },
+    { id: "road", type: "line", source: "local-tiles", "source-layer": "transportation", filter: ["has", "class"], paint: { "line-color": "#ffffff", "line-width": { base: 1.5, stops: [[5, 1], [14, 8]] }, "line-opacity": 0.9 } },
+    { id: "road-case", type: "line", source: "local-tiles", "source-layer": "transportation", filter: ["has", "class"], paint: { "line-color": "#b9b0a8", "line-width": { base: 1.5, stops: [[5, 1.2], [14, 9]] }, "line-opacity": 0.6 } },
+    { id: "boundary", type: "line", source: "local-tiles", "source-layer": "boundary", paint: { "line-color": "#f85149", "line-width": { base: 1.2, stops: [[6, 1], [12, 2.5]] }, "line-dasharray": [3, 2] } },
+    { id: "poi", type: "circle", source: "local-tiles", "source-layer": "poi", paint: { "circle-radius": { base: 1.3, stops: [[10, 2], [14, 5]] }, "circle-color": "#bc8cff", "circle-stroke-width": 1, "circle-stroke-color": "#ffffff" } },
+  ],
 };
+
+const DRONE_ICON_SVG =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTQiIGZpbGw9IiMwMDdhZjgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIvPgo8cGF0aCBkPSJNMTYgOEwxOSAxNEgxM0wxNiA4WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTI0IDE2TDE4IDE5VjEzTDI0IDE2WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTggMTZMMTQgMTlWMTNMOCAxNloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0xNiAyNEwxMyAyMFYyNkwxNiAyNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==";
+
+const makeDroneElement = () => {
+  const el = document.createElement("div");
+  el.style.width = "32px";
+  el.style.height = "32px";
+  el.innerHTML = `<img src="${DRONE_ICON_SVG}" width="32" height="32" style="display:block" />`;
+  return el;
+};
+
+const makeNumberedElement = (idx: number) => {
+  const el = document.createElement("div");
+  el.style.width = "24px";
+  el.style.height = "24px";
+  el.innerHTML =
+    '<div class="w-6 h-6 rounded-full border-2 border-white bg-primary shadow-lg flex items-center justify-center text-white text-[10px] font-bold">' +
+    (idx + 1) +
+    "</div>";
+  return el;
+};
+
+const makeSelectedElement = () => {
+  const el = document.createElement("div");
+  el.style.width = "32px";
+  el.style.height = "32px";
+  el.innerHTML =
+    '<div class="w-8 h-8 rounded-full border-2 border-amber-400 bg-amber-300 shadow-lg animate-pulse"></div>';
+  return el;
+};
+
+const pathToGeoJSON = (pts: Array<{ lat: number; lng: number }>) => ({
+  type: "FeatureCollection" as const,
+  features: [
+    {
+      type: "Feature" as const,
+      geometry: {
+        type: "LineString" as const,
+        coordinates: pts.map((p) => [p.lng, p.lat]),
+      },
+      properties: {},
+    },
+  ],
+});
 
 export function MapComponent({
   dronePosition = { lat: 55.7558, lng: 37.6173 }, // Default: Moscow
@@ -43,207 +103,175 @@ export function MapComponent({
   followDrone = true,
 }: MapComponentProps) {
   const mapId = useRef(`map-${Math.random().toString(36).substr(2, 9)}`);
-  const mapRef = useRef<L.Map | null>(null);
-  const droneMarkerRef = useRef<L.Marker | null>(null);
-  const pathPolylineRef = useRef<L.Polyline | null>(null);
-  const selectedPointMarkerRef = useRef<L.Marker | null>(null);
-  const pathMarkersRef = useRef<L.Marker[]>([]);
-
-  useEffect(() => {
-    // Apply Leaflet icon fix
-    fixLeafletIcons();
-
-    // Load Leaflet CSS dynamically
-    if (
-      typeof document !== "undefined" &&
-      !document.getElementById("leaflet-css")
-    ) {
-      const link = document.createElement("link");
-      link.id = "leaflet-css";
-      link.rel = "stylesheet";
-      link.href =
-        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
-      document.head.appendChild(link);
-    }
-  }, []);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const droneMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const pathMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const selectedMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const clickHandlerRef = useRef<((e: any) => void) | null>(null);
 
   useEffect(() => {
     if (mapRef.current) return;
 
-    // Initialize map
-    const map = L.map(mapId.current, {
-      zoomControl: false // We'll add it later or keep default, but usually custom positioning is better
-    }).setView(
-      [dronePosition.lat, dronePosition.lng],
-      17,
-    );
-
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-    // Add OpenStreetMap tile layer
-    const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
+    const map = new maplibregl.Map({
+      container: mapId.current,
+      style: OFFLINE_STYLE,
+      center: [dronePosition.lng, dronePosition.lat],
+      zoom: 17,
     });
 
-    // Add Satellite tile layer
-    const satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      maxZoom: 19,
+    map.addControl(new maplibregl.NavigationControl(), "bottom-right");
+
+    // Keep the UI usable if some offline tiles are missing.
+    map.on("error", (e) => {
+      console.warn("MapLibre error:", e && e.error ? e.error.message : e);
     });
 
-    const baseMaps = {
-      "Карта": osm,
-      "Спутник": satellite
-    };
-
-    osm.addTo(map);
-    L.control.layers(baseMaps, {}, { position: 'topright' }).addTo(map);
-
-    mapRef.current = map;
-
-    // Create custom drone icon
-    const droneIcon = L.icon({
-      iconUrl:
-        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTQiIGZpbGw9IiMwMDdhZjgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIvPgo8cGF0aCBkPSJNMTYgOEwxOSAxNEgxM0wxNiA4WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTI0IDE2TDE4IDE5VjEzTDI0IDE2WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTggMTZMMTQgMTlWMTNMOCAxNloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0xNiAyNEwxMyAyMFYyNkwxNiAyNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==",
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -16],
-    });
-
-    // Add drone marker
-    const droneMarker = L.marker([dronePosition.lat, dronePosition.lng], {
-      icon: droneIcon,
-    })
-      .addTo(map)
-      .bindPopup("<b>📍 Позиция дрона</b>");
-
+    const droneMarker = new maplibregl.Marker({ element: makeDroneElement() })
+      .setLngLat([dronePosition.lng, dronePosition.lat])
+      .setPopup(new maplibregl.Popup({ offset: 16 }).setHTML("<b>📍 Позиция дрона</b>"))
+      .addTo(map);
     droneMarkerRef.current = droneMarker;
 
-    // Add path if exists
-    if (path.length > 1) {
-      const pathCoords = path.map((p) => [p.lat, p.lng] as [number, number]);
-      const polyline = L.polyline(pathCoords, {
-        color: "#007af8",
-        weight: 3,
-        opacity: 0.7,
-        dashArray: "5, 5",
-      }).addTo(map);
+    const applyPath = () => {
+      if (!map.getSource("drone-path")) {
+        map.addSource("drone-path", {
+          type: "geojson",
+          data: pathToGeoJSON([]),
+        });
+        map.addLayer({
+          id: "drone-path-line",
+          type: "line",
+          source: "drone-path",
+          paint: {
+            "line-color": "#007af8",
+            "line-width": 3,
+            "line-opacity": 0.7,
+            "line-dasharray": [5, 5],
+          },
+        });
+      }
+      (map.getSource("drone-path") as maplibregl.GeoJSONSource).setData(
+        pathToGeoJSON(path),
+      );
+      if (path.length > 1) {
+        const bounds = new maplibregl.LngLatBounds();
+        path.forEach((p) => bounds.extend([p.lng, p.lat]));
+        bounds.extend([dronePosition.lng, dronePosition.lat]);
+        map.fitBounds(bounds, { padding: 50 });
+      }
+    };
 
-      pathPolylineRef.current = polyline;
+    map.on("load", applyPath);
+    if (map.isStyleLoaded()) applyPath();
 
-      // Fit map to path
-      const group = new L.FeatureGroup([droneMarker, polyline]);
-      map.fitBounds(group.getBounds(), { padding: [50, 50] });
-    }
-
-    // Add click handler if onMapClick is provided
-    if (onMapClick) {
-      map.on("click", (e: L.LeafletMouseEvent) => {
-        onMapClick(e.latlng.lat, e.latlng.lng);
-      });
-    }
+    mapRef.current = map;
 
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        droneMarkerRef.current = null;
+        selectedMarkerRef.current = null;
+        pathMarkersRef.current = [];
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle onMapClick changes
   useEffect(() => {
-    if (!mapRef.current) return;
+    const map = mapRef.current;
+    if (!map) return;
 
-    // Remove existing click handler
-    mapRef.current.off("click");
-
-    // Add new click handler if provided
+    if (clickHandlerRef.current) map.off("click", clickHandlerRef.current);
     if (onMapClick) {
-      mapRef.current.on("click", (e: L.LeafletMouseEvent) => {
-        onMapClick(e.latlng.lat, e.latlng.lng);
-      });
+      const handler = (e: any) => onMapClick(e.lngLat.lat, e.lngLat.lng);
+      map.on("click", handler);
+      clickHandlerRef.current = handler;
+    } else {
+      clickHandlerRef.current = null;
     }
   }, [onMapClick]);
 
   // Update drone position
   useEffect(() => {
-    if (droneMarkerRef.current && mapRef.current) {
-      droneMarkerRef.current.setLatLng([dronePosition.lat, dronePosition.lng]);
-      // Optionally follow drone
+    const map = mapRef.current;
+    const marker = droneMarkerRef.current;
+    if (marker && map) {
+      marker.setLngLat([dronePosition.lng, dronePosition.lat]);
       if (followDrone) {
-        mapRef.current.panTo([dronePosition.lat, dronePosition.lng]);
+        map.easeTo({ center: [dronePosition.lng, dronePosition.lat] });
       }
     }
   }, [dronePosition, followDrone]);
 
   // Update path
   useEffect(() => {
-    if (!mapRef.current) return;
+    const map = mapRef.current;
+    if (!map) return;
 
-    // Remove old markers
-    pathMarkersRef.current.forEach((marker) => marker.remove());
+    // Remove old numbered markers
+    pathMarkersRef.current.forEach((m) => m.remove());
     pathMarkersRef.current = [];
 
-    // Add new markers if showMarkers is true
     if (showMarkers) {
       path.forEach((p, idx) => {
-        const marker = L.marker([p.lat, p.lng], {
-          icon: L.divIcon({
-            className: "custom-path-marker",
-            html: `<div class="w-6 h-6 rounded-full border-2 border-white bg-primary shadow-lg flex items-center justify-center text-white text-[10px] font-bold">${idx + 1}</div>`,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
-          }),
-        }).addTo(mapRef.current!);
+        const marker = new maplibregl.Marker({ element: makeNumberedElement(idx) })
+          .setLngLat([p.lng, p.lat])
+          .addTo(map);
         pathMarkersRef.current.push(marker);
       });
     }
 
-    if (pathPolylineRef.current) {
-      const pathCoords = path.map((p) => [p.lat, p.lng] as [number, number]);
-      pathPolylineRef.current.setLatLngs(pathCoords);
-    } else if (path.length > 1 && mapRef.current) {
-      const pathCoords = path.map((p) => [p.lat, p.lng] as [number, number]);
-      const polyline = L.polyline(pathCoords, {
-        color: "#007af8",
-        weight: 3,
-        opacity: 0.7,
-        dashArray: "5, 5",
-      }).addTo(mapRef.current);
+    const apply = () => {
+      if (!map.getSource("drone-path")) {
+        map.addSource("drone-path", {
+          type: "geojson",
+          data: pathToGeoJSON([]),
+        });
+        map.addLayer({
+          id: "drone-path-line",
+          type: "line",
+          source: "drone-path",
+          paint: {
+            "line-color": "#007af8",
+            "line-width": 3,
+            "line-opacity": 0.7,
+            "line-dasharray": [5, 5],
+          },
+        });
+      }
+      (map.getSource("drone-path") as maplibregl.GeoJSONSource).setData(
+        pathToGeoJSON(path),
+      );
+    };
 
-      pathPolylineRef.current = polyline;
-    }
+    if (map.isStyleLoaded()) apply();
+    else map.once("load", apply);
   }, [path, showMarkers]);
 
   // Update selected point marker
   useEffect(() => {
-    if (!mapRef.current) return;
+    const map = mapRef.current;
+    if (!map) return;
 
     if (selectedPoint) {
-      if (selectedPointMarkerRef.current) {
-        selectedPointMarkerRef.current.setLatLng([
-          selectedPoint.lat,
+      if (selectedMarkerRef.current) {
+        selectedMarkerRef.current.setLngLat([
           selectedPoint.lng,
+          selectedPoint.lat,
         ]);
       } else {
-        const marker = L.marker([selectedPoint.lat, selectedPoint.lng], {
-          icon: L.divIcon({
-            className: "custom-selected-marker",
-            html: '<div class="w-8 h-8 rounded-full border-2 border-amber-400 bg-amber-300 shadow-lg animate-pulse"></div>',
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
-          }),
-        }).addTo(mapRef.current);
-        selectedPointMarkerRef.current = marker;
+        const marker = new maplibregl.Marker({
+          element: makeSelectedElement(),
+        })
+          .setLngLat([selectedPoint.lng, selectedPoint.lat])
+          .addTo(map);
+        selectedMarkerRef.current = marker;
       }
-    } else {
-      if (selectedPointMarkerRef.current) {
-        mapRef.current.removeLayer(selectedPointMarkerRef.current);
-        selectedPointMarkerRef.current = null;
-      }
+    } else if (selectedMarkerRef.current) {
+      selectedMarkerRef.current.remove();
+      selectedMarkerRef.current = null;
     }
   }, [selectedPoint]);
 

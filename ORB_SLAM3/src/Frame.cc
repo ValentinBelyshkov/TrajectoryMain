@@ -107,13 +107,13 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     mnId=nNextId++;
 
     // Scale Level Info
-    mnScaleLevels = mpORBextractorLeft->GetLevels();//获取金字塔层数
-    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();//金字塔每层缩放比例
-    mfLogScaleFactor = log(mfScaleFactor);//金字塔每层缩放比例取log
-    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();//每层图像相对于第一层的缩放系数
-    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();//每层图像相对于第一层的缩放系数的导数
-    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();//每层图像相对于第一层的缩放系数的平方
-    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();//每层图像相对于第一层的缩放系数的平方的导数
+    mnScaleLevels = mpORBextractorLeft->GetLevels();
+    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
+    mfLogScaleFactor = log(mfScaleFactor);
+    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
+    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
+    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
+    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
 #ifdef REGISTER_TIMES
@@ -830,17 +830,17 @@ void Frame::ComputeStereoMatches()
         const cv::KeyPoint &kp = mvKeysRight[iR];
         const float &kpY = kp.pt.y;
         const float r = 2.0f*mvScaleFactors[mvKeysRight[iR].octave];
-        const int maxr = ceil(kpY+r);//这边如果越界？
-        const int minr = floor(kpY-r);//这边如果越界？导致底下的yi超出边界
+        const int maxr = ceil(kpY+r);
+        const int minr = floor(kpY-r);
 
         for(int yi=minr;yi<=maxr;yi++)
             vRowIndices[yi].push_back(iR);
     }
 
     // Set limits for search
-    const float minZ = mb;//基线长度
+    const float minZ = mb;
     const float minD = 0;
-    const float maxD = mbf/minZ;//fx
+    const float maxD = mbf/minZ;
 
     // For each left keypoint search a match in the right image
     vector<pair<int, int> > vDistIdx;
@@ -858,8 +858,8 @@ void Frame::ComputeStereoMatches()
         if(vCandidates.empty())
             continue;
 
-        const float minU = uL-maxD;//很有可能小于0了，反正也不管
-        const float maxU = uL-minD;//理论上，一对对应点，左边像素坐标应该大于右边像素（画图易得）
+        const float minU = uL-maxD;
+        const float maxU = uL-minD;
 
         if(maxU<0)
             continue;
@@ -875,7 +875,7 @@ void Frame::ComputeStereoMatches()
             const size_t iR = vCandidates[iC];
             const cv::KeyPoint &kpR = mvKeysRight[iR];
 
-            if(kpR.octave<levelL-1 || kpR.octave>levelL+1)//右图像特征点层级和左边不一致，略去
+            if(kpR.octave<levelL-1 || kpR.octave>levelL+1)
                 continue;
 
             const float &uR = kpR.pt.x;
@@ -935,12 +935,12 @@ void Frame::ComputeStereoMatches()
             if(bestincR==-L || bestincR==L)
                 continue;
 
-            // Sub-pixel match (Parabola fitting)抛物线拟合
+            // Sub-pixel match (Parabola fitting)
             const float dist1 = vDists[L+bestincR-1];
             const float dist2 = vDists[L+bestincR];
             const float dist3 = vDists[L+bestincR+1];
 
-            const float deltaR = (dist1-dist3)/(2.0f*(dist1+dist3-2.0f*dist2));//泰勒展开
+            const float deltaR = (dist1-dist3)/(2.0f*(dist1+dist3-2.0f*dist2));
 
             if(deltaR<-1 || deltaR>1)
                 continue;
@@ -957,7 +957,7 @@ void Frame::ComputeStereoMatches()
                     disparity=0.01;
                     bestuR = uL-0.01;
                 }
-                mvDepth[iL]=mbf/disparity;//求解深度
+                mvDepth[iL]=mbf/disparity;
                 mvuRight[iL] = bestuR;
                 vDistIdx.push_back(pair<int,int>(bestDist,iL));
             }
@@ -968,14 +968,14 @@ void Frame::ComputeStereoMatches()
     const float median = vDistIdx[vDistIdx.size()/2].first;
     const float thDist = 1.5f*1.4f*median;
 
-    for(int i=vDistIdx.size()-1;i>=0;i--)//只使用那些匹配结果较好的点
+    for(int i=vDistIdx.size()-1;i>=0;i--)
     {
         if(vDistIdx[i].first<thDist)
             break;
         else
         {
-            mvuRight[vDistIdx[i].second]=-1;//左边特征点对应的右边特征点横坐标
-            mvDepth[vDistIdx[i].second]=-1;//左边图像特征点的深度
+            mvuRight[vDistIdx[i].second]=-1;
+            mvDepth[vDistIdx[i].second]=-1;
         }
     }
 }
@@ -1044,13 +1044,13 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     mnId=nNextId++;
 
     // Scale Level Info
-    mnScaleLevels = mpORBextractorLeft->GetLevels();//获取金字塔层数
-    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();//获取每层缩放比例
-    mfLogScaleFactor = log(mfScaleFactor);//缩放比例取log
-    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();//每层相对第一层的缩放系数
-    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();//每层相对第一层的缩放系数的导数
-    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();//每层相对第一层的缩放系数的平方
-    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();//每层相对第一层的缩放系数的平方的导数
+    mnScaleLevels = mpORBextractorLeft->GetLevels();
+    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
+    mfLogScaleFactor = log(mfScaleFactor);
+    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
+    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
+    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
+    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
 #ifdef REGISTER_TIMES

@@ -2,7 +2,7 @@
 GPS Sender routes:
   GET  /api/v1/gps/calib      — read calib.gpc content
   POST /api/v1/gps/calib      — save calib.gpc content
-  GET  /api/v1/gps/position   — compute lat/lon/alt from last /camera_pose + calib.gpc transform
+  GET  /api/v1/gps/position   — compute lat/lon/alt from last /robot_pose_slam + calib.gpc transform
 """
 import os
 import time
@@ -102,7 +102,7 @@ def save_calib(req: CalibContent):
 @router.get("/api/v1/gps/position")
 def get_gps_position():
     """
-    Read the last /camera_pose position from the persistent subscriber,
+    Read the last /robot_pose_slam position from the persistent subscriber,
     apply the calib.gpc affine transform, and return lat/lon/alt.
     """
     snap = ros_pose_subscriber.state.snapshot()
@@ -112,7 +112,7 @@ def get_gps_position():
     if pos is None:
         return {
             "success": False,
-            "error": "No pose received yet from /camera_pose",
+            "error": "No pose received yet from /robot_pose_slam",
             "lat": None, "lon": None, "alt": None,
             "pose_age_seconds": None,
         }

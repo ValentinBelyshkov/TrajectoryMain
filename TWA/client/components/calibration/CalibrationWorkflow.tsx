@@ -8,7 +8,6 @@ import { TestRunStep } from "./TestRunStep";
 import { FrameSelectionStep } from "./FrameSelectionStep";
 import { CameraRecordingStep } from "./CameraRecordingStep";
 import { FrameTrimmingStep } from "./FrameTrimmingStep";
-import { VideoTrimmingStep } from "./VideoTrimmingStep";
 import { VideoUploadStep } from "./VideoUploadStep";
 import { ProcessingStep } from "./ProcessingStep";
 import { CorrelationStep } from "./CorrelationStep";
@@ -209,26 +208,14 @@ export function CalibrationWorkflow({
   }
 
   if (calibrationStep === "trimming") {
-    const isCamera =
-      projectType === "камера" || publisherMode === "realsense";
-
-    // Camera (RealSense) recording produces frames on disk, not a video file,
-    // so use the frame-based trimming editor that deletes the extra frames.
-    if (isCamera) {
-      return wrapOverlay(
-        <FrameTrimmingStep
-          projectId={projectId}
-          onApplyTrim={c.handleApplyFrameTrim}
-          onBack={goTo.bind(null, "recording") as () => void}
-          onSkip={goTo.bind(null, "processing") as () => void}
-        />,
-      );
-    }
-
+    // Both camera (RealSense) and simulation recordings are processed
+    // frame-by-frame: frames live in the project's frames folder, and the
+    // trimming editor deletes the extra frames in place (no video/calib
+    // creation on the backend). Use the same frame-based editor for both.
     return wrapOverlay(
-      <VideoTrimmingStep
-        sessionId={c.calibrationSessionId || ""}
-        onApplyTrim={c.handleApplyTrim}
+      <FrameTrimmingStep
+        projectId={projectId}
+        onApplyTrim={c.handleApplyFrameTrim}
         onBack={goTo.bind(null, "recording") as () => void}
         onSkip={goTo.bind(null, "processing") as () => void}
       />,

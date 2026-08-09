@@ -4,7 +4,7 @@ On-demand single-frame camera snapshot.
 Grabs one message from /camera/image_raw (sensor_msgs/Image) via a
 short-lived rclpy subscription, saves it as an image file at a
 user-specified path, and writes a sibling `<same-basename>.txt` file with
-the current /camera_pose reading — reused directly from the already
+the current /robot_pose_slam reading — reused directly from the already
 -running persistent pose subscriber in ros_pose_subscriber.py, so no extra
 pose topic I/O is needed here.
 """
@@ -84,7 +84,7 @@ def _grab_one_frame(topic: str, timeout: float):
 
 def save_snapshot(image_path: str, timeout: float = 5.0) -> Dict[str, Any]:
     """Saves one frame from /camera/image_raw to `image_path`, and the
-    current /camera_pose reading to a sibling `<basename>.txt`."""
+    current /robot_pose_slam reading to a sibling `<basename>.txt`."""
     if not CAMERA_DEPS_AVAILABLE:
         return {"success": False, "error": f"camera dependencies not available: {_IMPORT_ERROR}"}
 

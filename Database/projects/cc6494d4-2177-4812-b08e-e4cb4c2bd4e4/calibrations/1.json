@@ -1,82 +1,15 @@
 {
-  "id": "calib_20260806_184541_abf9de",
-  "created_at": 1786031141,
-  "status": "processing",
-  "video_path": "/opt/main/Trajectory/Database/projects/cc6494d4-2177-4812-b08e-e4cb4c2bd4e4/calib/calib_20260806_184541_abf9de_raw.mp4",
+  "id": "calib_20260809_143926_1d2038",
+  "created_at": 1786275566,
+  "status": "recording",
+  "video_path": "/opt/main/Trajectory/Database/projects/cc6494d4-2177-4812-b08e-e4cb4c2bd4e4/calib/calib_20260809_143926_1d2038_raw.mp4",
   "trimmed_video_path": null,
   "trim_segments": [],
   "project_id": "cc6494d4-2177-4812-b08e-e4cb4c2bd4e4",
   "frames_dir": "/opt/main/Trajectory/Database/projects/cc6494d4-2177-4812-b08e-e4cb4c2bd4e4/frames",
   "procframe_dir": "/opt/main/Trajectory/Database/projects/cc6494d4-2177-4812-b08e-e4cb4c2bd4e4/procframe",
-  "correlation_points": [
-    {
-      "frame_idx": 222,
-      "pixel_x": 46.20658135283364,
-      "pixel_y": 52.24527105678064,
-      "lat": 55.493214924756046,
-      "lon": 38.63998350888514,
-      "alt": 100.0
-    },
-    {
-      "frame_idx": 334,
-      "pixel_x": 43.28153564899452,
-      "pixel_y": 47.288876757459306,
-      "lat": 55.49474195140613,
-      "lon": 38.64322774647209,
-      "alt": 100.0
-    },
-    {
-      "frame_idx": 389,
-      "pixel_x": 46.389396709323584,
-      "pixel_y": 51.67650449784213,
-      "lat": 55.491525667016504,
-      "lon": 38.648189521604166,
-      "alt": 100.0
-    },
-    {
-      "frame_idx": 402,
-      "pixel_x": 45.47531992687386,
-      "pixel_y": 47.288876757459306,
-      "lat": 55.49295816224847,
-      "lon": 38.63435380248461,
-      "alt": 100.0
-    },
-    {
-      "frame_idx": 384,
-      "pixel_x": 43.46435100548446,
-      "pixel_y": 46.96386729520873,
-      "lat": 55.49735125910735,
-      "lon": 38.655961843617916,
-      "alt": 100.0
-    }
-  ],
-  "transform": {
-    "scale": 2159.965977681461,
-    "rotation": [
-      [
-        -0.5065464300991557,
-        -0.6243563678544956,
-        0.5946342069485604
-      ],
-      [
-        0.20158806157384376,
-        -0.7563066292503311,
-        -0.622384556349933
-      ],
-      [
-        0.8383155537055851,
-        -0.19539551804364513,
-        0.5089672130341542
-      ]
-    ],
-    "translation": [
-      471.98848914534256,
-      360.58123955718196,
-      108.17220491217284
-    ],
-    "lat0": 55.493214924756046,
-    "lon0": 38.63998350888514,
-    "alt0": 100.0
-  },
-  "calib_gpc_path": "/opt/main/Trajectory/Database/projects/cc6494d4-2177-4812-b08e-e4cb4c2bd4e4/calibrations/calib.gpc"
+  "frame_pose_data": [],
+  "correlation_points": [],
+  "transform": null,
+  "calib_gpc_path": null
 }

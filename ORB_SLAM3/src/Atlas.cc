@@ -61,7 +61,7 @@ void Atlas::CreateNewMap()
     cout << "Creation of new map with id: " << Map::nNextId << endl;
     if(mpCurrentMap){
         if(!mspMaps.empty() && mnLastInitKFidMap < mpCurrentMap->GetMaxKFid())
-            mnLastInitKFidMap = mpCurrentMap->GetMaxKFid()+1; //The init KF is the next of current maximum 当前地图最大关键帧数+1=新地图关键帧初始序号mnInitKFid
+            mnLastInitKFidMap = mpCurrentMap->GetMaxKFid()+1; //The init KF is the next of current maximum
 
         mpCurrentMap->SetStoredMap();
         cout << "Stored map with ID: " << mpCurrentMap->GetId() << endl;
@@ -127,7 +127,7 @@ GeometricCamera* Atlas::AddCamera(GeometricCamera* pCam)
 
         if(pCam->GetType() == GeometricCamera::CAM_PINHOLE)
         {
-            if(((Pinhole*)pCam_i)->IsEqual(pCam))//判断相机类型与内参是否相同
+            if(((Pinhole*)pCam_i)->IsEqual(pCam))
             {
                 bAlreadyInMap = true;
                 index_cam = i;
@@ -272,7 +272,7 @@ void Atlas::RemoveBadMaps()
         delete pMap;
         pMap = static_cast<Map*>(NULL);
     }*/
-    mspBadMaps.clear();//
+    mspBadMaps.clear();
 }
 
 bool Atlas::isInertial()
@@ -345,7 +345,7 @@ void Atlas::PostLoad()
     for(Map* pMi : mvpBackupMaps)
     {
         mspMaps.insert(pMi);
-        pMi->PostLoad(mpKeyFrameDB, mpORBVocabulary, mpCams);//将backup的值复制到相关变量中 逐级复制
+        pMi->PostLoad(mpKeyFrameDB, mpORBVocabulary, mpCams);
         numKF += pMi->GetAllKeyFrames().size();
         numMP += pMi->GetAllMapPoints().size();
     }

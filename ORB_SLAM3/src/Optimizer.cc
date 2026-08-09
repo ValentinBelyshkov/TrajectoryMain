@@ -816,7 +816,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     g2o::SparseOptimizer optimizer;
     g2o::BlockSolver_6_3::LinearSolverType * linearSolver;
 
-    linearSolver = new g2o::LinearSolverDense<g2o::BlockSolver_6_3::PoseMatrixType>();//每个误差项优化变量纬度为6（位姿6自由度），观测值3维
+    linearSolver = new g2o::LinearSolverDense<g2o::BlockSolver_6_3::PoseMatrixType>();
 
     g2o::BlockSolver_6_3 * solver_ptr = new g2o::BlockSolver_6_3(linearSolver);
 
@@ -830,7 +830,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     Sophus::SE3<float> Tcw = pFrame->GetPose();
     vSE3->setEstimate(g2o::SE3Quat(Tcw.unit_quaternion().cast<double>(),Tcw.translation().cast<double>()));
     vSE3->setId(0);
-    vSE3->setFixed(false);//是否固定不优化
+    vSE3->setFixed(false);
     optimizer.addVertex(vSE3);
 
     // Set MapPoint vertices
@@ -1057,7 +1057,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
             if(chi2>chi2Mono[it])
             {
                 pFrame->mvbOutlier[idx]=true;
-                e->setLevel(1);//剔除对该边的观测，下次不再对该边进行优化
+                e->setLevel(1);
                 nBad++;
             }
             else
@@ -1096,7 +1096,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
             }
 
             if(it==2)
-                e->setRobustKernel(0);//最后一轮不使用鲁棒核函数
+                e->setRobustKernel(0);
         }
 
         if(optimizer.edges().size()<10)
@@ -1507,7 +1507,7 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     g2o::SparseOptimizer optimizer;
     optimizer.setVerbose(false);
     g2o::BlockSolver_7_3::LinearSolverType * linearSolver =
-           new g2o::LinearSolverEigen<g2o::BlockSolver_7_3::PoseMatrixType>();//sim3有7个自由度
+           new g2o::LinearSolverEigen<g2o::BlockSolver_7_3::PoseMatrixType>();
     g2o::BlockSolver_7_3 * solver_ptr= new g2o::BlockSolver_7_3(linearSolver);
     g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
 
@@ -1530,7 +1530,7 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     const int minFeat = 100;
 
     // Set KeyFrame vertices
-    for(size_t i=0, iend=vpKFs.size(); i<iend;i++)//顶点是所有关键帧图像
+    for(size_t i=0, iend=vpKFs.size(); i<iend;i++)
     {
         KeyFrame* pKF = vpKFs[i];
         if(pKF->isBad())
@@ -1555,7 +1555,7 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
         }
 
         if(pKF->mnId==pMap->GetInitKFid())
-            VSim3->setFixed(true);//固定第一帧
+            VSim3->setFixed(true);
 
         VSim3->setId(nIDi);
         VSim3->setMarginalized(false);
@@ -1573,13 +1573,12 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     const Eigen::Matrix<double,7,7> matLambda = Eigen::Matrix<double,7,7>::Identity();
 
     // Set Loop edges
-    // 添加回环检测帧的约束边
     int count_loop = 0;
     for(map<KeyFrame *, set<KeyFrame *> >::const_iterator mit = LoopConnections.begin(), mend=LoopConnections.end(); mit!=mend; mit++)
     {
-        KeyFrame* pKF = mit->first;//一级共视帧
-        const long unsigned int nIDi = pKF->mnId;//一级共视帧ID
-        const set<KeyFrame*> &spConnections = mit->second;//一级共视帧的连接帧
+        KeyFrame* pKF = mit->first;
+        const long unsigned int nIDi = pKF->mnId;
+        const set<KeyFrame*> &spConnections = mit->second;
         const g2o::Sim3 Siw = vScw[nIDi];
         const g2o::Sim3 Swi = Siw.inverse();
 
@@ -2167,7 +2166,7 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
 
     for(int i=0; i<N; i++)
     {
-        if(!vpMatches1[i])//地图点pMP2不存在
+        if(!vpMatches1[i])
             continue;
 
         MapPoint* pMP1 = vpMapPoints1[i];
@@ -2190,7 +2189,7 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
                 P3D1c = R1w*P3D1w + t1w;
                 vPoint1->setEstimate(P3D1c.cast<double>());
                 vPoint1->setId(id1);
-                vPoint1->setFixed(true);//不优化地图点，只添加约束
+                vPoint1->setFixed(true);
                 optimizer.addVertex(vPoint1);
 
                 g2o::VertexSBAPointXYZ* vPoint2 = new g2o::VertexSBAPointXYZ();
@@ -2212,7 +2211,7 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
             nMatchWithoutMP++;
 
             //TODO The 3D position in KF1 doesn't exist
-            if(!pMP2->isBad())//
+            if(!pMP2->isBad())
             {
                 g2o::VertexSBAPointXYZ* vPoint2 = new g2o::VertexSBAPointXYZ();
                 Eigen::Vector3f P3D2w = pMP2->GetWorldPos();
@@ -2263,7 +2262,7 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
         Eigen::Matrix<double,2,1> obs2;
         cv::KeyPoint kpUn2;
         bool inKF2;
-        if(i2 >= 0)//如果在候选帧中存在地图点对应的特征点，则直接使用；如果不存在，则使用相机模型确定观测值
+        if(i2 >= 0)
         {
             kpUn2 = pKF2->mvKeysUn[i2];
             obs2 << kpUn2.pt.x, kpUn2.pt.y;
@@ -2277,7 +2276,7 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
             float x = P3D2c(0)*invz;
             float y = P3D2c(1)*invz;
 
-            obs2 << x, y;//此处如何保证该点是落在图像里的，
+            obs2 << x, y;
             kpUn2 = cv::KeyPoint(cv::Point2f(x, y), pMP2->mnTrackScaleLevel);
 
             inKF2 = false;
@@ -2318,7 +2317,7 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
         if(!e12 || !e21)
             continue;
 
-        if(e12->chi2()>th2 || e21->chi2()>th2)//误差超过阈值，则剔除该约束
+        if(e12->chi2()>th2 || e21->chi2()>th2)
         {
             size_t idx = vnIndexEdge[i];
             vpMatches1[idx]=static_cast<MapPoint*>(NULL);
@@ -2833,10 +2832,10 @@ void Optimizer::LocalInertialBA(KeyFrame *pKF, bool *pbStopFlag, Map *pMap, int&
     }
 
     //cout << "Total map points: " << lLocalMapPoints.size() << endl;
-    // for(map<int,int>::iterator mit=mVisEdges.begin(), mend=mVisEdges.end(); mit!=mend; mit++)
-    // {
-    //     assert(mit->second>=3);
-    // }
+    for(map<int,int>::iterator mit=mVisEdges.begin(), mend=mVisEdges.end(); mit!=mend; mit++)
+    {
+        assert(mit->second>=3);
+    }
 
     optimizer.initializeOptimization();
     optimizer.computeActiveErrors();
@@ -3949,20 +3948,20 @@ void Optimizer::LocalBundleAdjustment(KeyFrame* pMainKF,vector<KeyFrame*> vpAdju
 void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbStopFlag, Map *pMap, LoopClosing::KeyFrameAndPose &corrPoses)
 {
     const int Nd = 6;
-    const   unsigned long maxKFid = pCurrKF->mnId;
+    const unsigned long maxKFid = pCurrKF->mnId;
 
-    vector<KeyFrame*> vpOptimizableKFs;//当前帧及其往前5帧 融合帧及前2帧 融合帧的后续帧
+    vector<KeyFrame*> vpOptimizableKFs;
     vpOptimizableKFs.reserve(2*Nd);
 
     // For cov KFS, inertial parameters are not optimized
     const int maxCovKF = 30;
-    vector<KeyFrame*> vpOptimizableCovKFs;//当前帧的第前6帧
+    vector<KeyFrame*> vpOptimizableCovKFs;
     vpOptimizableCovKFs.reserve(maxCovKF);
 
     // Add sliding window for current KF
     vpOptimizableKFs.push_back(pCurrKF);
     pCurrKF->mnBALocalForKF = pCurrKF->mnId;
-    for(int i=1; i<Nd; i++)//像序列中添加当前帧的前5帧
+    for(int i=1; i<Nd; i++)
     {
         if(vpOptimizableKFs.back()->mPrevKF)
         {
@@ -3973,7 +3972,7 @@ void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbS
             break;
     }
 
-    list<KeyFrame*> lFixedKeyFrames;//融合帧的固定帧序列
+    list<KeyFrame*> lFixedKeyFrames;
     if(vpOptimizableKFs.back()->mPrevKF)
     {
         vpOptimizableCovKFs.push_back(vpOptimizableKFs.back()->mPrevKF);
@@ -3990,7 +3989,7 @@ void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbS
     pMergeKF->mnBALocalForKF = pCurrKF->mnId;
 
     // Previous KFs
-    for(int i=1; i<(Nd/2); i++)//增加融合帧的前面帧
+    for(int i=1; i<(Nd/2); i++)
     {
         if(vpOptimizableKFs.back()->mPrevKF)
         {
@@ -4036,8 +4035,8 @@ void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbS
     int N = vpOptimizableKFs.size();
 
     // Optimizable points seen by optimizable keyframes
-    list<MapPoint*> lLocalMapPoints;//vpOptimizableKFs所对应的地图点
-    map<MapPoint*,int> mLocalObs;//vpOptimizableKFs中每个地图点被每帧看到的次数
+    list<MapPoint*> lLocalMapPoints;
+    map<MapPoint*,int> mLocalObs;
     for(int i=0; i<N; i++)
     {
         vector<MapPoint*> vpMPs = vpOptimizableKFs[i]->GetMapPointMatches();
@@ -4047,7 +4046,7 @@ void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbS
             MapPoint* pMP = *vit;
             if(pMP)
                 if(!pMP->isBad())
-                    if(pMP->mnBALocalForKF!=pCurrKF->mnId)//地图点是否已经用于当前帧优化
+                    if(pMP->mnBALocalForKF!=pCurrKF->mnId)
                     {
                         mLocalObs[pMP]=1;
                         lLocalMapPoints.push_back(pMP);
@@ -4070,7 +4069,7 @@ void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbS
     for(vector<pair<MapPoint*,int>>::iterator lit=pairs.begin(), lend=pairs.end(); lit!=lend; lit++, i++)
     {
         map<KeyFrame*,tuple<int,int>> observations = lit->first->GetObservations();
-        if(i>=maxCovKF)//只需要前30个点
+        if(i>=maxCovKF)
             break;
         for(map<KeyFrame*,tuple<int,int>>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
         {
@@ -4081,7 +4080,7 @@ void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbS
                 pKFi->mnBALocalForKF=pCurrKF->mnId;
                 if(!pKFi->isBad())
                 {
-                    vpOptimizableCovKFs.push_back(pKFi);//将不在vpOptimizableKFs vpOptimizableCovKFs lFixedKeyFrames中的地图点添加进vpOptimizableKFs
+                    vpOptimizableCovKFs.push_back(pKFi);
                     break;
                 }
             }

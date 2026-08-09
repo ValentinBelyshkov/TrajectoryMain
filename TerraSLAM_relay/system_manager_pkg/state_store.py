@@ -17,10 +17,10 @@ from .config import COMPONENT_CONFIG
 STATE_FILENAME = "manager_state.json"
 STATE_VERSION = 1
 
-# Components that should come up automatically on a (re)start. GPS is a
-# critical node and rosbridge is the manager's own transport, so both are
-# desired+autostart by default. Everything else is operator-driven.
-AUTOSTART_DEFAULTS = {"rosbridge", "gps_bridge"}
+# Components that should come up automatically on a (re)start. rosbridge is the
+# manager's own transport and slam_mode_manager drives the SLAM lifecycle, so both
+# are desired+autostart by default. Everything else is operator-driven.
+AUTOSTART_DEFAULTS = {"rosbridge", "slam_mode_manager"}
 
 
 def atomic_write(path: str, text: str) -> None:
@@ -143,10 +143,17 @@ class StateStore:
         comp["extra"] = extra
         self._save()
 
+    def reset_components_to_defaults(self) -> None:
+        """Reset all component desired/autostart state to the defaults (only
+        AUTOSTART_DEFAULTS are desired+autostart, every other component is off).
+        Called on startup so the launch state is deterministic regardless of any
+        previously persisted desired-state."""
+        self._data["components"] = self._default_components()
+        self._save()
+
+    # --- components ---
     def all_components(self) -> Dict[str, Any]:
         return self._data.setdefault("components", {})
-
-    # --- fallback ---
     def get_fallback(self) -> Dict[str, str]:
         return self._data.setdefault(
             "fallback", {"method": "RTL", "connection": "udp:127.0.0.1:14550"}

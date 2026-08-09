@@ -27,9 +27,8 @@
 
 namespace ORB_SLAM3_Wrapper
 {
-    class WrapperTypeConversions
+    namespace WrapperTypeConversions
     {
-    public:
         // **************************************DATA TYPE CONVERSIONS*************************************
         /**
          * @brief Converts a ROS timestamp to seconds.
@@ -69,6 +68,8 @@ namespace ORB_SLAM3_Wrapper
          */
         Eigen::Affine3f se3ORBToROS(const Sophus::SE3f &s);
 
+        Sophus::SE3f se3ROSToORB(const Eigen::Affine3f &affineMatrix);
+
         /**
          * @brief This function converts a vector in the world frame of ORB coordinates 
          * to a vector in the world frame of ROS coordinates.
@@ -78,12 +79,19 @@ namespace ORB_SLAM3_Wrapper
         Eigen::Vector3f vector3fORBToROS(const Eigen::Vector3f &s);
 
         /**
-         * @brief Converts a Sophus SE3f transform to an Eigen Affine3d transform.
+         * @brief Converts a Sophus SE3f transform to an Eigen Affine3f transform.
          * @param s The Sophus SE3f transform.
-         * @return The corresponding Eigen Affine3d transform.
+         * @return The corresponding Eigen Affine3f transform.
          */
-        Eigen::Affine3d se3ToAffine(const Sophus::SE3f &s);
+        Eigen::Affine3f se3ToAffine(const Sophus::SE3f &s);
 
+        Eigen::Affine3f poseToAffine(const geometry_msgs::msg::Pose &pose);
+
+        /** 
+        * @brief Given a rotation matrix in Twc ORB Coordinates, outputs the euler angles [Roll, Pitch, Yaw] in ROS Coordinates. Range of euler angles [0, 2*PI)
+         */
+        Eigen::Vector3f rotationORBToEulerROS(const Eigen::Matrix3f& rotation);
+        
         /**
          * @brief Converts a Sophus SE3f transform to a geometry_msgs Pose message.
          * @param s The Sophus SE3f transform.
@@ -91,7 +99,11 @@ namespace ORB_SLAM3_Wrapper
          */
         geometry_msgs::msg::Pose se3ToPoseMsg(const Sophus::SE3f &s);
 
+        geometry_msgs::msg::Pose affine3fToPose(const Eigen::Affine3f & in);
+
         sensor_msgs::msg::PointCloud2 MapPointsToPCL(std::vector<Eigen::Vector3f>& mapPoints);
+
+        sensor_msgs::msg::PointCloud2 MapPointsToPCL(std::vector<ORB_SLAM3::MapPoint*>& mapPoints);
 
         // **************************************TRANSFORMATIONS*************************************
         /**
@@ -101,7 +113,7 @@ namespace ORB_SLAM3_Wrapper
          * @return Transformed pose.
          */
         template <typename T>
-        T transformPoseWithReference(Eigen::Affine3d &, Sophus::SE3f &);
+        T transformPoseWithReference(Eigen::Affine3f &, const Sophus::SE3f &);
 
         /**
          * @brief Transforms a pose using a reference pose and SE3 transform.
@@ -110,7 +122,7 @@ namespace ORB_SLAM3_Wrapper
          * @return Transformed pose.
          */
         template <typename T>
-        T transformPointWithReference(Eigen::Affine3d &referencePose, Eigen::Vector3f &s);
+        T transformPointWithReference(Eigen::Affine3f &referencePose, Eigen::Vector3f &s);
     };
 }
 

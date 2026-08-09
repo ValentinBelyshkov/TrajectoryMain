@@ -1,17 +1,17 @@
 %YAML:1.0
 
 # #System.LoadAtlasFromFile: "mapc"
-System.SaveAtlasToFile: "/opt/main/Trajectory/Database/projects/cc6494d4-2177-4812-b08e-e4cb4c2bd4e4/calibrations/map"
+System.SaveAtlasToFile: "/opt/main/Trajectory/Database/projects/dea7a45f-ec4c-474e-88fe-f9909081a9e7/calibrations/map"
 #------------------------------------------------------
 # Camera Parameters
 #-----------------------------------------------------------------------------
 
 Camera.type: "PinHole"
 
-Camera.fx: 600.0
-Camera.fy: 600.0
-Camera.cx: 320.0
-Camera.cy: 240.0
+Camera.fx: 603.9605102539062
+Camera.fy: 602.82666015625
+Camera.cx: 320.6596374511719
+Camera.cy: 227.18173217773438
 
 Camera.k1: 0.0
 Camera.k2: 0.0

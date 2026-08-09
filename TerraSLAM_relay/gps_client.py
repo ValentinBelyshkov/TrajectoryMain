@@ -5,7 +5,7 @@ import time
 
 import numpy as np
 import rclpy
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, NavSatStatus
 from std_msgs.msg import Int8
@@ -26,7 +26,7 @@ class GcpRelay(Node):
     def __init__(self, path):
         super().__init__('gcp_relay')
         self.pub = self.create_publisher(NavSatFix, '/camera/gps', 10)
-        self.create_subscription(Pose, '/camera_pose', self.on_pose, 10)
+        self.create_subscription(PoseStamped, '/robot_pose_slam', self.on_pose, 10)
         self.create_subscription(Int8, '/orb_slam3/tracking_state', self._cb_tracking, 10)
 
         # Внутреннее состояние для записи статуса
@@ -81,8 +81,8 @@ class GcpRelay(Node):
         """Прямой Int8 из /orb_slam3/tracking_state — приоритетный источник."""
         self._tracking_state = int(msg.data)
 
-    def on_pose(self, msg: Pose):
-        x, y, z = msg.position.x, msg.position.y, msg.position.z
+    def on_pose(self, msg: PoseStamped):
+        x, y, z = msg.pose.position.x, msg.pose.position.y, msg.pose.position.z
         self._last_pose_ts = time.time()
 
         # Декодируем специальные значения позы → состояние трекинга

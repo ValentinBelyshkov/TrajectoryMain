@@ -58,8 +58,8 @@ class Atlas
 
         // Save/load a set structure, the set structure is broken in libboost 1.58 for ubuntu 16.04, a vector is serializated
         //ar & mspMaps;
-        ar & mvpBackupMaps;//地图备份
-        ar & mvpCameras;//相机类型
+        ar & mvpBackupMaps;
+        ar & mvpCameras;
         // Need to save/load the static Id from Frame, KeyFrame, MapPoint and Map
         ar & Map::nNextId;
         ar & Frame::nNextId;
@@ -141,7 +141,7 @@ public:
 
 protected:
 
-    std::set<Map*> mspMaps;//地图集合
+    std::set<Map*> mspMaps;
     std::set<Map*> mspBadMaps;
     // Its necessary change the container from set to vector because libboost 1.58 and Ubuntu 16.04 have an error with this cointainer
     std::vector<Map*> mvpBackupMaps;

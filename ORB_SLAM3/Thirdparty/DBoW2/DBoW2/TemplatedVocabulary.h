@@ -245,18 +245,13 @@ public:
    * @param filename
    */
   void saveToTextFile(const std::string &filename) const;  
-  /**
-   * Loads the vocabulary from a binary file
-   * @param filename
-   */
-  bool loadFromBinaryFile(const std::string &filename);
 
-  /**
-   * Saves the vocabulary into a binary file
-   * @param filename
-   */
-  void saveToBinaryFile(const std::string &filename) const;  
+
+
+  bool loadFromBinaryFile(const std::string &filename);
   
+  
+  void saveToBinaryFile(const std::string &filename) const;  
   /**
    * Saves the vocabulary into a file
    * @param filename
@@ -1470,6 +1465,16 @@ void TemplatedVocabulary<TDescriptor,F>::save(const std::string &filename) const
   save(fs);
 }
 
+// --------------------------------------------------------------------------
+
+template<class TDescriptor, class F>
+void TemplatedVocabulary<TDescriptor,F>::load(const std::string &filename)
+{
+  cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
+  if(!fs.isOpened()) throw string("Could not open file ") + filename;
+  
+  this->load(fs);
+}
 
 // --------------------------------------------------------------------------
 template<class TDescriptor, class F>
@@ -1540,16 +1545,6 @@ void TemplatedVocabulary<TDescriptor,F>::saveToBinaryFile(const std::string &fil
 	bool is_leaf = node.isLeaf(); f.write((char*)&is_leaf, sizeof(is_leaf)); // i put this one at the end for alignement....
   }
   f.close();
-}
-
-// --------------------------------------------------------------------------
-template<class TDescriptor, class F>
-void TemplatedVocabulary<TDescriptor,F>::load(const std::string &filename)
-{
-  cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
-  if(!fs.isOpened()) throw string("Could not open file ") + filename;
-  
-  this->load(fs);
 }
 
 // --------------------------------------------------------------------------

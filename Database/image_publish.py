@@ -38,7 +38,7 @@ class ImagePublisher(Node):
     def __init__(self, image_dir: str, fps: float, loop: bool, procframe_dir: str = ""):
         super().__init__("image_publisher")
 
-        self.pub_raw = self.create_publisher(Image, "/camera/image_raw", 10)
+        self.pub_raw = self.create_publisher(Image, "/cam0/image_raw", 10)
         self.pub_compressed = self.create_publisher(
             CompressedImage, "/camera/image_raw/compressed", 10
         )

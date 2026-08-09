@@ -268,27 +268,14 @@ void Viewer::Run()
             s_cam.Follow(Twc);
         }
 
-        if(menuTopView)
+        if(menuTopView && mpMapDrawer->mpAtlas->isImuInitialized())
         {
             menuTopView = false;
-            bCameraView = true;
-            // 设置投影矩阵
-            s_cam.SetProjectionMatrix(pangolin::ProjectionMatrix(1024, 768, mViewpointF, mViewpointF, 512, 389, 0.1, 10000));
-            // 设置模型视图矩阵，相机位于目标物体正上方，向下观察
-            s_cam.SetModelViewMatrix(pangolin::ModelViewLookAt(0.0 , -1.0, 0.0, 0, 0, 0, 0.0, 0.0, -1.0));
-            // 相机跟随目标物体的变换
-            // s_cam.Follow(Twc);
+            bCameraView = false;
+            s_cam.SetProjectionMatrix(pangolin::ProjectionMatrix(1024,768,3000,3000,512,389,0.1,10000));
+            s_cam.SetModelViewMatrix(pangolin::ModelViewLookAt(0,0.01,50, 0,0,0,0.0,0.0, 1.0));
+            s_cam.Follow(Ow);
         }
-
-
-        // if(menuTopView && mpMapDrawer->mpAtlas->isImuInitialized())
-        // {
-        //     menuTopView = false;
-        //     bCameraView = false;
-        //     s_cam.SetProjectionMatrix(pangolin::ProjectionMatrix(1024,768,3000,3000,512,389,0.1,10000));
-        //     s_cam.SetModelViewMatrix(pangolin::ModelViewLookAt(0,0.01,50, 0,0,0,0.0,0.0, 1.0));
-        //     s_cam.Follow(Ow);
-        // }
 
         if(menuLocalizationMode && !bLocalizationMode)
         {
@@ -371,9 +358,6 @@ void Viewer::Run()
         {
             if(bLocalizationMode)
                 mpSystem->DeactivateLocalizationMode();
-
-            // Save Atlas
-            mpSystem->SaveAtlasfromViewer();
 
             // Stop all threads
             mpSystem->Shutdown();

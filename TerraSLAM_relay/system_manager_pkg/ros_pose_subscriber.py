@@ -1,5 +1,6 @@
 """
-Persistent rclpy subscriber for /camera_pose and /orb_slam3/tracking_state.
+Persistent rclpy subscriber for /robot_pose_slam (geometry_msgs/msg/PoseStamped)
+and /orb_slam3/tracking_state.
 
 Why this exists: the previous implementation polled by spawning a fresh
 `ros2 topic echo --once` subprocess on every tick. Each subprocess has to
@@ -27,7 +28,7 @@ os.environ.setdefault("ROS_DOMAIN_ID", "0")
 
 try:
     import rclpy
-    from geometry_msgs.msg import Pose
+    from geometry_msgs.msg import PoseStamped
     from std_msgs.msg import Int8
     RCLPY_AVAILABLE = True
 except ImportError:
@@ -74,8 +75,8 @@ _start_error: str = ""
 
 
 def _pose_cb(msg) -> None:
-    p = msg.position
-    o = msg.orientation
+    p = msg.pose.position
+    o = msg.pose.orientation
     payload = (
         f"position:\n  x: {p.x}\n  y: {p.y}\n  z: {p.z}\n"
         f"orientation:\n  x: {o.x}\n  y: {o.y}\n  z: {o.z}\n  w: {o.w}"
@@ -100,7 +101,7 @@ def _spin() -> None:
         # '_sigint_gc'" noise in the logs, and is unreliable under load).
         executor = rclpy.executors.SingleThreadedExecutor()
         executor.add_node(_node)
-        _node.create_subscription(Pose, POSE_TOPIC, _pose_cb, 10)
+        _node.create_subscription(PoseStamped, POSE_TOPIC, _pose_cb, 10)
         _node.create_subscription(Int8, TRACKING_STATE_TOPIC, _tracking_state_cb, 10)
         _start_error = ""
         while _running:

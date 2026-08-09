@@ -59,6 +59,7 @@ export function useProject(projectId: string | undefined) {
     status: "idle",
   });
   const [hasVideoStream, setHasVideoStream] = useState(false);
+  const [saveFrames, setSaveFrames] = useState(false);
 
   const [gpsStatus, setGpsStatus] = useState<GPSStatus>({
     hasSignal: false,
@@ -184,7 +185,7 @@ export function useProject(projectId: string | undefined) {
 
   const startRecording = useCallback(async () => {
     try {
-      await controlTerraSLAMComponent("all", "restart", projectId);
+      await controlTerraSLAMComponent("all", "restart", projectId, saveFrames);
 
       if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
         wsRef.current = null;
@@ -199,7 +200,7 @@ export function useProject(projectId: string | undefined) {
     if (gpsStatus.lat && gpsStatus.lon) {
       setDronePath([{ lat: gpsStatus.lat, lng: gpsStatus.lon }]);
     }
-  }, [gpsStatus, projectId]);
+  }, [gpsStatus, projectId, saveFrames]);
 
   const stopRecording = useCallback(async () => {
     if (recordingIntervalRef.current) {
@@ -248,6 +249,8 @@ export function useProject(projectId: string | undefined) {
     videoCanvasRef,
     startRecording,
     stopRecording,
+    saveFrames,
+    setSaveFrames,
     gpsStatus,
     systemStatus,
     refetch,

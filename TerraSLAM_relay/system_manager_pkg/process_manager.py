@@ -119,6 +119,7 @@ class ProcessManager:
             return ["bash", "-lc", cmd]
         if name == "publisher_realsense":
             frames_dir = (extra or {}).get("frames_dir")
+            save_frames = (extra or {}).get("save_frames", True)
             cmd = (
                 "source /opt/ros/humble/setup.bash && "
                 "source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
@@ -126,18 +127,9 @@ class ProcessManager:
             )
             if frames_dir:
                 cmd += f" --frames-dir {shlex.quote(frames_dir)}"
+            if not save_frames:
+                cmd += " --no-save-frames"
             return ["bash", "-lc", cmd]
-        if name == "relay":
-            calib_path = (extra or {}).get("calib_path", "")
-            if not calib_path:
-                raise ValueError("relay requires calib_path")
-            return [
-                "bash", "-lc",
-                f"source /opt/ros/humble/setup.bash && "
-                f"source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
-                f"cd /opt/main/Trajectory/TerraSLAM_relay && "
-                f"exec python3 gps_client.py {shlex.quote(calib_path)}"
-            ]
         return list(cfg["cmd"])
 
     async def start(self, name: str, extra: Optional[Dict[str, Any]] = None) -> str:
@@ -385,5 +377,4 @@ class ProcessManager:
 manager = ProcessManager()
 
 # Пути, которые передаются отдельным запросом до старта компонента
-relay_calib_path: Optional[str] = None
 publisher_folder_path: Optional[str] = None

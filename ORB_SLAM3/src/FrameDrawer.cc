@@ -21,24 +21,11 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <fstream>
-#include <sstream>
-#include <iostream> 
+
 #include<mutex>
-#include <iomanip>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <cerrno>
-#include <cstring>
+
 namespace ORB_SLAM3
 {
-
-std::string FrameDrawer::msOutputBasePath = "";
-
-void FrameDrawer::SetOutputBasePath(const std::string& path)
-{
-    msOutputBasePath = path;
-}
 
 FrameDrawer::FrameDrawer(Atlas* pAtlas):both(false),mpAtlas(pAtlas)
 {
@@ -58,6 +45,7 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
     int state; // Tracking state
     vector<float> vCurrentDepth;
     float thDepth;
+
     Frame currentFrame;
     vector<MapPoint*> vpLocalMap;
     vector<cv::KeyPoint> vMatchesKeys;
@@ -69,7 +57,6 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
 
     cv::Scalar standardColor(0,255,0);
     cv::Scalar odometryColor(255,0,0);
-
 
     //Copy variables within scoped mutex
     {
@@ -121,7 +108,7 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
 
     if(im.channels()<3) //this should be always true
         cvtColor(im,im,cv::COLOR_GRAY2BGR);
-        
+
     //Draw
     if(state==Tracking::NOT_INITIALIZED)
     {
@@ -162,14 +149,10 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
     }
     else if(state==Tracking::OK) //TRACKING
     {
-
         mnTracked=0;
         mnTrackedVO=0;
         const float r = 5;
         int n = vCurrentKeys.size();
-       // std::ofstream keypointFile(filename);
-       // if (keypointFile.is_open())
-       // {
         for(int i=0;i<n;i++)
         {
             if(vbVO[i] || vbMap[i])
@@ -194,25 +177,6 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
                     pt2.x=vCurrentKeys[i].pt.x+r;
                     pt2.y=vCurrentKeys[i].pt.y+r;
                 }
-                
-                MapPoint* pMP = nullptr;
-                if(i < (int)currentFrame.mvpMapPoints.size())
-                    pMP = currentFrame.mvpMapPoints[i];
-
-        bool has_3d = (pMP != nullptr && !pMP->isBad());
-
-        // Подготовка строки для файла
-        //std::stringstream line;
-        //line << std::fixed << std::setprecision(4);
-        //line << point.x << " " << point.y;
-
-
-
-       // keypointFile << line.str() << "\n";
-              //  Eigen::Vector3f eigenPos = vpLocalMap[i]->GetWorldPos();
-		//std::cout<<"my points: "<< eigenPos.x()<<std::endl;
-		//cv::Mat worldPos = (cv::Mat_<float>(3,1) << p[0], p[1], p[2]); 
-                //keypointFile << point.x << " " << point.y;//  << eigenPos.x() << " " << eigenPos.y() << " " << eigenPos.z() << "\n";
 
                 // This is a match to a MapPoint in the map
                 if(vbMap[i])
@@ -226,64 +190,11 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
                     cv::rectangle(im,pt1,pt2,odometryColor);
                     cv::circle(im,point,2,odometryColor,-1);
                     mnTrackedVO++;
-                    
-                    
                 }
-              
             }
-        }
-  //  keypointFile.close();
-   //     }
-   //     else
-   //     {
-   //     	std::cerr << "Не удалось открыть файл для записи: " << filename << std::endl;
-   //     }
-}
-        // --- Запись только по запросу (ROS-сервис) и только при успешном трекинге ---
-    if (state == Tracking::OK && mbSaveFrameRequest.exchange(false))
-    {
-        if (msOutputBasePath.empty())
-        {
-            std::cerr << "[FrameDrawer] Cannot save proc frame: output base path is empty"
-                      << std::endl;
-        }
-        else
-        {
-        const std::string procDir = msOutputBasePath + "/procframe";
-        if (mkdir(procDir.c_str(), 0777) != 0 && errno != EEXIST)
-        {
-            std::cerr << "[FrameDrawer] Cannot create " << procDir << ": "
-                      << std::strerror(errno) << std::endl;
-        }
-
-        std::string prefix = procDir + "/frame_"
-                             + std::to_string(currentFrame.mnId);
-        std::string imgfilename = prefix + ".jpg";
-        std::string txtfilename = prefix + ".txt";
-
-        try {
-            bool success = cv::imwrite(imgfilename, im);
-            if (!success) {
-                std::cerr << "Failed to write proc frame (imwrite returned false): " 
-                          << imgfilename << std::endl;
-            } else {
-                std::cout << "[FrameDrawer] Saved proc frame: " << imgfilename
-                          << " (" << im.cols << "x" << im.rows << ")" << std::endl;
-            }
-        } catch (const cv::Exception& e) {
-            std::cerr << "OpenCV exception while writing proc frame: " 
-                      << e.what() << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "Standard exception while writing proc frame: " 
-                      << e.what() << std::endl;
-        }
-
-        // --- Сохраняем pose (txt) в том же месте ---
-        SaveCameraPose(currentFrame.GetPose(),
-                       currentFrame.mTimeStamp,
-                       txtfilename);
         }
     }
+
     cv::Mat imWithInfo;
     DrawTextInfo(im,state, imWithInfo);
 
@@ -520,50 +431,9 @@ void FrameDrawer::Update(Tracking *pTracker)
                 }
             }
         }
-        }
-    mState=static_cast<int>(pTracker->mLastProcessedState);
-}
 
-void FrameDrawer::SaveCameraPose(const Sophus::SE3f &Tcw, double timestamp,
-                                 std::string filename)
-{
-    // ── Same ORB→ROS coordinate transform as se3ORBToROS() / se3ToPoseMsg()
-    //    in type_conversion.cpp (matches what camera_pose topic publishes) ─────
-    //
-    //   x_ros =  z_orb
-    //   y_ros = -x_orb
-    //   z_ros = -y_orb
-    Eigen::Matrix3f tfORBToROS;
-    tfORBToROS << 0,  0,  1,
-                 -1,  0,  0,
-                  0, -1,  0;
-
-    Eigen::Matrix3f Rcw = Tcw.rotationMatrix();
-    Eigen::Vector3f tcw = Tcw.translation();
-
-    // Step 1: apply ORB→ROS rotation to camera-frame pose
-    Eigen::Matrix3f Rcw_ros = tfORBToROS * Rcw;
-    Eigen::Vector3f tcw_ros = tfORBToROS * tcw;
-
-    // Step 2: invert Tcw → Twc (camera position in world / map frame)
-    Eigen::Matrix3f Rwc_ros = Rcw_ros.transpose();
-    Eigen::Vector3f twc_ros = -(Rwc_ros * tcw_ros);
-
-    // Step 3: bring world position into ROS map frame
-    Eigen::Vector3f t_final = tfORBToROS * twc_ros;
-
-    // ── Write only x y z, append mode ─────────────────────────────────────────
-    std::ofstream f(filename, std::ios::app);
-    if (!f.is_open())
-    {
-        std::cerr << "Failed to write pose file: " << filename << std::endl;
-        return;
     }
-
-    f << std::fixed << std::setprecision(6)
-      << t_final.x() << " "
-      << t_final.y() << " "
-      << t_final.z() << "\n";
+    mState=static_cast<int>(pTracker->mLastProcessedState);
 }
 
 } //namespace ORB_SLAM

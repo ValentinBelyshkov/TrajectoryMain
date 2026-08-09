@@ -4,7 +4,7 @@ messages on the ROS2 topic, rather than just reporting the process as
 "running".
 
 Pose data is fed by a single persistent rclpy subscriber node
-(ros_pose_subscriber.py) that stays subscribed to /camera_pose and
+(ros_pose_subscriber.py) that stays subscribed to /robot_pose_slam and
 /orb_slam3/tracking_state for the process lifetime. A background asyncio
 loop here just reads that in-memory state at a fixed interval (cheap,
 non-blocking) and evaluates the fallback condition — it no longer spawns
@@ -46,7 +46,7 @@ def _is_tracking_lost(position: Optional[Tuple[float, float, float]]) -> bool:
 
 
 class PoseMonitor:
-    """Tracks whether /camera_pose is actively publishing, and cross-checks
+    """Tracks whether /robot_pose_slam is actively publishing, and cross-checks
     the ORB-SLAM3 tracking state on /orb_slam3/tracking_state. Reads from
     the persistent rclpy subscriber in ros_pose_subscriber.py instead of
     polling via subprocess."""

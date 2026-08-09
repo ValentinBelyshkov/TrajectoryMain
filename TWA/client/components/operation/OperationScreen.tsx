@@ -1,4 +1,5 @@
 import { useRef, useMemo, type RefObject } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MapComponent } from "@/components/MapComponent";
 import type { DronePosition, DronePath, GPSStatus } from "@/hooks/useProject";
 
@@ -12,6 +13,8 @@ interface OperationScreenProps {
   onCalibrate: () => void;
   hasVideoStream: boolean;
   videoCanvasRef: RefObject<HTMLCanvasElement | null>; 
+  saveFrames: boolean;
+  onSaveFramesChange: (value: boolean) => void;
   gpsStatus?: GPSStatus;
   projectType?: string;
   systemStatus?: {
@@ -31,6 +34,8 @@ export function OperationScreen({
   onCalibrate,
   hasVideoStream,
   videoCanvasRef,
+  saveFrames,
+  onSaveFramesChange,
   gpsStatus,
   projectType,
   systemStatus,
@@ -97,7 +102,7 @@ export function OperationScreen({
               className="flex-1 btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="text-lg">▶️</span>
-              Поднять и начать запись
+              Старт
             </button>
           ) : (
             <button
@@ -105,8 +110,24 @@ export function OperationScreen({
               className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
             >
               <span className="text-lg">⏹️</span>
-              Остановить запись
+              Стоп
             </button>
+          )}
+
+          {!isRecording && (
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-white/60 px-4 py-3">
+              <Checkbox
+                id="save-frames"
+                checked={saveFrames}
+                onCheckedChange={(checked) => onSaveFramesChange(checked === true)}
+              />
+              <label
+                htmlFor="save-frames"
+                className="text-sm font-medium text-foreground cursor-pointer select-none"
+              >
+                запись кадров
+              </label>
+            </div>
           )}
           
           {!isRecording && (

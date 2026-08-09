@@ -44,7 +44,7 @@ class CalibTransform:
                 line = line.strip()
                 if not line:
                     continue
-                if line.startswith("proj="):
+                if line.startswith("+") or line.startswith("proj="):
                     self.projection = line
                     continue
                 tok = line.split()
@@ -129,8 +129,8 @@ class GpsBridgeNode(Node):
 
         # ── Parameters ──
         self.declare_parameter("calib_file", "calib.gpc")
-        self.declare_parameter("pose_topic", "/camera_pose")
-        self.declare_parameter("pose_type", "pose")
+        self.declare_parameter("pose_topic", "/robot_pose_slam")
+        self.declare_parameter("pose_type", "pose_stamped")
         self.declare_parameter("port", "/dev/ttyTHS1")
         self.declare_parameter("baudrate", 115200)
         self.declare_parameter("max_rate_hz", 10.0)

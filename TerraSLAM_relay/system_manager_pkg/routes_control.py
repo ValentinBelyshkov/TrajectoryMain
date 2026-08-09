@@ -28,7 +28,6 @@ PROJECTS_DIR = os.getenv("PROJECTS_DIR", "/opt/main/Trajectory/Database/projects
 
 COMPONENT_MAPPING = {
     "slam": "slam",
-    "relay": "relay",
     "publisher": "publisher",
     "publisher:folder": "publisher_folder",
     "publisher:realsense": "publisher_realsense",
@@ -38,7 +37,6 @@ COMPONENT_MAPPING = {
 
 LOG_NAMES = {
     "slam": "slam_core",
-    "relay": "relay",
     "publisher_folder": "publisher_folder",
     "publisher_realsense": "publisher_realsense",
     "gps_bridge": "gps_bridge",
@@ -50,6 +48,7 @@ class ComponentAction(BaseModel):
     component: str
     action: str
     project_id: Optional[str] = None
+    save_frames: Optional[bool] = None
 
 
 class CommandResponse(BaseModel):
@@ -228,10 +227,10 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
 
     if action.component == "all" and action.action in ("start", "restart", "stop", "kill"):
         if project_type == "симуляция":
-            target_components = ["slam", "relay", "publisher_folder", "rosbridge"]
+            target_components = ["slam", "publisher_folder", "rosbridge"]
             others = ["publisher_realsense"]
         else:
-            target_components = ["slam", "relay", "publisher_realsense", "rosbridge"]
+            target_components = ["slam", "publisher_realsense", "rosbridge"]
             others = ["publisher_folder"]
 
         combined_output = ""
@@ -265,7 +264,12 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
                 if action.action == "restart":
                     kill_res = await _gateway_action(comp, "kill")
                     combined_output += "\n".join(kill_res) + "\n"
-                    start_res = await _gateway_action(comp, "start", value=frames_dir if comp == "publisher_realsense" else None)
+                    start_value = None
+                    if comp == "publisher_realsense":
+                        if action.project_id and frames_dir:
+                            save_frames = action.save_frames if action.save_frames is not None else True
+                            start_value = frames_dir if save_frames else "__nosave__"
+                    start_res = await _gateway_action(comp, "start", value=start_value)
                     combined_output += "\n".join(start_res) + "\n"
                 else:
                     results = await _gateway_action(comp, action.action)
@@ -336,7 +340,7 @@ async def get_terraslam_status():
         if "publisher_mode" in values:
             publisher_mode = values["publisher_mode"]
 
-    main_components = ["slam", "relay"]
+    main_components = ["slam"]
     if publisher_mode == "folder":
         main_components.append("publisher_folder")
     else:

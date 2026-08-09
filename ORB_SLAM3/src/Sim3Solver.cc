@@ -75,19 +75,17 @@ Sim3Solver::Sim3Solver(KeyFrame *pKF1, KeyFrame *pKF2, const vector<MapPoint *> 
             MapPoint* pMP1 = vpKeyFrameMP1[i1];
             MapPoint* pMP2 = vpMatched12[i1];
 
-            if(!pMP1)//此处为何没有判断pMP2存在否 是bug？
-                continue;
-            if(!pMP2)//此处为何没有判断pMP2存在否 是bug？
+            if(!pMP1)
                 continue;
 
             if(pMP1->isBad() || pMP2->isBad())
                 continue;
 
             if(bDifferentKFs)
-                pKFm = vpKeyFrameMatchedMP[i1];//搞个鸡毛
+                pKFm = vpKeyFrameMatchedMP[i1];
 
             int indexKF1 = get<0>(pMP1->GetIndexInKeyFrame(pKF1));
-            int indexKF2 = get<0>(pMP2->GetIndexInKeyFrame(pKFm));//限制了地图点只能在候选帧中出现 
+            int indexKF2 = get<0>(pMP2->GetIndexInKeyFrame(pKFm));
 
             if(indexKF1<0 || indexKF2<0)
                 continue;
@@ -119,7 +117,7 @@ Sim3Solver::Sim3Solver(KeyFrame *pKF1, KeyFrame *pKF2, const vector<MapPoint *> 
     FromCameraToImage(mvX3Dc1,mvP1im1,pCamera1);
     FromCameraToImage(mvX3Dc2,mvP2im2,pCamera2);
 
-    SetRansacParameters();//此处似乎没有用
+    SetRansacParameters();
 }
 
 void Sim3Solver::SetRansacParameters(double probability, int minInliers, int maxIterations)
@@ -141,11 +139,11 @@ void Sim3Solver::SetRansacParameters(double probability, int minInliers, int max
     if(mRansacMinInliers==N)
         nIterations=1;
     else
-        nIterations = ceil(log(1-mRansacProb)/log(1-pow(epsilon,3)));//循环次数
+        nIterations = ceil(log(1-mRansacProb)/log(1-pow(epsilon,3)));
 
     mRansacMaxIts = max(1,min(nIterations,mRansacMaxIts));
 
-    mnIterations = 0;//当前循环次数
+    mnIterations = 0;
 }
 
 Eigen::Matrix4f Sim3Solver::iterate(int nIterations, bool &bNoMore, vector<bool> &vbInliers, int &nInliers)
@@ -187,7 +185,7 @@ Eigen::Matrix4f Sim3Solver::iterate(int nIterations, bool &bNoMore, vector<bool>
             vAvailableIndices.pop_back();
         }
 
-        ComputeSim3(P3Dc1i,P3Dc2i);
+        if(!ComputeSim3(P3Dc1i, P3Dc2i)) continue;
 
         CheckInliers();
 
@@ -260,7 +258,7 @@ Eigen::Matrix4f Sim3Solver::iterate(int nIterations, bool &bNoMore, vector<bool>
             vAvailableIndices.pop_back();
         }
 
-        ComputeSim3(P3Dc1i,P3Dc2i);
+        if(!ComputeSim3(P3Dc1i, P3Dc2i)) continue;
 
         CheckInliers();
 
@@ -310,7 +308,7 @@ void Sim3Solver::ComputeCentroid(Eigen::Matrix3f &P, Eigen::Matrix3f &Pr, Eigen:
 }
 
 
-void Sim3Solver::ComputeSim3(Eigen::Matrix3f &P1, Eigen::Matrix3f &P2)
+bool Sim3Solver::ComputeSim3(Eigen::Matrix3f &P1, Eigen::Matrix3f &P2)
 {
     // Custom implementation of:
     // Horn 1987, Closed-form solution of absolute orientataion using unit quaternions
@@ -361,12 +359,14 @@ void Sim3Solver::ComputeSim3(Eigen::Matrix3f &P1, Eigen::Matrix3f &P2)
     int maxIndex; // should be zero
     eval.maxCoeff(&maxIndex);
 
-    Eigen::Vector3f vec = evec.block<3,1>(1,maxIndex); //extract imaginary part of the quaternion (sin*axis)
+    Eigen::Vector3f vec = evec.block<3, 1>(1, maxIndex);  // extract imaginary part of the quaternion (sin*axis)
+    double vecNorm = vec.norm();
+    if(vecNorm == 0) return false;
 
     // Rotation angle. sin is the norm of the imaginary part, cos is the real part
-    double ang=atan2(vec.norm(),evec(0,maxIndex));
+    double ang = atan2(vecNorm, evec(0, maxIndex));
 
-    vec = 2*ang*vec/vec.norm(); //Angle-axis representation. quaternion angle is the half
+    vec = 2 * ang * vec / vecNorm; //Angle-axis representation. quaternion angle is the half
     mR12i = Sophus::SO3f::exp(vec).matrix();
 
     // Step 5: Rotate set 2
@@ -411,6 +411,7 @@ void Sim3Solver::ComputeSim3(Eigen::Matrix3f &P1, Eigen::Matrix3f &P2)
 
     Eigen::Vector3f tinv = -sRinv * mt12i;
     mT21i.block<3,1>(0,3) = tinv;
+    return true;
 }
 
 

@@ -26,14 +26,14 @@ class PoseToGPSConverter(Node):
         self.build_transform()
 
         self.subscription = self.create_subscription(
-            Pose,
-            '/camera_pose',
+            PoseStamped,
+            '/robot_pose_slam',
             self.pose_callback,
             10
         )
         self.publisher = self.create_publisher(PoseStamped, '/gps_pose', 10)
 
-        self.get_logger().info('PoseToGPSConverter запущен. Ожидаю /camera_pose...')
+        self.get_logger().info('PoseToGPSConverter запущен. Ожидаю /robot_pose_slam...')
 
     def load_calibration(self, calib_file):
         self.local_points = []
@@ -99,8 +99,8 @@ class PoseToGPSConverter(Node):
         return direct['lat2'], direct['lon2']
 
     def pose_callback(self, msg):
-        x = msg.position.x
-        y = msg.position.y
+        x = msg.pose.position.x
+        y = msg.pose.position.y
 
         try:
             east, north = self.local_to_enu(x, y)
@@ -113,7 +113,7 @@ class PoseToGPSConverter(Node):
             out_msg.pose.position.x = lat
             out_msg.pose.position.y = lon
             out_msg.pose.position.z = 0.0
-            out_msg.pose.orientation = msg.orientation  # копируем ориентацию
+            out_msg.pose.orientation = msg.pose.orientation  # копируем ориентацию
 
             self.publisher.publish(out_msg)
             self.get_logger().info(f'GPS: {lat:.8f}, {lon:.8f}')

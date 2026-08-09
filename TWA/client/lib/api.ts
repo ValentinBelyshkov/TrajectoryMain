@@ -248,10 +248,14 @@ export async function controlTerraSLAMComponent(
   component: string,
   action: string,
   projectId?: string,
+  saveFrames?: boolean,
 ): Promise<CommandResponse> {
   return request<CommandResponse>("/api/control/terraslam/component", {
     method: "POST",
-    body: JSON.stringify({ component, action, project_id: projectId }),
+    body: JSON.stringify({
+      component, action, project_id: projectId,
+      ...(saveFrames !== undefined ? { save_frames: saveFrames } : {}),
+    }),
   });
 }
 

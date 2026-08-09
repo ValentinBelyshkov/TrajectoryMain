@@ -230,7 +230,7 @@ set<KeyFrame*> KeyFrame::GetConnectedKeyFrames()
     unique_lock<mutex> lock(mMutexConnections);
     set<KeyFrame*> s;
     for(map<KeyFrame*,int>::iterator mit=mConnectedKeyFrameWeights.begin();mit!=mConnectedKeyFrameWeights.end();mit++)
-        s.insert(mit->first); //mConnectedKeyFrameWeights 共视图 帧 相同关键点数
+        s.insert(mit->first);
     return s;
 }
 
@@ -378,7 +378,7 @@ MapPoint* KeyFrame::GetMapPoint(const size_t &idx)
 
 void KeyFrame::UpdateConnections(bool upParent)
 {
-    map<KeyFrame*,int> KFcounter;//<共视关键帧，共视点数>
+    map<KeyFrame*,int> KFcounter;
 
     vector<MapPoint*> vpMP;
 
@@ -389,7 +389,6 @@ void KeyFrame::UpdateConnections(bool upParent)
 
     //For all map points in keyframe check in which other keyframes are they seen
     //Increase counter for those keyframes
-    // 遍历所有地图点，以获取所有和当前帧有共视点的关键帧，同时记录每个关键帧的共视点个数
     for(vector<MapPoint*>::iterator vit=vpMP.begin(), vend=vpMP.end(); vit!=vend; vit++)
     {
         MapPoint* pMP = *vit;
@@ -419,13 +418,12 @@ void KeyFrame::UpdateConnections(bool upParent)
     //In case no keyframe counter is over threshold add the one with maximum counter
     int nmax=0;
     KeyFrame* pKFmax=NULL;
-    int th = 15;//超过15个共视点就成为共视图
+    int th = 15;
 
     vector<pair<int,KeyFrame*> > vPairs;
     vPairs.reserve(KFcounter.size());
     if(!upParent)
         cout << "UPDATE_CONN: current KF " << mnId << endl;
-    //遍历所有和当前帧具有共视点的关键帧，找到其中共视点最多的关键帧（用以构建父子帧，构建生成树）,同时共视点数超过15的帧用以生成共视图
     for(map<KeyFrame*,int>::iterator mit=KFcounter.begin(), mend=KFcounter.end(); mit!=mend; mit++)
     {
         if(!upParent)
@@ -441,7 +439,7 @@ void KeyFrame::UpdateConnections(bool upParent)
             (mit->first)->AddConnection(this,mit->second);
         }
     }
-    // 如果所有帧的共视点数都小于15， 则选取共视点最多的那一帧建立连接关系，构建共视图
+
     if(vPairs.empty())
     {
         vPairs.push_back(make_pair(nmax,pKFmax));

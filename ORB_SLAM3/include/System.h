@@ -102,7 +102,7 @@ public:
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
-    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = true, const int initFr = 0, const string &strSequence = std::string());
+    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = true, const bool bDoLoopClosing = true, const int initFr = 0, const string &strSequence = std::string());
 
     // Proccess the given stereo frame. Images must be synchronized and rectified.
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
@@ -125,15 +125,7 @@ public:
     void ActivateLocalizationMode();
     // This resumes local mapping thread and performs SLAM again.
     void DeactivateLocalizationMode();
-FrameDrawer* GetFrameDrawer() { return mpFrameDrawer; }
-// === Map control with explicit filepath (public API) ===
-    bool SaveAtlasToFile(const std::string& filepath, bool binary = true);
-    bool LoadAtlasFromFile(const std::string& filepath, bool binary = true);
-    void SetAtlasSavePath(const std::string& path) { mStrSaveAtlasToFile = path; }
-    void SetAtlasLoadPath(const std::string& path) { mStrLoadAtlasFromFile = path; }
-    void SaveAtlas(int type);
-    bool LoadAtlas(int type);
-// =======================================================
+
     // Returns true if there have been a big map change (loop closure, global BA)
     // since last call to this function
     bool MapChanged();
@@ -148,7 +140,6 @@ FrameDrawer* GetFrameDrawer() { return mpFrameDrawer; }
     void Shutdown();
     bool isShutDown();
 
-    void SaveAtlasfromViewer();
     // Save camera trajectory in the TUM RGB-D dataset format.
     // Only for stereo and RGB-D. This method does not work for monocular.
     // Call first Shutdown()
@@ -205,6 +196,9 @@ FrameDrawer* GetFrameDrawer() { return mpFrameDrawer; }
     void InsertTrackTime(double& time);
 #endif
 
+    void SaveAtlas(int type);
+    bool LoadAtlas(int type);
+
 private:
 
 
@@ -259,6 +253,7 @@ private:
 
     // Shutdown flag
     bool mbShutDown;
+    bool mbLoopClosing;
 
     // Tracking state
     int mTrackingState;

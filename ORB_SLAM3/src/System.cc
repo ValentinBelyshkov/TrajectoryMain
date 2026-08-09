@@ -25,8 +25,6 @@
 #include <iomanip>
 #include <openssl/md5.h>
 #include <boost/serialization/base_object.hpp>
-#include <cerrno>
-#include <cstring>
 #include <boost/serialization/string.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -34,7 +32,6 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/archive/xml_oarchive.hpp>
-#include <time.h>
 
 bool has_suffix(const std::string &str, const std::string &suffix) {
   std::size_t index = str.find(suffix, str.size() - suffix.size());
@@ -47,9 +44,9 @@ namespace ORB_SLAM3
 Verbose::eLevel Verbose::th = Verbose::VERBOSITY_NORMAL;
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
-               const bool bUseViewer, const int initFr, const string &strSequence):
+               const bool bUseViewer, const bool bDoLoopClosing, const int initFr, const string &strSequence):
     mSensor(sensor), mpViewer(static_cast<Viewer*>(NULL)), mbReset(false), mbResetActiveMap(false),
-    mbActivateLocalizationMode(false), mbDeactivateLocalizationMode(false), mbShutDown(false)
+    mbActivateLocalizationMode(false), mbDeactivateLocalizationMode(false), mbShutDown(false), mbLoopClosing(bDoLoopClosing)
 {
     // Output welcome message
     cout << endl <<
@@ -85,8 +82,10 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     cv::FileNode node = fsSettings["File.version"];
     if(!node.empty() && node.isString() && node.string() == "1.0"){
         settings_ = new Settings(strSettingsFile,mSensor);
+
         mStrLoadAtlasFromFile = settings_->atlasLoadFile();
         mStrSaveAtlasToFile = settings_->atlasSaveFile();
+
         cout << (*settings_) << endl;
     }
     else{
@@ -108,7 +107,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     bool activeLC = true;
     if(!node.empty())
     {
-        activeLC = static_cast<int>(fsSettings["loopClosing"]) != 0; //回环检测
+        activeLC = static_cast<int>(fsSettings["loopClosing"]) != 0;
     }
 
     mStrVocabularyFilePath = strVocFile;
@@ -137,7 +136,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
         cout << "Vocabulary loaded!" << endl << endl;
 
         //Create KeyFrame Database
-        mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);//关键帧数据库
+        mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
 
         //Create the Atlas
         cout << "Initialization of Atlas from scratch " << endl;
@@ -162,6 +161,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
         }
         cout << "Vocabulary loaded!" << endl << endl;
 
+
         //Create KeyFrame Database
         mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
 
@@ -184,7 +184,10 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
         loadedAtlas = true;
 
-        mpAtlas->CreateNewMap();//载入地图后新建地图，在新建地图上进行相关操作
+        // See issue https://github.com/UZ-SLAMLab/ORB_SLAM3/issues/515 for details.
+        // mpAtlas->CreateNewMap();
+        vector<Map*> map_vector = mpAtlas->GetAllMaps();
+        mpAtlas->ChangeMap(map_vector.at(0));
 
         //clock_t timeElapsed = clock() - start;
         //unsigned msElapsed = timeElapsed / (CLOCKS_PER_SEC / 1000);
@@ -200,17 +203,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //Create Drawers. These are used by the Viewer
     mpFrameDrawer = new FrameDrawer(mpAtlas);
     mpMapDrawer = new MapDrawer(mpAtlas, strSettingsFile, settings_);
-    if (!mStrSaveAtlasToFile.empty())
-    {
-        std::string atlasPath = mStrSaveAtlasToFile;  // или как у вас называется поле
-        size_t pos = atlasPath.find("/calibrations/");
-        if (pos != std::string::npos)
-        {
-            std::string projectBase = atlasPath.substr(0, pos);
-            FrameDrawer::SetOutputBasePath(projectBase);
-            std::cout << "[System] Frame output path: " << projectBase << "/procframe" << std::endl;
-        }
-    }
+
     //Initialize the Tracking thread
     //(it will live in the main thread of execution, the one that called this constructor)
     cout << "Seq. Name: " << strSequence << endl;
@@ -236,8 +229,18 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
     //Initialize the Loop Closing thread and launch
     // mSensor!=MONOCULAR && mSensor!=IMU_MONOCULAR
-    mpLoopCloser = new LoopClosing(mpAtlas, mpKeyFrameDatabase, mpVocabulary, mSensor!=MONOCULAR, activeLC); // mSensor!=MONOCULAR);
-    mptLoopClosing = new thread(&ORB_SLAM3::LoopClosing::Run, mpLoopCloser);
+    if(mbLoopClosing)
+    {
+        cout << "****Enabled Loop Closing****" << endl;
+        mpLoopCloser = new LoopClosing(mpAtlas, mpKeyFrameDatabase, mpVocabulary, mSensor!=MONOCULAR, activeLC); // mSensor!=MONOCULAR);
+        mptLoopClosing = new thread(&ORB_SLAM3::LoopClosing::Run, mpLoopCloser);
+    }
+    else
+    {
+        cout << "****Disabled Loop Closing****" << endl;
+        mpLoopCloser = nullptr;
+        mptLoopClosing = nullptr;
+    }
 
     //Set pointers between threads
     mpTracker->SetLocalMapper(mpLocalMapper);
@@ -246,8 +249,10 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpLocalMapper->SetTracker(mpTracker);
     mpLocalMapper->SetLoopCloser(mpLoopCloser);
 
-    mpLoopCloser->SetTracker(mpTracker);
-    mpLoopCloser->SetLocalMapper(mpLocalMapper);
+    if(mpLoopCloser) {
+        mpLoopCloser->SetTracker(mpTracker);
+        mpLoopCloser->SetLocalMapper(mpLocalMapper);
+    }
 
     //usleep(10*1000*1000);
 
@@ -258,15 +263,13 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
         mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile,settings_);
         mptViewer = new thread(&Viewer::Run, mpViewer);
         mpTracker->SetViewer(mpViewer);
-        mpLoopCloser->mpViewer = mpViewer;
+        if(mpLoopCloser) mpLoopCloser->mpViewer = mpViewer;
         mpViewer->both = mpFrameDrawer->both;
     }
 
     // Fix verbosity
-    Verbose::SetTh(Verbose::VERBOSITY_NORMAL);
-
+    Verbose::SetTh(Verbose::VERBOSITY_QUIET);
     cout << "INIT COMPLETE" << endl;
-
 }
 
 Sophus::SE3f System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp, const vector<IMU::Point>& vImuMeas, string filename)
@@ -299,9 +302,9 @@ Sophus::SE3f System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, 
     // Check mode change
     {
         unique_lock<mutex> lock(mMutexMode);
-        if(mbActivateLocalizationMode)//仅定位模式；不优化地图点；不增加关键帧
+        if(mbActivateLocalizationMode)
         {
-            mpLocalMapper->RequestStop();//在SLAM初始化时,使用
+            mpLocalMapper->RequestStop();
 
             // Wait until Local Mapping has effectively stopped
             while(!mpLocalMapper->isStopped())
@@ -312,7 +315,7 @@ Sophus::SE3f System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, 
             mpTracker->InformOnlyTracking(true);
             mbActivateLocalizationMode = false;
         }
-        if(mbDeactivateLocalizationMode) 
+        if(mbDeactivateLocalizationMode)
         {
             mpTracker->InformOnlyTracking(false);
             mpLocalMapper->Release();
@@ -338,7 +341,7 @@ Sophus::SE3f System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, 
 
     if (mSensor == System::IMU_STEREO)
         for(size_t i_imu = 0; i_imu < vImuMeas.size(); i_imu++)
-            mpTracker->GrabImuData(vImuMeas[i_imu]);//将IMU数据存放至mlQueueImuData
+            mpTracker->GrabImuData(vImuMeas[i_imu]);
 
     // std::cout << "start GrabImageStereo" << std::endl;
     Sophus::SE3f Tcw = mpTracker->GrabImageStereo(imLeftToFeed,imRightToFeed,timestamp,filename);
@@ -540,15 +543,6 @@ void System::ResetActiveMap()
     mbResetActiveMap = true;
 }
 
-void System::SaveAtlasfromViewer()
-{
-    if(!mStrSaveAtlasToFile.empty())
-    {
-        Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
-        SaveAtlas(FileType::BINARY_FILE);
-    }
-}
-
 void System::Shutdown()
 {
     {
@@ -559,7 +553,7 @@ void System::Shutdown()
     cout << "Shutdown" << endl;
 
     mpLocalMapper->RequestFinish();
-    mpLoopCloser->RequestFinish();
+    if (mpLoopCloser) mpLoopCloser->RequestFinish();
     if(mpViewer)
     {
         mpViewer->RequestFinish();
@@ -570,25 +564,25 @@ void System::Shutdown()
     }
 
     // Wait until all thread have effectively stopped
-    while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())
+    while(!mpLocalMapper->isFinished() || (mpLoopCloser && (!mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())))
     {
-        // if(!mpLocalMapper->isFinished())
-        //     cout << "mpLocalMapper is not finished" << endl;
-        // if(!mpLoopCloser->isFinished())
-        //     cout << "mpLoopCloser is not finished" << endl;
-        // if(mpLoopCloser->isRunningGBA()){
-        //     cout << "mpLoopCloser is running GBA" << endl;
-        //     cout << "break anyway..." << endl;
-        //     break;
-        // }
+        /*if(!mpLocalMapper->isFinished())
+            cout << "mpLocalMapper is not finished" << endl;*/
+        /*if(mpLoopCloser && !mpLoopCloser->isFinished())
+            cout << "mpLoopCloser is not finished" << endl;
+        if(mpLoopCloser && mpLoopCloser->isRunningGBA()){
+            cout << "mpLoopCloser is running GBA" << endl;
+            cout << "break anyway..." << endl;
+            break;
+        }*/
         usleep(5000);
     }
 
-     if(!mStrSaveAtlasToFile.empty())
-     {
-         Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
-         SaveAtlas(FileType::BINARY_FILE);
-     }
+    if(!mStrSaveAtlasToFile.empty())
+    {
+        Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
+        SaveAtlas(FileType::BINARY_FILE);
+    }
 
     if(mpViewer)
         pangolin::BindToContext("ORB-SLAM2: Map Viewer");
@@ -1375,7 +1369,6 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
     return mTrackedKeyPointsUn;
 }
 
-
 Atlas* System::GetAtlas()
 {
     return mpAtlas;
@@ -1453,47 +1446,41 @@ void System::InsertTrackTime(double& time)
 void System::SaveAtlas(int type){
     if(!mStrSaveAtlasToFile.empty())
     {
+        //clock_t start = clock();
+
+        // Save the current session
         mpAtlas->PreSave();
 
-        // 1. Чистая сборка пути (убираем костыль с "./")
-        std::string pathSaveFileName = mStrSaveAtlasToFile;
-        if (pathSaveFileName.empty()) return;
-        if (pathSaveFileName.back() == '/') pathSaveFileName.pop_back();
-        if (pathSaveFileName.size() < 4 || pathSaveFileName.substr(pathSaveFileName.size()-4) != ".osa") {
-            pathSaveFileName += ".osa";
-        }
+        string pathSaveFileName = "./";
+        pathSaveFileName = pathSaveFileName.append(mStrSaveAtlasToFile);
+        pathSaveFileName = pathSaveFileName.append(".osa");
 
-        std::cout << "\n[SaveAtlas] Target file: " << pathSaveFileName << std::endl;
-
-        std::string strVocabularyChecksum = CalculateCheckSum(mStrVocabularyFilePath, TEXT_FILE);
+        string strVocabularyChecksum = CalculateCheckSum(mStrVocabularyFilePath,TEXT_FILE);
         std::size_t found = mStrVocabularyFilePath.find_last_of("/\\");
-        std::string strVocabularyName = mStrVocabularyFilePath.substr(found+1);
+        string strVocabularyName = mStrVocabularyFilePath.substr(found+1);
 
-        if(type == TEXT_FILE) {
-            std::ofstream ofs(pathSaveFileName, std::ios::out | std::ios::binary | std::ios::trunc);
-            if(ofs.fail()) {
-                std::cerr << "[ERROR] Text stream failed. errno: " << strerror(errno) << std::endl;
-                return;
-            }
-            std::cout << "Starting to write text..." << std::endl;
+        if(type == TEXT_FILE) // File text
+        {
+            cout << "Starting to write the save text file " << endl;
+            std::remove(pathSaveFileName.c_str());
+            std::ofstream ofs(pathSaveFileName, std::ios::binary);
             boost::archive::text_oarchive oa(ofs);
-            oa << strVocabularyName << strVocabularyChecksum << mpAtlas;
-            std::cout << "End text." << std::endl;
-        }
-        else if(type == BINARY_FILE) {
-            // 2. Явная проверка потока ДО создания boost-архива
-            std::ofstream ofs(pathSaveFileName, std::ios::out | std::ios::binary | std::ios::trunc);
-            if(ofs.fail()) {
-                std::cerr << "[ERROR] Binary stream failed to open: " << pathSaveFileName << std::endl;
-                std::cerr << "System errno: " << strerror(errno) << std::endl;
-                return; // Выходим, чтобы boost не кинул маскирующее исключение
-            }
 
-            std::cout << "Starting to write binary..." << std::endl;
+            oa << strVocabularyName;
+            oa << strVocabularyChecksum;
+            oa << mpAtlas;
+            cout << "End to write the save text file" << endl;
+        }
+        else if(type == BINARY_FILE) // File binary
+        {
+            cout << "Starting to write the save binary file" << endl;
+            std::remove(pathSaveFileName.c_str());
+            std::ofstream ofs(pathSaveFileName, std::ios::binary);
             boost::archive::binary_oarchive oa(ofs);
-            oa << strVocabularyName << strVocabularyChecksum << mpAtlas;
-            ofs.close();
-            std::cout << "End binary." << std::endl;
+            oa << strVocabularyName;
+            oa << strVocabularyChecksum;
+            oa << mpAtlas;
+            cout << "End to write save binary file" << endl;
         }
     }
 }
@@ -1503,123 +1490,63 @@ bool System::LoadAtlas(int type)
     string strFileVoc, strVocChecksum;
     bool isRead = false;
 
-    // ✅ FIX: Корректная сборка пути (как в сохранении)
-    std::string pathLoadFileName = mStrLoadAtlasFromFile;
-    if (pathLoadFileName.empty()) return false;
-    if (pathLoadFileName.back() == '/') pathLoadFileName.pop_back();
-    if (pathLoadFileName.size() < 4 || pathLoadFileName.substr(pathLoadFileName.size()-4) != ".osa") {
-        pathLoadFileName += ".osa";
-    }
+    string pathLoadFileName = "./";
+    pathLoadFileName = pathLoadFileName.append(mStrLoadAtlasFromFile);
+    pathLoadFileName = pathLoadFileName.append(".osa");
 
-    std::cout << "\n[LoadAtlas] Target file: " << pathLoadFileName << std::endl;
-
-    if(type == TEXT_FILE) {
-        std::cout << "Starting to read the save text file" << std::endl;
+    if(type == TEXT_FILE) // File text
+    {
+        cout << "Starting to read the save text file " << endl;
         std::ifstream ifs(pathLoadFileName, std::ios::binary);
-        if(!ifs.good()) {
-            std::cerr << "[ERROR] Text load failed: " << strerror(errno) << std::endl;
+        if(!ifs.good())
+        {
+            cout << "Load file not found" << endl;
             return false;
         }
         boost::archive::text_iarchive ia(ifs);
-        ia >> strFileVoc >> strVocChecksum >> mpAtlas;
-        std::cout << "End to load the save text file" << std::endl;
+        ia >> strFileVoc;
+        ia >> strVocChecksum;
+        ia >> mpAtlas;
+        cout << "End to load the save text file " << endl;
         isRead = true;
     }
-    else if(type == BINARY_FILE) {
-        std::cout << "Starting to read the save binary file" << std::endl;
+    else if(type == BINARY_FILE) // File binary
+    {
+        cout << "Starting to read the save binary file"  << endl;
         std::ifstream ifs(pathLoadFileName, std::ios::binary);
-        if(!ifs.good()) {
-            std::cerr << "[ERROR] Binary load failed: " << strerror(errno) << std::endl;
+        if(!ifs.good())
+        {
+            cout << "Load file not found" << endl;
             return false;
         }
         boost::archive::binary_iarchive ia(ifs);
-        ia >> strFileVoc >> strVocChecksum >> mpAtlas;
-        std::cout << "End to load the save binary file" << std::endl;
+        ia >> strFileVoc;
+        ia >> strVocChecksum;
+        ia >> mpAtlas;
+        cout << "End to load the save binary file" << endl;
         isRead = true;
     }
 
-    if(isRead) {
-        string strInputVocabularyChecksum = CalculateCheckSum(mStrVocabularyFilePath, TEXT_FILE);
-        if(strInputVocabularyChecksum.compare(strVocChecksum) != 0) {
-            std::cerr << "[ERROR] Vocabulary mismatch!" << std::endl;
-            return false;
+    if(isRead)
+    {
+        //Check if the vocabulary is the same
+        string strInputVocabularyChecksum = CalculateCheckSum(mStrVocabularyFilePath,TEXT_FILE);
+
+        if(strInputVocabularyChecksum.compare(strVocChecksum) != 0)
+        {
+            cout << "The vocabulary load isn't the same which the load session was created " << endl;
+            cout << "-Vocabulary name: " << strFileVoc << endl;
+            return false; // Both are differents
         }
+
         mpAtlas->SetKeyFrameDababase(mpKeyFrameDatabase);
         mpAtlas->SetORBVocabulary(mpVocabulary);
         mpAtlas->PostLoad();
+
         return true;
     }
     return false;
 }
-
-
-// === Public wrappers for Save/Load Atlas with filepath ===
-bool System::SaveAtlasToFile(const std::string& filepath, bool binary)
-{
-    if (filepath.empty()) {
-        std::cerr << "[ERROR] SaveAtlasToFile: empty filepath" << std::endl;
-        return false;
-    }
-    
-    // Сохраняем старый путь
-    std::string oldPath = mStrSaveAtlasToFile;
-    
-    // Убираем .osa если есть
-    std::string cleanPath = filepath;
-    if (cleanPath.size() >= 4 && 
-        cleanPath.substr(cleanPath.size() - 4) == ".osa") {
-        cleanPath = cleanPath.substr(0, cleanPath.size() - 4);
-    }
-    
-    // 🔥 КРИТИЧНО: устанавливаем путь ПЕРЕД вызовом
-    mStrSaveAtlasToFile = cleanPath;
-    
-    std::cout << "[DEBUG] SaveAtlasToFile: mStrSaveAtlasToFile set to '" 
-              << mStrSaveAtlasToFile << "'" << std::endl;
-    
-    // Вызываем существующий метод
-    try {
-        SaveAtlas(binary ? 1 : 0);  // 1=BINARY, 0=TEXT
-    } catch (const std::exception& e) {
-        std::cerr << "[ERROR] SaveAtlas exception: " << e.what() << std::endl;
-        mStrSaveAtlasToFile = oldPath;
-        return false;
-    }
-    
-    // Проверяем результат
-    std::string expectedPath = cleanPath;
-if (expectedPath.size() < 4 || expectedPath.substr(expectedPath.size()-4) != ".osa") {
-    expectedPath += ".osa";
-}
-std::ifstream test(expectedPath, std::ios::binary);
-bool success = test.good();
-
-std::cout << "[DEBUG] Checking file: " << expectedPath 
-          << ", exists: " << (success ? "YES" : "NO") << std::endl;
-    if (test.is_open()) test.close();
-    
-    std::cout << "[DEBUG] Expected file: " << expectedPath 
-              << ", exists: " << (success ? "YES" : "NO") << std::endl;
-    
-    // Восстанавливаем (опционально)
-    mStrSaveAtlasToFile = oldPath;
-    
-    return success;
-}
-
-bool System::LoadAtlasFromFile(const std::string& filepath, bool binary)
-{
-    if (filepath.empty()) return false;
-    
-    std::string cleanPath = filepath;
-    if (cleanPath.size() >= 4 && cleanPath.substr(cleanPath.size()-4) == ".osa") {
-        cleanPath = cleanPath.substr(0, cleanPath.size()-4);
-    }
-    
-    mStrLoadAtlasFromFile = cleanPath;
-    return LoadAtlas(binary ? 1 : 0);
-}
-// =======================================================
 
 string System::CalculateCheckSum(string filename, int type)
 {

@@ -99,7 +99,7 @@ IntegratedRotation::IntegratedRotation(const Eigen::Vector3f &angVel, const Bias
     }
     else
     {
-        deltaR = Eigen::Matrix3f::Identity() + W*sin(d)/d + W*W*(1.0f-cos(d))/d2;// ?罗德里格斯公式 但是是不是少了cosd的部分？
+        deltaR = Eigen::Matrix3f::Identity() + W*sin(d)/d + W*W*(1.0f-cos(d))/d2;
         rightJ = Eigen::Matrix3f::Identity() - W*(1.0f-cos(d))/d2 + W*W*(d-sin(d))/(d2*d);
     }
 }
@@ -402,7 +402,7 @@ void Calib::Set(const Sophus::SE3<float> &sophTbc, const float &ng, const float 
     // Sophus/Eigen
     mTbc = sophTbc;
     mTcb = mTbc.inverse();
-    Cov.diagonal() << ng2, ng2, ng2, na2, na2, na2;//对角线
+    Cov.diagonal() << ng2, ng2, ng2, na2, na2, na2;
     CovWalk.diagonal() << ngw2, ngw2, ngw2, naw2, naw2, naw2;
 }
 

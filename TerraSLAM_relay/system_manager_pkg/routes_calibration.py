@@ -257,7 +257,14 @@ async def start_recording(req: Optional[Dict] = None):
 
 @router.post("/api/v1/calibration/video/start-from-project/{project_id}")
 async def start_recording_from_project(project_id: str):
-    """Create a new calibration recording session from an existing project video."""
+    """Create a new calibration recording session from an existing project.
+
+    Симуляция обрабатывается покадрово — так же, как режим камеры. Кадры уже
+    нарезаны из видео проекта при загрузке видео и лежат в projects/<id>/frames,
+    поэтому здесь НИЧЕГО не извлекаем и НЕ создаём копию видео/папку calib.
+    Просто создаём сессию, указывающую на готовую папку frames — фронт и так
+    заберёт кадры оттуда через /api/projects/:id/frames.
+    """
     project_path = PROJECTS_DIR / project_id
     if not project_path.exists():
         raise HTTPException(404, detail=f"Project {project_id} not found")
@@ -266,38 +273,30 @@ async def start_recording_from_project(project_id: str):
     if not metadata_path.exists():
         raise HTTPException(404, detail="Project metadata not found")
 
-    with open(metadata_path, "r", encoding="utf-8") as f:
-        project_data = json.load(f)
-
-    video_filename = project_data.get("video_filename")
-    if not video_filename:
-        raise HTTPException(400, detail="Project has no video file")
-
-    source_path = Path(video_filename)
-    if not source_path.exists():
-        raise HTTPException(404, detail=f"Project video not found: {video_filename}")
+    frames_dir = project_path / "frames"
+    if not frames_dir.exists() or not any(frames_dir.glob("*.jpg")):
+        raise HTTPException(
+            400,
+            detail="Project has no extracted frames in frames/ — upload the project video first",
+        )
 
     session_id = _new_session_id()
-    video_path = _calib_dir(project_id) / f"{session_id}_raw.mp4"
 
     session = {
         "id": session_id,
         "created_at": int(time.time()),
         "status": SessionStatus.TRIMMING,
-        "video_path": str(video_path),
+        "video_path": None,
         "trimmed_video_path": None,
         "trim_segments": [],
         "project_id": project_id,
-        "frames_dir": None,
+        "frames_dir": str(frames_dir),
         "procframe_dir": str(_procframe_dir(project_id)),
         "frame_pose_data": [],
         "correlation_points": [],
         "transform": None,
         "calib_gpc_path": None,
     }
-
-    import shutil
-    shutil.copy2(source_path, video_path)
 
     _save_session(session)
     return {"success": True, "session": session}
@@ -490,7 +489,7 @@ async def _run_calibration_process(session_id: str, session: dict, project_id: s
         frames_total=0, frames_done=0, slam_running=False, slam_crashed=False, error=None)
 
     existing_frames = sorted(frames_dir.glob("*.jpg"))
-    have_video = trimmed_path.exists() and trimmed_path.stat().st_size > 0
+    have_video = trimmed_path is not None and trimmed_path.exists() and trimmed_path.stat().st_size > 0
 
     print(f"[calib:{session_id}] step1: have_video={have_video} "
           f"existing_frames={len(existing_frames)}", flush=True)
@@ -798,13 +797,15 @@ async def process_calibration(req: ProcessReq):
     frames_dir = PROJECTS_DIR / project_id / "frames"
     frames_dir.mkdir(parents=True, exist_ok=True)
 
-    # Камера (RealSense): кадры уже лежат в frames_dir, видеофайла нет.
-    # Webm-поток: кадры извлекаются из trimmed-видео.
-    video_src = session.get("trimmed_video_path") or session.get("video_path")
-    if not video_src:
-        raise HTTPException(400, detail="Session has no video_path/trimmed_video_path")
-    trimmed_path = Path(video_src)
-    have_video = trimmed_path.exists() and trimmed_path.stat().st_size > 0
+    # Камера (RealSense) и симуляция: кадры уже лежат в frames_dir, видеофайла
+    # нет. Видео учитывается только если есть trimmed_video_path (режим
+    # видео-обрезки). Иначе обрабатываем имеющиеся кадры проекта.
+    trimmed_video = session.get("trimmed_video_path")
+    if trimmed_video and Path(trimmed_video).exists() and Path(trimmed_video).stat().st_size > 0:
+        trimmed_path: Optional[Path] = Path(trimmed_video)
+    else:
+        trimmed_path = None
+    have_video = trimmed_path is not None
     existing_frames = sorted(frames_dir.glob("*.jpg"))
 
     if not have_video and not existing_frames:

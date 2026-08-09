@@ -38,7 +38,7 @@ Map::Map(int initKFid):mnInitKFid(initKFid), mnMaxKFid(initKFid),/*mnLastLoopKFi
                        mnMapChange(0), mbFail(false), mnMapChangeNotified(0), mbIsInertial(false), mbIMU_BA1(false), mbIMU_BA2(false)
 {
     mnId=nNextId++;
-    mThumbnail = static_cast<GLubyte*>(NULL); //// View of the map in aerial sight (for the AtlasViewer)
+    mThumbnail = static_cast<GLubyte*>(NULL);
 }
 
 Map::~Map()
@@ -101,7 +101,7 @@ void Map::EraseMapPoint(MapPoint *pMP)
     mspMapPoints.erase(pMP);
 
     // TODO: This only erase the pointer.
-    // Delete the MapPoint 在fuse后应该删除对应的地图点内存 但是在融合的时候不应该删除
+    // Delete the MapPoint
 }
 
 void Map::EraseKeyFrame(KeyFrame *pKF)
@@ -123,7 +123,7 @@ void Map::EraseKeyFrame(KeyFrame *pKF)
     }
 
     // TODO: This only erase the pointer.
-    // Delete the MapPoint 这边应该不能删除指针对应的内存,因为该部分内存实际上是转移到另一个地图中了
+    // Delete the MapPoint
 }
 
 void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs)
@@ -435,8 +435,8 @@ void Map::PostLoad(KeyFrameDatabase* pKFDB, ORBVocabulary* pORBVoc/*, map<long u
         if(!pMPi || pMPi->isBad())
             continue;
 
-        pMPi->UpdateMap(this);//更新地图点属于哪个地图
-        mpMapPointId[pMPi->mnId] = pMPi;//地图点id 地图点
+        pMPi->UpdateMap(this);
+        mpMapPointId[pMPi->mnId] = pMPi;
     }
 
     map<long unsigned int, KeyFrame*> mpKeyFrameId;
@@ -445,9 +445,9 @@ void Map::PostLoad(KeyFrameDatabase* pKFDB, ORBVocabulary* pORBVoc/*, map<long u
         if(!pKFi || pKFi->isBad())
             continue;
 
-        pKFi->UpdateMap(this);//更新关键帧属于哪个地图
-        pKFi->SetORBVocabulary(pORBVoc);//设置关键帧字典
-        pKFi->SetKeyFrameDatabase(pKFDB);//设置关键帧数据库
+        pKFi->UpdateMap(this);
+        pKFi->SetORBVocabulary(pORBVoc);
+        pKFi->SetKeyFrameDatabase(pKFDB);
         mpKeyFrameId[pKFi->mnId] = pKFi;
     }
 
@@ -457,7 +457,7 @@ void Map::PostLoad(KeyFrameDatabase* pKFDB, ORBVocabulary* pORBVoc/*, map<long u
         if(!pMPi || pMPi->isBad())
             continue;
 
-        pMPi->PostLoad(mpKeyFrameId, mpMapPointId);//增加观测index
+        pMPi->PostLoad(mpKeyFrameId, mpMapPointId);
     }
 
     for(KeyFrame* pKFi : mspKeyFrames)

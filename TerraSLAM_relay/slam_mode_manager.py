@@ -14,6 +14,9 @@ class SlamModeManager(Node):
         self.slam_state = -1
         self.slam_state_name = "UNKNOWN"
         self.initialized = False
+        # Отслеживает доступность сервиса map_control, чтобы перевести
+        # свежезапущенный slam обратно в режим локализации (см. check_file_flags).
+        self._slam_service_up = False
         
         self.mode_file = "/tmp/terraslam_slam_mode"
         self.cmd_file = "/tmp/terraslam_slam_cmd"
@@ -31,11 +34,11 @@ class SlamModeManager(Node):
         
         self.get_logger().info("Waiting for orb_slam3/map_control service...")
         if not self.map_control_cli.wait_for_service(timeout_sec=10.0):
-            self.get_logger().error("Service /orb_slam3/map_control not available!")
-            return
-        
-        self.get_logger().info("Service connected. Starting in LOCALIZATION_ONLY...")
-        self.send_map_control(3)                    # 3 = LOCALIZATION_ONLY
+            self.get_logger().error("Service /orb_slam3/map_control not available at startup — will retry via timer.")
+        else:
+            self.get_logger().info("Service connected. Starting in LOCALIZATION_ONLY...")
+            self.send_map_control(3)                    # 3 = LOCALIZATION_ONLY
+            self._slam_service_up = True
         
         self.create_timer(0.2, self.check_file_flags)   # 5 Hz вместо 10 Hz
         self.publish_status()
@@ -74,6 +77,23 @@ class SlamModeManager(Node):
         return True   # мы вернём настоящий результат позже
 
     def check_file_flags(self):
+        # === Перевод свежего slam в режим локализации по атласу ===
+        # «Старт» перезапускает slam, но не этот менеджер, поэтому новый
+        # экземпляр slam не получает LOCALIZATION_ONLY и по умолчанию пытается
+        # инициализироваться с кадров (MonocularInitialization), что при
+        # неподвижной камере падает с segfault. Как только сервис map_control
+        # снова появляется (slam перезапущен), переводим его в локализацию.
+        try:
+            slam_up = self.map_control_cli.service_is_ready()
+        except Exception:
+            slam_up = False
+        if slam_up and not self._slam_service_up:
+            self.get_logger().info("SLAM service (re)started — re-sending LOCALIZATION_ONLY (3)")
+            self.initialized = False
+            self.current_mode = "LOCALIZATION_ONLY"
+            self.send_map_control(3)
+        self._slam_service_up = slam_up
+
         # === Mode switch ===
         if os.path.exists(self.mode_file):
             try:

@@ -316,7 +316,7 @@ private:
     // Assign keypoints to the grid for speed up feature matching (called in the constructor).
     void AssignFeaturesToGrid();
 
-    bool mbIsSet;//该帧是否设置了位姿
+    bool mbIsSet;
 
     bool mbImuPreintegrated;
 

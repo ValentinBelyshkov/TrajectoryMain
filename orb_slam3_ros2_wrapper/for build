@@ -1,0 +1,7 @@
+colcon build --symlink-install --packages-select orb_slam3_ros2_wrapper \
+  --cmake-args \
+  -DORB_SLAM3_INCLUDE_DIR=/usr/local/include/ORB_SLAM3 \
+  -DORB_SLAM3_LIBRARY=/usr/local/lib/libORB_SLAM3.so \
+  -DDBoW2_INCLUDE_DIR=/opt/main/Trajectory/ORB_SLAM3/Thirdparty/DBoW2 \
+  -DDBoW2_LIBRARY=/usr/local/lib/libDBoW2.so \
+  -Dg2o_LIBRARY=/usr/local/lib/libg2o.so
