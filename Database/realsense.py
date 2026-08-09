@@ -36,7 +36,7 @@ class RealSensePublisher(Node):
         
         # Подписка на позу камеры (ORB-SLAM3)
         self.pose_sub = self.create_subscription(
-            PoseStamped, '/robot_pose_slam', self.pose_callback, qos
+            PoseStamped, '/orb_slam3/robot_pose_slam', self.pose_callback, qos
         )
         self.current_pose = None  # x, y, z
         

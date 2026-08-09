@@ -1,7 +1,10 @@
 %YAML:1.0
 
 # #System.LoadAtlasFromFile: "mapc"
-System.SaveAtlasToFile: "/opt/main/Trajectory/Database/projects/dea7a45f-ec4c-474e-88fe-f9909081a9e7/calibrations/map"
+# ORB-SLAM3 SaveAtlas() writes to "./<SaveAtlasToFile>.osa" relative to the
+# SLAM process CWD (/opt/main/Trajectory), so this MUST be a path relative to
+# that directory (no leading slash, no ".osa" suffix).
+System.SaveAtlasToFile: "Database/projects/dea7a45f-ec4c-474e-88fe-f9909081a9e7/calibrations/map"
 #------------------------------------------------------
 # Camera Parameters
 #-----------------------------------------------------------------------------

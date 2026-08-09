@@ -214,12 +214,15 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
     project_type = project.type if project else None
 
     if action.action in ("start", "restart") and action.component in ("slam", "all") and action.project_id:
-        yaml_path = os.getenv("YAML_PATH", "/app/trajectory-db/real.yaml")
+        # ORB-SLAM3 SaveAtlas()/LoadAtlas() resolve the path relative to the
+        # SLAM process CWD (/opt/main/Trajectory), so these MUST be relative to
+        # that directory (no leading slash, no ".osa" suffix).
+        yaml_path = "/opt/main/Trajectory/Database/real.yaml"
         load_path = None
         save_path = None
         if project and project.calibration_status == "calibrated":
-            load_path = f"{PROJECTS_DIR}/{action.project_id}/calibrations/map"
-            save_path = f"{PROJECTS_DIR}/{action.project_id}/calibrations/map"
+            load_path = f"Database/projects/{action.project_id}/calibrations/map"
+            save_path = f"Database/projects/{action.project_id}/calibrations/map"
         logger.info(
             f"Updating SLAM YAML before {action.action}: load_filename={load_path}, save_filename={save_path}"
         )

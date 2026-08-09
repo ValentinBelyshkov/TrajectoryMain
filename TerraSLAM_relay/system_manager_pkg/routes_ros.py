@@ -21,13 +21,15 @@ router = APIRouter()
 _DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "index.html")
 
 ROS2_TOPICS = {
-    "covariance": "/orb_slam3/covariance",
-    "camera_pose": "/robot_pose_slam",
+    "slam_info": "/orb_slam3/slam_info",
+    "camera_pose": "/orb_slam3/robot_pose_slam",
+    "map_data": "/orb_slam3/map_data",
+    "map_points": "/orb_slam3/map_points",
     "imu": "/imu",
     "mavros_state": "/mavros/state",
     "mavros_imu": "/mavros/imu/data",
     "mavros_pose": "/mavros/local_position/pose",
-    "tracking": "/orb_slam3/tracking_state",
+    "tracking": "/orb_slam3/slam_info",
 }
 
 

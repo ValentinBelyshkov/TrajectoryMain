@@ -61,8 +61,11 @@ async def _run(rec: Dict[str, Any]) -> None:
         if mode == "folder" and not os.path.isdir(frames_dir):
             raise RuntimeError(f"Frames dir missing: {frames_dir}")
 
-        yaml_path = os.getenv("YAML_PATH", "/home/orb/Database/real.yaml")
-        save_path = f"{_projects_dir()}/{project_id}/calibrations/map"
+        yaml_path = "/opt/main/Trajectory/Database/real.yaml"
+        # ORB-SLAM3 SaveAtlas() writes to "./<SaveAtlasToFile>.osa" relative to
+        # the SLAM process CWD (/opt/main/Trajectory), so this must be relative
+        # to that directory (no leading slash, no ".osa" suffix).
+        save_path = f"Database/projects/{project_id}/calibrations/map"
         update_yaml(yaml_path, save_path)
 
         if mode == "folder":

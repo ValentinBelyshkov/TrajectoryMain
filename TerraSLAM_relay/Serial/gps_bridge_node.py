@@ -129,7 +129,7 @@ class GpsBridgeNode(Node):
 
         # ── Parameters ──
         self.declare_parameter("calib_file", "calib.gpc")
-        self.declare_parameter("pose_topic", "/robot_pose_slam")
+        self.declare_parameter("pose_topic", "/orb_slam3/robot_pose_slam")
         self.declare_parameter("pose_type", "pose_stamped")
         self.declare_parameter("port", "/dev/ttyTHS1")
         self.declare_parameter("baudrate", 115200)

@@ -548,13 +548,20 @@ async def _run_calibration_process(session_id: str, session: dict, project_id: s
     publisher_name = "publisher_folder"
     try:
         yaml_path = "/opt/main/Trajectory/Database/real.yaml"
-        save_path = f"/opt/main/Trajectory/Database/projects/{project_id}/calibrations/map"
+        # ORB-SLAM3 SaveAtlas() writes to "./<SaveAtlasToFile>.osa" relative to
+        # the SLAM process CWD (/opt/main/Trajectory). An absolute path there
+        # would be concatenated into "./<absolute>.osa" and never created, so we
+        # must pass a path RELATIVE to /opt/main/Trajectory (no leading slash,
+        # no ".osa" suffix — ORB-SLAM3 adds it).
+        save_path = f"Database/projects/{project_id}/calibrations/map"
         from .process_manager import update_yaml
 
         # Удаляем старый .osa перед запуском SLAM, чтобы при save_map не
         # возникло конфликта с предыдущей картой проекта. ORB-SLAM не всегда
         # корректно перезаписывает существующий файл, поэтому стираем явно.
-        osa_path = f"{save_path}.osa"
+        # save_path относительный от CWD SLAM (/opt/main/Trajectory), резолвим
+        # его к абсолютному, чтобы os.remove нашёл файл из процесса бэкенда.
+        osa_path = f"/opt/main/Trajectory/Database/projects/{project_id}/calibrations/map.osa"
         try:
             if os.path.exists(osa_path):
                 os.remove(osa_path)
@@ -613,6 +620,19 @@ async def _run_calibration_process(session_id: str, session: dict, project_id: s
             "once": True,
             "procframe_dir": str(procframe_dir),
         })
+
+        # Новый ORB-SLAM3 врапер не имеет старого MapControl command 5, который
+        # писал кадр+позу в procframe. Вместо него отдельный узел
+        # procframe_capture подписывается на /orb_slam3/robot_pose_slam и
+        # камеру и пишет пары в procframe, пока поднят флаг сохранения кадров.
+        try:
+            await manager.start("procframe_capture", extra={
+                "procframe_dir": str(procframe_dir),
+            })
+            print(f"[calib:{session_id}] step2: procframe_capture started for {procframe_dir}", flush=True)
+        except Exception as e:
+            print(f"[calib:{session_id}] step2 WARNING: failed to start procframe_capture: {e}", flush=True)
+
         _enable_frame_saving(session_id)
         upd(step="publisher_running", step_label="Издатель кадров публикует...",
             frames_total=frame_count, frames_done=0,
@@ -667,21 +687,10 @@ async def _run_calibration_process(session_id: str, session: dict, project_id: s
         # Число кадров, которые издатель УЖЕ отправил (по реальному времени).
         sent = min(frame_count, int((time.time() - publisher_start) * publisher_fps))
 
-        try:
-            # MapControl (сохранить текущий кадр+позу) — лучшее усилие, не
-            # блокирует учёт прогресса.
-            out, err, rc = await asyncio.to_thread(
-                ros2_run,
-                ["service", "call", "/orb_slam3/map_control",
-                 "orb_slam3_ros2_wrapper/srv/MapControl",
-                 "{command: 5, filepath: ''}"],
-                timeout=2,
-            )
-            if rc != 0 and (sent + 1) % 30 == 0:
-                print(f"[calib:{session_id}] step3: MapControl rc={rc} err={err}", flush=True)
-        except Exception as e:
-            if (sent + 1) % 30 == 0:
-                print(f"[calib:{session_id}] step3: MapControl exception: {e}", flush=True)
+        # Кадр+поза в procframe теперь пишутся узлом procframe_capture
+        # (подписка на /orb_slam3/robot_pose_slam + камеру) пока поднят флаг
+        # сохранения кадров (_enable_frame_saving). Явный MapControl command 5
+        # из старого врапера здесь больше не вызывается.
 
         if (sent + 1) % 30 == 0 or sent == 0:
             print(f"[calib:{session_id}] step3: frame {sent}/{frame_count} sent", flush=True)
@@ -692,10 +701,29 @@ async def _run_calibration_process(session_id: str, session: dict, project_id: s
             break
         await asyncio.sleep(frame_interval)
 
-    # Stop publisher and SLAM
-    print(f"[calib:{session_id}] step3 done: stopping {publisher_name} and slam", flush=True)
+    # Сохраняем карту ПОКА SLAM ещё запущен: сервис /orb_slam3/save_map
+    # (SetBool -> saveAtlas) недоступен после остановки процесса. Путь
+    # SaveAtlasToFile уже прописан в real.yaml относительно CWD SLAM
+    # (Database/projects/<id>/calibrations/map) на этапе старта (step2),
+    # поэтому ORB-SLAM3 запишет <cwd>/Database/projects/<id>/calibrations/map.osa.
+    try:
+        out, err, rc = await asyncio.to_thread(
+            ros2_run,
+            ["service", "call", "/orb_slam3/save_map", "std_srvs/srv/SetBool", "{data: true}"],
+            timeout=30,
+        )
+        print(f"[calib:{session_id}] save_map rc={rc} out={out} err={err}", flush=True)
+    except Exception as e:
+        print(f"[calib:{session_id}] WARNING save_map failed (non-fatal): {e}", flush=True)
+
+    # Stop publisher, procframe capture and SLAM
+    print(f"[calib:{session_id}] step3 done: stopping {publisher_name}, procframe_capture and slam", flush=True)
     _disable_frame_saving()
     await manager.stop(publisher_name)
+    try:
+        await manager.stop("procframe_capture")
+    except Exception as e:
+        print(f"[calib:{session_id}] step3 WARNING stopping procframe_capture: {e}", flush=True)
     await asyncio.sleep(2)
     await manager.stop("slam")
 
@@ -765,6 +793,9 @@ async def _run_calibration_process(session_id: str, session: dict, project_id: s
     session["frame_pose_data"] = valid_frame_pose_data
     session["status"] = SessionStatus.CORRELATING
     _save_session(session)
+
+    # Карта уже сохранена через /orb_slam3/save_map (см. конец step3, пока
+    # SLAM ещё запущен — сервис недоступен после остановки процесса).
 
     print(f"[calib:{session_id}] FINISH: poses_saved={poses_saved}, "
           f"status={session['status']}, procframe_dir={procframe_dir}", flush=True)

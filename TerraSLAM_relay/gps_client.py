@@ -8,7 +8,7 @@ import rclpy
 from geometry_msgs.msg import PoseStamped
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, NavSatStatus
-from std_msgs.msg import Int8
+from slam_msgs.msg import SlamInfo
 
 # Файл, который system_manager читает через GET /api/v1/slam/status
 STATUS_FILE = "/tmp/terraslam_slam_status"
@@ -26,11 +26,15 @@ class GcpRelay(Node):
     def __init__(self, path):
         super().__init__('gcp_relay')
         self.pub = self.create_publisher(NavSatFix, '/camera/gps', 10)
-        self.create_subscription(PoseStamped, '/robot_pose_slam', self.on_pose, 10)
-        self.create_subscription(Int8, '/orb_slam3/tracking_state', self._cb_tracking, 10)
+        # New ORB-SLAM3 wrapper publishes the live pose on /orb_slam3/robot_pose_slam
+        # (geometry_msgs/PoseStamped) and status on /orb_slam3/slam_info
+        # (slam_msgs/SlamInfo). The old /robot_pose_slam and /orb_slam3/tracking_state
+        # (Int8) topics no longer exist.
+        self.create_subscription(PoseStamped, '/orb_slam3/robot_pose_slam', self.on_pose, 10)
+        self.create_subscription(SlamInfo, '/orb_slam3/slam_info', self._cb_slam_info, 10)
 
         # Внутреннее состояние для записи статуса
-        self._tracking_state: int = -1   # из /orb_slam3/tracking_state
+        self._tracking_state: int = -1   # из /orb_slam3/slam_info
         self._pose_state: int = -1       # выведенное из Pose-значений
         self._last_pose_ts: float = 0.0  # время последнего сообщения с позой
 
@@ -77,9 +81,16 @@ class GcpRelay(Node):
         if rmse_lat > 0.5 or rmse_lon > 0.5:
             self.get_logger().warn("⚠️ Большая ошибка! Проверь что ты не перепутал порядок координат в GPC файле")
 
-    def _cb_tracking(self, msg: Int8):
-        """Прямой Int8 из /orb_slam3/tracking_state — приоритетный источник."""
-        self._tracking_state = int(msg.data)
+    def _cb_slam_info(self, msg: SlamInfo):
+        """Статус из /orb_slam3/slam_info (slam_msgs/SlamInfo). Явного
+        tracking-state там нет — выводим coarse-статус: OK при tracking_frequency>0,
+        RECENTLY_LOST при наличии карты, но нулевой частоте, иначе NOT_INITIALIZED."""
+        if msg.tracking_frequency > 0.1:
+            self._tracking_state = 2
+        elif msg.num_keyframes_in_current_map > 0:
+            self._tracking_state = 3
+        else:
+            self._tracking_state = 1
 
     def on_pose(self, msg: PoseStamped):
         x, y, z = msg.pose.position.x, msg.pose.position.y, msg.pose.position.z

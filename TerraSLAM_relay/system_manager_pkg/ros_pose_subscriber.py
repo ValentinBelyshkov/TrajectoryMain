@@ -1,6 +1,6 @@
 """
-Persistent rclpy subscriber for /robot_pose_slam (geometry_msgs/msg/PoseStamped)
-and /orb_slam3/tracking_state.
+Persistent rclpy subscriber for /orb_slam3/robot_pose_slam (geometry_msgs/PoseStamped)
+and /orb_slam3/slam_info (slam_msgs/SlamInfo).
 
 Why this exists: the previous implementation polled by spawning a fresh
 `ros2 topic echo --once` subprocess on every tick. Each subprocess has to
@@ -22,14 +22,14 @@ import threading
 import time
 from typing import Any, Dict, Optional, Tuple
 
-from .config import POSE_TOPIC, TRACKING_STATE_TOPIC
+from .config import POSE_TOPIC, SLAM_INFO_TOPIC
 
 os.environ.setdefault("ROS_DOMAIN_ID", "0")
 
 try:
     import rclpy
     from geometry_msgs.msg import PoseStamped
-    from std_msgs.msg import Int8
+    from slam_msgs.msg import SlamInfo
     RCLPY_AVAILABLE = True
 except ImportError:
     RCLPY_AVAILABLE = False
@@ -43,6 +43,8 @@ class _PoseSubscriberState:
         self.last_seen: Optional[float] = None
         self.tracking_state: Optional[int] = None
         self.tracking_state_last_seen: Optional[float] = None
+        self.tracking_frequency: float = 0.0
+        self.num_keyframes: int = 0
 
     def set_pose(self, position: Tuple[float, float, float], payload: str) -> None:
         with self._lock:
@@ -50,10 +52,18 @@ class _PoseSubscriberState:
             self.last_payload = payload
             self.last_seen = time.time()
 
-    def set_tracking_state(self, value: int) -> None:
+    def set_slam_info(self, tracking_frequency: float, num_keyframes: int) -> None:
         with self._lock:
-            self.tracking_state = value
+            self.tracking_frequency = tracking_frequency
+            self.num_keyframes = num_keyframes
             self.tracking_state_last_seen = time.time()
+            # Derive a coarse legacy state value: 2 = OK, 3 = recently lost.
+            if tracking_frequency > 0.1:
+                self.tracking_state = 2
+            elif num_keyframes > 0:
+                self.tracking_state = 3
+            else:
+                self.tracking_state = 1
 
     def snapshot(self) -> Dict[str, Any]:
         with self._lock:
@@ -63,6 +73,8 @@ class _PoseSubscriberState:
                 "last_seen": self.last_seen,
                 "tracking_state": self.tracking_state,
                 "tracking_state_last_seen": self.tracking_state_last_seen,
+                "tracking_frequency": self.tracking_frequency,
+                "num_keyframes": self.num_keyframes,
             }
 
 
@@ -84,8 +96,8 @@ def _pose_cb(msg) -> None:
     state.set_pose((float(p.x), float(p.y), float(p.z)), payload)
 
 
-def _tracking_state_cb(msg) -> None:
-    state.set_tracking_state(int(msg.data))
+def _slam_info_cb(msg) -> None:
+    state.set_slam_info(float(msg.tracking_frequency), int(msg.num_keyframes_in_current_map))
 
 
 def _spin() -> None:
@@ -102,7 +114,7 @@ def _spin() -> None:
         executor = rclpy.executors.SingleThreadedExecutor()
         executor.add_node(_node)
         _node.create_subscription(PoseStamped, POSE_TOPIC, _pose_cb, 10)
-        _node.create_subscription(Int8, TRACKING_STATE_TOPIC, _tracking_state_cb, 10)
+        _node.create_subscription(SlamInfo, SLAM_INFO_TOPIC, _slam_info_cb, 10)
         _start_error = ""
         while _running:
             executor.spin_once(timeout_sec=0.5)

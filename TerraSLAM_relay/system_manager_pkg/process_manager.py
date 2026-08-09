@@ -130,6 +130,17 @@ class ProcessManager:
             if not save_frames:
                 cmd += " --no-save-frames"
             return ["bash", "-lc", cmd]
+        if name == "procframe_capture":
+            procframe_dir = (extra or {}).get("procframe_dir")
+            if not procframe_dir:
+                raise ValueError("procframe_capture requires procframe_dir")
+            cmd = (
+                "source /opt/ros/humble/setup.bash && "
+                "source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
+                f"exec python3 /opt/main/Trajectory/Database/procframe_capture.py "
+                f"--procframe-dir {shlex.quote(procframe_dir)}"
+            )
+            return ["bash", "-lc", cmd]
         return list(cfg["cmd"])
 
     async def start(self, name: str, extra: Optional[Dict[str, Any]] = None) -> str:

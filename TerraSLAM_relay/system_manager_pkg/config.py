@@ -48,7 +48,7 @@ COMPONENT_CONFIG = {
             "source /opt/ros/humble/setup.bash && source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
             "python3 /opt/main/Trajectory/TerraSLAM_relay/Serial/gps_bridge_node.py --ros-args "
             "-p protocol:=msp -p hw_type:=uart -p port:=/dev/ttyTHS1 -p baudrate:=115200 "
-            "-p pose_topic:=/robot_pose_slam -p pose_type:=pose_stamped"
+            "-p pose_topic:=/orb_slam3/robot_pose_slam -p pose_type:=pose_stamped"
         ],
         "cwd": "/opt/main/Trajectory/TerraSLAM_relay/Serial",
         "env": {"ROS_DOMAIN_ID": "0"},
@@ -82,25 +82,43 @@ COMPONENT_CONFIG = {
         "max_restarts": 5,
         "restart_window": 60,
     },
+    "procframe_capture": {
+        "cmd": [
+            "bash", "-lc",
+            "source /opt/ros/humble/setup.bash && "
+            "source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
+            "python3 /opt/main/Trajectory/Database/procframe_capture.py"
+        ],
+        "cwd": "/opt/main/Trajectory/Database",
+        "env": {"ROS_DOMAIN_ID": "0"},
+        "autorestart": True,
+        "max_restarts": 5,
+        "restart_window": 60,
+    },
 }
 
 # --- Pose liveness config ---
-# ORB-SLAM3 now publishes the camera pose on /robot_pose_slam as
-# geometry_msgs/msg/PoseStamped (see wrapper update).
-POSE_TOPIC = "/robot_pose_slam"
-TRACKING_STATE_TOPIC = "/orb_slam3/tracking_state"
+# New ORB-SLAM3 ROS2 wrapper publishes the camera pose on
+# /orb_slam3/robot_pose_slam as geometry_msgs/msg/PoseStamped, and map/status
+# info on /orb_slam3/slam_info (slam_msgs/SlamInfo: num_maps,
+# num_keyframes_in_current_map, tracking_frequency). The old /orb_slam3/tracking_state
+# (Int8) and /orb_slam3/covariance topics no longer exist.
+POSE_TOPIC = "/orb_slam3/robot_pose_slam"
+SLAM_INFO_TOPIC = "/orb_slam3/slam_info"
+# Legacy alias kept for any code that imported it — point it at the new topic.
+TRACKING_STATE_TOPIC = "/orb_slam3/slam_info"
 POSE_STALE_AFTER_SECONDS = 3.0
 POSE_POLL_INTERVAL_SECONDS = 1.0
 # NOTE: pose/tracking-state are now read via a persistent rclpy subscriber
 # (system_manager_pkg/ros_pose_subscriber.py) instead of spawning
-# `ros2 topic echo --once` per poll, so no echo timeout is needed anymore.
-# Kept here only in case older code still imports it.
+# `ros2 topic echo --once` per poll.
 POSE_ECHO_TIMEOUT_SECONDS = 3.0
 
-# ORB-SLAM3 tracking state values published on /orb_slam3/tracking_state
-# (std_msgs/Int8): -1=SYSTEM_NOT_READY, 0=NO_IMAGES_YET, 1=NOT_INITIALIZED,
-# 2=OK, 3=RECENTLY_LOST, 4=LOST
-TRACKING_STATE_LOST_VALUES = (3, 4)
+# New wrapper has no explicit tracking-state Int8; we infer "lost" from the
+# sentinel pose it publishes (position = -3.0 on all axes), from a stale pose
+# topic, and from slam_info (tracking_frequency == 0 with an existing map =>
+# RECENTLY_LOST, which we surface as tracking_state 3).
+TRACKING_STATE_LOST_VALUES = (3,)
 TRACKING_STATE_OK_VALUE = 2
 
 # ORB-SLAM3 publishes this sentinel position when tracking is lost:

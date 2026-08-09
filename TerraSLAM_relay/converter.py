@@ -27,13 +27,13 @@ class PoseToGPSConverter(Node):
 
         self.subscription = self.create_subscription(
             PoseStamped,
-            '/robot_pose_slam',
+            '/orb_slam3/robot_pose_slam',
             self.pose_callback,
             10
         )
         self.publisher = self.create_publisher(PoseStamped, '/gps_pose', 10)
 
-        self.get_logger().info('PoseToGPSConverter запущен. Ожидаю /robot_pose_slam...')
+        self.get_logger().info('PoseToGPSConverter запущен. Ожидаю /orb_slam3/robot_pose_slam...')
 
     def load_calibration(self, calib_file):
         self.local_points = []
