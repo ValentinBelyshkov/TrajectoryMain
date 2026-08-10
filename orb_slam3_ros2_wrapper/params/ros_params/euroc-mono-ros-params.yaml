@@ -20,7 +20,7 @@ ORB_SLAM3_MONO_ROS2:
     robot_qz: 0.0
     robot_qw: 1.0
 
-    visualization: true
+    visualization: true  # temporarily re-enabled (headless Xvfb via xvfb-run)
     odometry_mode: false
     publish_tf: true
     map_data_publish_frequency: 1000 # publish every 1000.0 milliseconds

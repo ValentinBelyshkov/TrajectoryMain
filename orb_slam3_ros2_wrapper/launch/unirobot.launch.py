@@ -10,7 +10,7 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    robot_namespace = ""
+    robot_namespace = "orb_slam3"
     sensor_config = LaunchConfiguration("sensor_config")
     sensor_config_arg = DeclareLaunchArgument(
         "sensor_config",

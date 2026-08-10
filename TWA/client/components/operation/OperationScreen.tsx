@@ -5,6 +5,7 @@ import type { DronePosition, DronePath, GPSStatus } from "@/hooks/useProject";
 
 interface OperationScreenProps {
   isRecording: boolean;
+  isBusy?: boolean;
   onStartRecording: () => void;
   onStopRecording: () => void;
   dronePosition: DronePosition;
@@ -26,6 +27,7 @@ interface OperationScreenProps {
 
 export function OperationScreen({
   isRecording,
+  isBusy = false,
   onStartRecording,
   onStopRecording,
   dronePosition,
@@ -98,19 +100,20 @@ export function OperationScreen({
           {!isRecording ? (
             <button
               onClick={onStartRecording}
-              disabled={!gps.hasSignal || showCalibration}
+              disabled={showCalibration || isBusy}
               className="flex-1 btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="text-lg">▶️</span>
-              Старт
+              {isBusy ? "Запуск..." : "Старт"}
             </button>
           ) : (
             <button
               onClick={onStopRecording}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+              disabled={isBusy}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="text-lg">⏹️</span>
-              Стоп
+              {isBusy ? "Остановка..." : "Стоп"}
             </button>
           )}
 

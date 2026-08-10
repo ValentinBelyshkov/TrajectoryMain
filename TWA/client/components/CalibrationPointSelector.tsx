@@ -1,9 +1,8 @@
 import { useState, useRef } from "react";
-import { Trash2, Save, GripVertical } from "lucide-react";
+import { Trash2, Save, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MapComponent } from "@/components/MapComponent";
-import { saveAllGCPPoints, type CalibrationPointRequest } from "@/lib/api";
-import { motion, Reorder, AnimatePresence } from "framer-motion";
+import { saveAllGCPPoints } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export interface CalibrationPoint {
@@ -24,26 +23,6 @@ interface CalibrationPointSelectorProps {
   imageFilename?: string;
 }
 
-interface PendingPoint {
-  id: string;
-  imageX?: number;
-  imageY?: number;
-  lat?: number;
-  lng?: number;
-}
-
-const pointFromDragEvent = (
-  info: { point: { x: number; y: number } },
-  container: React.RefObject<HTMLDivElement | null>,
-): { x: number; y: number } | null => {
-  const rect = container.current?.getBoundingClientRect();
-  if (!rect) return null;
-  return {
-    x: Math.round(info.point.x - rect.left),
-    y: Math.round(info.point.y - rect.top),
-  };
-};
-
 export function CalibrationPointSelector({
   imageUrl,
   images = [],
@@ -52,138 +31,107 @@ export function CalibrationPointSelector({
   projectId,
   imageFilename,
 }: CalibrationPointSelectorProps) {
+  // Effective list of snapshots the user can pick from.
+  const effectiveImages =
+    images.length > 0
+      ? images
+      : imageUrl && imageFilename
+        ? [{ filename: imageFilename, url: imageUrl }]
+        : [];
+
+  // How many GCPs we need. The real calibration flow uses 5 distinct snapshots;
+  // the legacy single-image path only has one, so it falls back to 1. Cap at the
+  // number of available snapshots so it never becomes impossible to finish.
+  const REQUIRED_GCPS =
+    effectiveImages.length > 1 ? Math.min(5, effectiveImages.length) : 1;
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [pointsByImage, setPointsByImage] = useState<Record<string, CalibrationPoint[]>>({});
-  
-  // For legacy support or single image
-  const effectiveImages = images.length > 0 ? images : (imageUrl && imageFilename ? [{ filename: imageFilename, url: imageUrl }] : []);
-  const currentImage = effectiveImages[currentImageIndex];
 
-  const completedPoints = currentImage ? (pointsByImage[currentImage.filename] || []) : [];
-  
-  const setCompletedPoints = (points: CalibrationPoint[] | ((prev: CalibrationPoint[]) => CalibrationPoint[])) => {
+  const currentImage = effectiveImages[currentImageIndex];
+  const completedPoints = currentImage ? pointsByImage[currentImage.filename] || [] : [];
+  const imageHasPoint = completedPoints.length >= 1;
+
+  const setCompletedPoints = (points: CalibrationPoint[]) => {
     if (!currentImage) return;
-    setPointsByImage(prev => {
-      const currentPoints = prev[currentImage.filename] || [];
-      const nextPoints = typeof points === 'function' ? points(currentPoints) : points;
-      return { ...prev, [currentImage.filename]: nextPoints };
-    });
+    setPointsByImage((prev) => ({
+      ...prev,
+      [currentImage.filename]: points,
+    }));
   };
 
-  const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
-  const [currentMode, setCurrentMode] = useState<"image" | "map" | null>(null);
+  const [pendingPoint, setPendingPoint] = useState<{ id: string } | null>(null);
+  // The point the user clicked on the MAP (lat/lng). Kept separate from
+  // pendingPoint so the confirm button can depend on it directly.
+  const [mapPoint, setMapPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  
+
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
-  const REQUIRED_POINTS = 1;
-  const pointNumber = completedPoints.length + 1;
+  const totalCompleted = Object.values(pointsByImage).reduce(
+    (acc, pts) => acc + pts.length,
+    0,
+  );
 
-  const startNewPoint = (mode: "image" | "map") => {
-    if (completedPoints.length >= REQUIRED_POINTS) return;
-    if (pendingPoint) return;
-
-    setCurrentMode(mode);
-    setPendingPoint({
-      id: `point-${Date.now()}`,
-    });
-  };
-
-  const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (completedPoints.length >= REQUIRED_POINTS) return;
-    if (pendingPoint?.imageX && currentMode === "map") return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
-
-    setCurrentMode("map");
-    setPendingPoint({
-      id: `point-${Date.now()}`,
-      imageX: x,
-      imageY: y,
-    });
-  };
-
-  const handleMapPoint = (lat: number, lng: number) => {
-    if (!pendingPoint || currentMode !== "map") return;
-
-    setPendingPoint((prev) => {
-      if (!prev) return null;
-      return { ...prev, lat, lng };
-    });
-  };
-
+  // --- Flow: 1) select snapshot, 2) click a point on the MAP, 3) confirm ---
+  // The point on the PHOTO is ALWAYS the image center — we never ask the user
+  // to click the photo. We compute the center at confirm time.
+  // Clicking the MAP directly arms the pending point and stores its lat/lng,
+  // so no separate "arm" button is required.
   const handleMapClick = (lat: number, lng: number) => {
-    handleMapPoint(lat, lng);
+    if (imageHasPoint) return; // this snapshot already has its point
+    if (!pendingPoint) setPendingPoint({ id: `point-${Date.now()}` });
+    setMapPoint({ lat, lng });
   };
 
   const completePoint = (altitude: number = 0) => {
-    if (
-      !pendingPoint ||
-      !pendingPoint.imageX ||
-      !pendingPoint.imageY ||
-      !pendingPoint.lat ||
-      !pendingPoint.lng
-    ) {
-      alert("Требуются координаты на обеих сторонах");
+    if (!pendingPoint || !mapPoint || !currentImage) {
+      alert("Сначала выберите точку на карте");
       return;
     }
+    // The photo point is the center of the displayed image.
+    const rect = imageContainerRef.current?.getBoundingClientRect();
+    const cx = rect ? Math.round(rect.width / 2) : 0;
+    const cy = rect ? Math.round(rect.height / 2) : 0;
 
     const newPoint: CalibrationPoint = {
       id: pendingPoint.id,
-      imageX: pendingPoint.imageX,
-      imageY: pendingPoint.imageY,
-      lat: pendingPoint.lat,
-      lng: pendingPoint.lng,
+      imageX: cx,
+      imageY: cy,
+      lat: mapPoint.lat,
+      lng: mapPoint.lng,
       altitude,
     };
 
     setCompletedPoints([...completedPoints, newPoint]);
     setPendingPoint(null);
-    setCurrentMode(null);
+    setMapPoint(null);
   };
 
   const cancelPoint = () => {
     setPendingPoint(null);
-    setCurrentMode(null);
+    setMapPoint(null);
   };
 
-  const deletePoint = (index: number) => {
-    setCompletedPoints(completedPoints.filter((_, i) => i !== index));
-  };
-
-  const updatePointPosition = (id: string, x: number, y: number) => {
-    setCompletedPoints((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, imageX: x, imageY: y } : p)),
-    );
-  };
-
-  const updatePendingPointPosition = (x: number, y: number) => {
-    setPendingPoint((prev) => (prev ? { ...prev, imageX: x, imageY: y } : null));
+  const deletePoint = () => {
+    // Remove the (single) point for the currently selected snapshot.
+    setCompletedPoints([]);
   };
 
   const handleSaveGCP = async () => {
-    const incompleteImages = effectiveImages.filter(
-      (img) => (pointsByImage[img.filename]?.length || 0) !== REQUIRED_POINTS
-    );
-
-    if (incompleteImages.length > 0) {
-      alert(
-        `Пожалуйста, установите все ${REQUIRED_POINTS} контрольных точек для всех изображений. Осталось изображений: ${incompleteImages.length}`
-      );
+    if (totalCompleted !== REQUIRED_GCPS) {
+      alert(`Нужно установить ровно ${REQUIRED_GCPS} точек (по одной на снимок). Сейчас: ${totalCompleted}`);
       return;
     }
 
     if (projectId) {
       setIsSaving(true);
       setSaveError(null);
-
       try {
-        const payload = effectiveImages.map((img) => ({
-          image_filename: img.filename,
-          points: pointsByImage[img.filename].map((p) => ({
+        const payload = Object.entries(pointsByImage).map(([filename, pts]) => ({
+          image_filename: filename,
+          points: pts.map((p) => ({
             imageX: p.imageX,
             imageY: p.imageY,
             lat: p.lat,
@@ -191,59 +139,31 @@ export function CalibrationPointSelector({
             altitude: p.altitude,
           })),
         }));
-
         await saveAllGCPPoints(projectId, payload);
         onComplete();
       } catch (err) {
         setSaveError(err instanceof Error ? err.message : "Ошибка сохранения");
         setIsSaving(false);
       }
-    } else if (imageFilename) {
-      const gpcContent = generateGPCContent(completedPoints);
-      const element = document.createElement("a");
-      element.setAttribute(
-        "href",
-        "data:text/plain;charset=utf-8," + encodeURIComponent(gpcContent),
-      );
-      element.setAttribute("download", "calibration.gpc");
-      element.style.display = "none";
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
+    } else {
       onComplete();
     }
   };
 
-  const generateGPCContent = (
-    calibrationPoints: CalibrationPoint[],
-  ): string => {
-    let content = "+proj=utm +zone=37 +datum=WGS84\n";
-    content += `${imageFilename || "image.jpg"}\n`;
-    content += `${calibrationPoints.length}\n`;
-
-    calibrationPoints.forEach((point) => {
-      content += `${point.imageX.toFixed(6)} ${point.imageY.toFixed(6)} ${point.lng.toFixed(6)} ${point.lat.toFixed(6)} ${point.altitude.toFixed(2)}\n`;
-    });
-
-    return content;
-  };
-
   const getProgressText = () => {
-    const totalRequired = effectiveImages.length * REQUIRED_POINTS;
-    const totalCompleted = Object.values(pointsByImage).reduce((acc, pts) => acc + pts.length, 0);
-    
-    if (effectiveImages.length > 1) {
-      return `Кадр ${currentImageIndex + 1}/${effectiveImages.length} | Установите 1 точку близкую к центру (Всего: ${totalCompleted}/${totalRequired})`;
+    if (pendingPoint && !mapPoint) {
+      return `Точка ${totalCompleted + 1}/${REQUIRED_GCPS}: выберите точку на карте`;
     }
-
-    if (!pendingPoint) {
-      return `Установите точку близкую к центру`;
+    if (pendingPoint && mapPoint) {
+      return `Точка ${totalCompleted + 1}/${REQUIRED_GCPS}: подтвердите (точка на фото — в центре)`;
     }
-    if (!pendingPoint.imageX) {
-      return `Выберите точку на изображении`;
-    }
-    return `Выберите соответствующую точку на карте`;
+    return `Выберите снимок и поставьте точку на карте (${totalCompleted}/${REQUIRED_GCPS})`;
   };
+
+  // All collected GCPs as a flat list (for the side list).
+  const allPoints = effectiveImages
+    .map((img) => ({ img, pts: pointsByImage[img.filename] || [] }))
+    .filter((x) => x.pts.length > 0);
 
   return (
     <div className="fixed inset-0 z-[1200] bg-slate-50 flex flex-col">
@@ -251,7 +171,7 @@ export function CalibrationPointSelector({
         {/* Header */}
         <div className="bg-gradient-to-r from-primary to-secondary text-white p-5 flex justify-between items-center shrink-0">
           <div>
-            <h2 className="text-xl font-bold">Калибровка системы</h2>
+            <h2 className="text-xl font-bold">Калибровка системы (GCP)</h2>
             <p className="text-white/80 text-sm">{getProgressText()}</p>
           </div>
           <Button variant="ghost" onClick={onCancel} className="text-white hover:bg-white/10">
@@ -259,62 +179,55 @@ export function CalibrationPointSelector({
           </Button>
         </div>
 
-        {/* Content - Columns */}
+        {/* Content */}
         <div className="flex-1 flex gap-6 p-6 min-h-0">
-          {/* Column 0: Image Slider (only if multiple images) */}
+          {/* Column 0: snapshot strip */}
           {effectiveImages.length > 1 && (
-            <div className="w-24 flex flex-col gap-3 overflow-y-auto pr-2 border-r border-slate-100">
-              {effectiveImages.map((img, idx) => (
-                <button
-                  key={img.filename}
-                  onClick={() => {
-                    setCurrentImageIndex(idx);
-                    setPendingPoint(null);
-                    setCurrentMode(null);
-                  }}
-                  className={cn(
-                    "relative aspect-square rounded-lg overflow-hidden border-2 transition-all shrink-0",
-                    currentImageIndex === idx ? "border-primary ring-2 ring-primary/20" : "border-transparent hover:border-slate-300"
-                  )}
-                >
-                  <img src={img.url} className="w-full h-full object-cover" alt="" />
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[8px] py-0.5 text-center">
-                    {pointsByImage[img.filename]?.length || 0}/{REQUIRED_POINTS}
-                  </div>
-                </button>
-              ))}
+            <div className="w-28 flex flex-col gap-3 overflow-y-auto pr-2 border-r border-slate-100">
+              {effectiveImages.map((img, idx) => {
+                const done = (pointsByImage[img.filename]?.length || 0) >= 1;
+                return (
+                  <button
+                    key={img.filename}
+                    onClick={() => {
+                      setPendingPoint(null);
+                      setCurrentImageIndex(idx);
+                    }}
+                    className={cn(
+                      "relative aspect-square rounded-lg overflow-hidden border-2 transition-all shrink-0",
+                      currentImageIndex === idx
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-transparent hover:border-slate-300",
+                      done && "border-green-500",
+                    )}
+                  >
+                    <img src={img.url} className="w-full h-full object-cover" alt="" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[8px] py-0.5 text-center">
+                      {done ? "✓" : `${idx + 1}`}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
 
           <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
-            {/* Column 1: Image (Col 1-5) */}
+            {/* Column 1: Image (point is always at center) */}
             <div className="lg:col-span-5 flex flex-col min-h-0">
               <div className="mb-3 flex justify-between items-center">
                 <h3 className="text-sm font-semibold flex items-center gap-2 truncate">
                   📷 {currentImage?.filename || "Изображение"}
-                  {currentMode === "image" && (
-                    <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                  )}
                 </h3>
-                <div className="flex gap-2">
-                  <Button 
-                      variant={currentMode === "image" ? "default" : "outline"} 
-                      size="sm"
-                      onClick={() => startNewPoint("image")}
-                      disabled={!!pendingPoint || completedPoints.length >= REQUIRED_POINTS}
-                  >
-                      Добавить
-                  </Button>
-                </div>
+                {imageHasPoint && (
+                  <span className="text-[10px] text-green-600 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                    Готово
+                  </span>
+                )}
               </div>
 
               <div
                 ref={imageContainerRef}
-                onClick={handleImageClick}
-                className={cn(
-                  "relative rounded-xl overflow-hidden border-2 transition-all aspect-video lg:flex-1 bg-slate-100 shadow-inner",
-                  currentMode === "image" ? "border-primary cursor-crosshair ring-4 ring-primary/10" : "border-slate-200"
-                )}
+                className="relative rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-100 shadow-inner aspect-video lg:flex-1 pointer-events-none select-none"
               >
                 {currentImage && (
                   <img
@@ -324,160 +237,114 @@ export function CalibrationPointSelector({
                   />
                 )}
 
-                {/* Completed points on image - Draggable */}
-                <AnimatePresence>
-                  {completedPoints.map((point, idx) => (
-                    <motion.div
-                      key={point.id}
-                      drag
-                      dragConstraints={imageContainerRef}
-                      dragMomentum={false}
-                      onDragEnd={(_, info) => {
-                        const p = pointFromDragEvent(info, imageContainerRef);
-                        if (p) updatePointPosition(point.id, p.x, p.y);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ duration: 0 }}
-                      className="absolute w-8 h-8 rounded-full border-2 border-white bg-primary shadow-lg cursor-grab active:cursor-grabbing z-10 flex items-center justify-center text-white text-xs font-bold -ml-4 -mt-4"
-                      style={{
-                        left: point.imageX,
-                        top: point.imageY,
-                      }}
-                      title={`Точка ${idx + 1}`}
-                    >
-                      {idx + 1}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                {/* The photo point is ALWAYS at the center of the image. */}
+                <div
+                  className="absolute w-7 h-7 rounded-full border-2 border-white bg-primary shadow-lg flex items-center justify-center text-white text-xs font-bold -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: "50%", top: "50%" }}
+                  title="Точка на фото (центр)"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                </div>
 
-                {/* Pending point on image */}
-                {pendingPoint?.imageX && (
-                  <motion.div
-                    key={pendingPoint.id}
-                    drag
-                    dragConstraints={imageContainerRef}
-                    dragMomentum={false}
-                    onDragEnd={(_, info) => {
-                      const p = pointFromDragEvent(info, imageContainerRef);
-                      if (p) updatePendingPointPosition(p.x, p.y);
-                    }}
-                    animate={{ x: 0, y: 0 }}
-                    transition={{ duration: 0 }}
-                    className="absolute w-8 h-8 rounded-full border-2 border-amber-400 bg-amber-300 shadow-lg animate-pulse z-20 flex items-center justify-center text-amber-900 text-xs font-bold cursor-grab active:cursor-grabbing -ml-4 -mt-4"
-                    style={{
-                      left: pendingPoint.imageX,
-                      top: pendingPoint.imageY,
-                    }}
-                  >
-                    {pointNumber}
-                  </motion.div>
+                {/* Pending map point badge while choosing on map */}
+                {pendingPoint && (
+                  <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] px-2 py-1 rounded shadow">
+                    Выберите точку на карте →
+                  </div>
                 )}
               </div>
+              <p className="text-[10px] text-slate-400 mt-2 text-center">
+                Точка на фото фиксируется в центре кадра автоматически.
+              </p>
             </div>
 
-
-            {/* Column 2: Map (Col 6-9) */}
+            {/* Column 2: Map */}
             <div className="lg:col-span-4 flex flex-col min-h-0">
               <div className="mb-3 flex justify-between items-center">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   🗺️ Карта
-                  {currentMode === "map" && (
+                  {pendingPoint && (
                     <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
                   )}
                 </h3>
-                <Button 
-                  variant={currentMode === "map" ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => startNewPoint("map")}
-                  disabled={!!pendingPoint || completedPoints.length >= REQUIRED_POINTS}
-                >
-                  Найти
-                </Button>
               </div>
 
               <div className="relative aspect-video lg:flex-1 rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-100 shadow-inner">
                 <MapComponent
                   dronePosition={{ lat: 55.7558, lng: 37.6173 }}
                   followDrone={false}
-                  path={completedPoints.map((p) => ({
-                    lat: p.lat,
-                    lng: p.lng,
+                  path={allPoints.map((x) => ({
+                    lat: x.pts[0].lat,
+                    lng: x.pts[0].lng,
                   }))}
-                  onMapClick={
-                    currentMode === "map" && pendingPoint ? handleMapClick : undefined
-                  }
+                  onMapClick={handleMapClick}
                   selectedPoint={
-                    pendingPoint?.lat && pendingPoint?.lng
-                      ? { lat: pendingPoint.lat, lng: pendingPoint.lng }
-                      : undefined
+                    mapPoint
+                      ? { lat: mapPoint.lat, lng: mapPoint.lng }
+                      : completedPoints[0]
+                        ? { lat: completedPoints[0].lat, lng: completedPoints[0].lng }
+                        : undefined
                   }
                 />
               </div>
             </div>
 
-            {/* Column 3: Point List (Col 10-12) */}
+            {/* Column 3: collected points list */}
             <div className="lg:col-span-3 flex flex-col min-h-0 bg-slate-50 rounded-xl border border-slate-200 p-4">
-              <h3 className="text-sm font-semibold mb-3">Список точек</h3>
-              
-              <Reorder.Group 
-                axis="y" 
-                values={completedPoints} 
-                onReorder={setCompletedPoints}
-                className="flex-1 overflow-y-auto space-y-2 pr-1"
-              >
-                {completedPoints.map((point, idx) => (
-                  <Reorder.Item 
-                    key={point.id} 
-                    value={point}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm flex items-center gap-3 group hover:border-primary/50 transition-colors"
+              <h3 className="text-sm font-semibold mb-3">
+                Точки ({totalCompleted}/{REQUIRED_GCPS})
+              </h3>
+
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {allPoints.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-32 text-slate-400 text-center">
+                    <p className="text-xs">Точки ещё не добавлены</p>
+                  </div>
+                )}
+                {allPoints.map(({ img, pts }, i) => (
+                  <div
+                    key={img.filename}
+                    className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm"
                   >
-                    <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
-                      <GripVertical className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold text-sm text-slate-700">Точка {completedPoints.indexOf(point) + 1}</span>
-                        <button 
-                          onClick={() => deletePoint(completedPoints.indexOf(point))}
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-sm text-slate-700">Точка {i + 1}</span>
+                      {pts.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setCurrentImageIndex(
+                              effectiveImages.findIndex((e) => e.filename === img.filename),
+                            );
+                            deletePoint();
+                          }}
                           className="text-slate-300 hover:text-red-500 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-500 space-y-0.5">
-                        <p>IMG: {point.imageX.toFixed(0)}, {point.imageY.toFixed(0)}</p>
-                        <p>GPS: {point.lat.toFixed(5)}, {point.lng.toFixed(5)}</p>
-                      </div>
+                      )}
                     </div>
-                  </Reorder.Item>
-                ))}
-                {completedPoints.length === 0 && !pendingPoint && (
-                  <div className="flex flex-col items-center justify-center h-32 text-slate-400 text-center">
-                    <p className="text-xs">Точки еще не добавлены</p>
+                    <div className="text-[10px] font-mono text-slate-500 space-y-0.5">
+                      <p>IMG: {img.filename}</p>
+                      <p>GPS: {pts[0].lat.toFixed(5)}, {pts[0].lng.toFixed(5)}</p>
+                    </div>
                   </div>
-                )}
-              </Reorder.Group>
+                ))}
+              </div>
 
               {/* Pending point editor */}
               {pendingPoint && (
-                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg animate-in fade-in slide-in-from-bottom-2">
-                  <p className="text-xs font-bold text-amber-800 mb-2 uppercase tracking-wider">Новая точка {pointNumber}</p>
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs font-bold text-amber-800 mb-2 uppercase tracking-wider">
+                    Новая точка {totalCompleted + 1}
+                  </p>
                   <div className="space-y-1.5 mb-3 text-[10px] font-mono">
                     <div className="flex justify-between">
-                      <span className="text-amber-600">Пиксели:</span>
-                      <span className="font-bold">
-                        {pendingPoint.imageX ? `${pendingPoint.imageX.toFixed(0)}, ${pendingPoint.imageY?.toFixed(0)}` : "—"}
-                      </span>
+                      <span className="text-amber-600">Фото:</span>
+                      <span className="font-bold">центр</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-amber-600">GPS:</span>
                       <span className="font-bold">
-                        {pendingPoint.lat ? `${pendingPoint.lat.toFixed(5)}, ${pendingPoint.lng?.toFixed(5)}` : "—"}
+                        {mapPoint ? `${mapPoint.lat.toFixed(5)}, ${mapPoint.lng.toFixed(5)}` : "—"}
                       </span>
                     </div>
                   </div>
@@ -490,17 +357,19 @@ export function CalibrationPointSelector({
                     className="w-full mb-3 px-2 py-1.5 border border-amber-200 rounded bg-white text-xs focus:ring-1 focus:ring-amber-500 outline-none"
                   />
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="ghost" size="sm" onClick={cancelPoint} className="h-8 text-xs">Отмена</Button>
-                    <Button 
-                      size="sm" 
+                    <Button variant="ghost" size="sm" onClick={cancelPoint} className="h-8 text-xs">
+                      Отмена
+                    </Button>
+                    <Button
+                      size="sm"
                       onClick={() => {
                         const el = document.getElementById("altitude-input") as HTMLInputElement;
                         completePoint(parseFloat(el?.value || "0"));
                       }}
-                      disabled={!pendingPoint.imageX || !pendingPoint.lat}
+                      disabled={!mapPoint}
                       className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white"
                     >
-                      Готово
+                      Подтвердить
                     </Button>
                   </div>
                 </div>
@@ -512,11 +381,13 @@ export function CalibrationPointSelector({
         {/* Footer */}
         <div className="p-6 border-t bg-slate-50 flex flex-col items-center shrink-0">
           {saveError && (
-            <p className="text-[10px] text-red-500 mb-3 bg-red-50 p-2 rounded border border-red-100 max-w-md w-full">{saveError}</p>
+            <p className="text-[10px] text-red-500 mb-3 bg-red-50 p-2 rounded border border-red-100 max-w-md w-full">
+              {saveError}
+            </p>
           )}
           <Button
             onClick={handleSaveGCP}
-            disabled={(Object.values(pointsByImage).reduce((acc, pts) => acc + pts.length, 0) < (effectiveImages.length * REQUIRED_POINTS)) || isSaving}
+            disabled={totalCompleted < REQUIRED_GCPS || isSaving}
             className="w-full max-w-md gap-2 h-12 font-bold text-sm shadow-lg shadow-primary/20"
           >
             {isSaving ? (
@@ -524,10 +395,11 @@ export function CalibrationPointSelector({
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {isSaving ? "Сохранение..." : "Завершить калибровку"}
+            {isSaving ? "Сохранение..." : `Завершить (${totalCompleted}/${REQUIRED_GCPS})`}
           </Button>
           <p className="text-[10px] text-center text-slate-400 mt-3">
-            Необходимо установить по 1 точке для каждого изображения (минимум 5 изображений)
+            Выберите 5 снимков, для каждого поставьте точку на карте и подтвердите.
+            Точка на фото всегда в центре кадра.
           </p>
         </div>
       </div>

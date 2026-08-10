@@ -46,7 +46,7 @@ function toggleCameraFeed() {
     errEl.style.display = 'none';
     img.onerror = () => {
       setCamBadge('off');
-      errEl.textContent = 'Нет данных с камеры (/camera/image_raw не публикуется)';
+      errEl.textContent = 'Нет данных с камеры (/cam0/image_raw не публикуется)';
       errEl.style.display = 'block';
     };
     img.onload = () => {

@@ -611,7 +611,7 @@ input[type="text"]:focus { border-color: var(--blue); }
       <!-- ───── Camera Live View ───── -->
       <div class="card">
         <div class="card-header">
-          📷 Камера — /camera/image_raw (live)
+          📷 Камера — /cam0/image_raw (live)
           <span id="cam-feed-badge" class="badge badge-warn" style="margin-left:auto">OFF</span>
         </div>
         <div class="card-body col">
@@ -1556,7 +1556,7 @@ function toggleCameraFeed() {
     errEl.style.display = 'none';
     img.onerror = () => {
       setCamBadge('off');
-      errEl.textContent = 'Нет данных с камеры (/camera/image_raw не публикуется)';
+      errEl.textContent = 'Нет данных с камеры (/cam0/image_raw не публикуется)';
       errEl.style.display = 'block';
     };
     img.onload = () => {

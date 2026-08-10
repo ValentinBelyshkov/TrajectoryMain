@@ -98,16 +98,19 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
   }, [selectedFrame]);
 
   const handleFrameClick = (e: React.MouseEvent<HTMLDivElement>, frameIdx: number) => {
+    // Selecting a frame auto-places the photo point at the image center.
+    // The user never clicks the photo to set the point — they only click the
+    // map to place the GPS point, matching the documented calibration flow.
     setSelectedFrame(frameIdx);
+    setPixelPoint({ x: 50, y: 50 });
   };
 
   const confirmPoint = () => {
     if (selectedFrame === null || !pixelPoint || !gpsPoint) return;
-    const selectedFrameData = displayFrames[selectedFrame];
-    if (selectedFrameData && !selectedFrameData.pose) {
-      alert("Для выбранного кадра отсутствуют данные позы. Выберите другой кадр.");
-      return;
-    }
+    // Pose is authoritative from the session's frame_pose_data (the `frames`
+    // prop), which the backend uses to compute the transform. Do NOT block on
+    // the display list (procframe fallback) lacking a `pose` field — the
+    // backend re-validates and returns a clear error if a pose is truly missing.
     const newPoint: CorrelationPoint = {
       frame_idx: selectedFrame,
       pixel_x: pixelPoint.x,
@@ -130,7 +133,7 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="text-center">
             <h3 className="text-2xl font-bold text-foreground mb-2">Соотнесение (5 точек)</h3>
-            <p className="text-muted-foreground">Выберите точки на кадрах и на карте</p>
+            <p className="text-muted-foreground">Выберите фото, затем поставьте точку на карте и подтвердите</p>
           </div>
 
           <div className="flex gap-2 flex-wrap justify-center">
@@ -177,13 +180,7 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
                   <img
                     src={`/api/projects/${projectId}/procframe/${displayFrames[selectedFrame].frame}`}
                     alt={`Frame ${selectedFrame}`}
-                    className="w-full aspect-video object-contain border border-border rounded cursor-crosshair"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = ((e.clientX - rect.left) / rect.width) * 100;
-                      const y = ((e.clientY - rect.top) / rect.height) * 100;
-                      setPixelPoint({ x, y });
-                    }}
+                    className="w-full aspect-video object-contain border border-border rounded pointer-events-none select-none"
                   />
                   {pixelPoint && (
                     <div
@@ -203,13 +200,13 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
                 </div>
               </div>
               <div className="mt-4 flex gap-2">
-                <button
-                  onClick={confirmPoint}
-                  disabled={!pixelPoint || !gpsPoint || (selectedFrame !== null && !displayFrames[selectedFrame]?.pose)}
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  ✓ Подтвердить точку
-                </button>
+                  <button
+                    onClick={confirmPoint}
+                    disabled={selectedFrame === null || !pixelPoint || !gpsPoint}
+                    className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    ✓ Подтвердить точку
+                  </button>
                 <button onClick={() => { setSelectedFrame(null); setPixelPoint(null); setGpsPoint(null); }} className="px-4 py-2 border border-border rounded-lg hover:bg-slate-50 transition-colors">
                   Отмена
                 </button>
@@ -224,8 +221,7 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
                   <tr className="bg-slate-50 text-left text-muted-foreground">
                     <th className="p-2">#</th>
                     <th className="p-2">Frame</th>
-                    <th className="p-2">Pixel</th>
-                    <th className="p-2">GPS</th>
+                    <th className="p-2">GPS (lat, lon)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -233,8 +229,38 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
                     <tr key={i} className="border-t border-border">
                       <td className="p-2">{i + 1}</td>
                       <td className="p-2">Frame {p.frame_idx + 1}</td>
-                      <td className="p-2">({p.pixel_x.toFixed(1)}%, {p.pixel_y.toFixed(1)}%)</td>
-                      <td className="p-2">{p.lat.toFixed(6)}, {p.lon.toFixed(6)}</td>
+                      <td className="p-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="0.000001"
+                            value={p.lat}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value);
+                              if (!isNaN(v)) {
+                                setPoints((prev) =>
+                                  prev.map((pt, idx) => (idx === i ? { ...pt, lat: v } : pt))
+                                );
+                              }
+                            }}
+                            className="w-40 px-2 py-1 border border-border rounded text-xs"
+                          />
+                          <input
+                            type="number"
+                            step="0.000001"
+                            value={p.lon}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value);
+                              if (!isNaN(v)) {
+                                setPoints((prev) =>
+                                  prev.map((pt, idx) => (idx === i ? { ...pt, lon: v } : pt))
+                                );
+                              }
+                            }}
+                            className="w-40 px-2 py-1 border border-border rounded text-xs"
+                          />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

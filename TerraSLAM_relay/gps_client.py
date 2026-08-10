@@ -7,13 +7,11 @@ import numpy as np
 import rclpy
 from geometry_msgs.msg import PoseStamped
 from rclpy.node import Node
-from sensor_msgs.msg import NavSatFix, NavSatStatus
-from slam_msgs.msg import SlamInfo
 
-# Файл, который system_manager читает через GET /api/v1/slam/status
+# File that system_manager reads via GET /api/v1/slam/status
 STATUS_FILE = "/tmp/terraslam_slam_status"
 
-# Соответствие int-кода ORB-SLAM3 строковому имени состояния
+# Correspondence of ORB-SLAM3 int codes to string state names.
 TRACKING_STATE_NAMES = {
     -1: "UNKNOWN",
     0:  "NO_IMAGES_YET",
@@ -22,23 +20,26 @@ TRACKING_STATE_NAMES = {
     3:  "TRACKING_LOST",
 }
 
+# Filtered pose topic produced by the gps_filter component. We consume the
+# already-filtered stream so the UI status matches what reaches the hardware.
+FILTERED_POSE_TOPIC = "/orb_slam3/robot_pose_slam_filtered"
+
+
 class GcpRelay(Node):
     def __init__(self, path):
         super().__init__('gcp_relay')
-        self.pub = self.create_publisher(NavSatFix, '/camera/gps', 10)
-        # New ORB-SLAM3 wrapper publishes the live pose on /orb_slam3/robot_pose_slam
-        # (geometry_msgs/PoseStamped) and status on /orb_slam3/slam_info
-        # (slam_msgs/SlamInfo). The old /robot_pose_slam and /orb_slam3/tracking_state
-        # (Int8) topics no longer exist.
-        self.create_subscription(PoseStamped, '/orb_slam3/robot_pose_slam', self.on_pose, 10)
-        self.create_subscription(SlamInfo, '/orb_slam3/slam_info', self._cb_slam_info, 10)
+        # NOTE: this node no longer publishes /camera/gps — the gps_bridge
+        # component owns that ROS topic now. This node only derives the
+        # SLAM tracking status written to STATUS_FILE (consumed by
+        # GET /api/v1/slam/status).
+        self.create_subscription(PoseStamped, FILTERED_POSE_TOPIC, self.on_pose, 10)
 
-        # Внутреннее состояние для записи статуса
-        self._tracking_state: int = -1   # из /orb_slam3/slam_info
-        self._pose_state: int = -1       # выведенное из Pose-значений
-        self._last_pose_ts: float = 0.0  # время последнего сообщения с позой
+        # Internal state for status reporting.
+        self._tracking_state: int = -1   # from /orb_slam3/slam_info (unused here)
+        self._pose_state: int = -1       # derived from Pose values
+        self._last_pose_ts: float = 0.0  # time of last pose message
 
-        # Таймер: писать статус раз в секунду
+        # Timer: write status once per second.
         self.create_timer(1.0, self._write_status)
 
         pts = []
@@ -50,53 +51,21 @@ class GcpRelay(Node):
                 vals = line.split()
                 if len(vals) < 5:
                     continue
-                # Формат файла точно как у тебя:  x y z lon lat alt
                 px, py, pz = float(vals[0]), float(vals[1]), float(vals[2])
                 lon, lat = float(vals[3]), float(vals[4])
                 alt = float(vals[5]) if len(vals) >= 6 else 0.0
                 pts.append((px, py, lat, lon, alt))
 
         if len(pts) < 3:
-            raise ValueError(f"Нужно минимум 3 GCP точки, загружено {len(pts)}")
+            raise ValueError(f"Need at least 3 GCP points, loaded {len(pts)}")
 
-        self.get_logger().info(f"✅ Загружено {len(pts)} точек калибровки")
-
-        # Z полностью исключаем из расчета, он только портит результат
-        X = np.array([[px, py, 1.0] for px, py, _, _, _ in pts])
-        y_lat = np.array([p[2] for p in pts])
-        y_lon = np.array([p[3] for p in pts])
-
-        # Считаем оптимальное преобразование
-        self.a, residuals_lat, _, _ = np.linalg.lstsq(X, y_lat, rcond=None)
-        self.b, residuals_lon, _, _ = np.linalg.lstsq(X, y_lon, rcond=None)
-
-        # Самая полезная строчка для отладки
-        rmse_lat = np.sqrt(residuals_lat[0]/len(pts)) * 111111
-        rmse_lon = np.sqrt(residuals_lon[0]/len(pts)) * 111111 * np.cos(np.deg2rad(55.5))
-
-        self.get_logger().info(f"Средняя ошибка преобразования:")
-        self.get_logger().info(f"  Широта: {rmse_lat:.2f} м")
-        self.get_logger().info(f"  Долгота: {rmse_lon:.2f} м")
-
-        if rmse_lat > 0.5 or rmse_lon > 0.5:
-            self.get_logger().warn("⚠️ Большая ошибка! Проверь что ты не перепутал порядок координат в GPC файле")
-
-    def _cb_slam_info(self, msg: SlamInfo):
-        """Статус из /orb_slam3/slam_info (slam_msgs/SlamInfo). Явного
-        tracking-state там нет — выводим coarse-статус: OK при tracking_frequency>0,
-        RECENTLY_LOST при наличии карты, но нулевой частоте, иначе NOT_INITIALIZED."""
-        if msg.tracking_frequency > 0.1:
-            self._tracking_state = 2
-        elif msg.num_keyframes_in_current_map > 0:
-            self._tracking_state = 3
-        else:
-            self._tracking_state = 1
+        self.get_logger().info(f"Loaded {len(pts)} calibration points")
 
     def on_pose(self, msg: PoseStamped):
         x, y, z = msg.pose.position.x, msg.pose.position.y, msg.pose.position.z
         self._last_pose_ts = time.time()
 
-        # Декодируем специальные значения позы → состояние трекинга
+        # Decode special pose values -> tracking state.
         if abs(x + 3.0) < 0.01 and abs(y + 3.0) < 0.01 and abs(z + 3.0) < 0.01:
             self._pose_state = 3   # TRACKING_LOST
             return
@@ -109,32 +78,13 @@ class GcpRelay(Node):
 
         self._pose_state = 2   # OK
 
-        gps = NavSatFix()
-        gps.header.stamp = self.get_clock().now().to_msg()
-        gps.header.frame_id = 'map'
-        gps.status.status = NavSatStatus.STATUS_FIX
-
-        gps.latitude  = self.a[0] * x + self.a[1] * y + self.a[2]
-        gps.longitude = self.b[0] * x + self.b[1] * y + self.b[2]
-        gps.altitude  = z
-
-        gps.position_covariance_type = NavSatFix.COVARIANCE_TYPE_APPROXIMATED
-
-        self.pub.publish(gps)
-        self.get_logger().info(
-            f'ORB: {x:+.2f} {y:+.2f} {z:+.2f} | GPS: {gps.latitude:.7f} {gps.longitude:.7f}',
-            throttle_duration_sec=0.2
-        )
-
     def _write_status(self):
-        """Раз в секунду пишет состояние SLAM в /tmp/terraslam_slam_status.
-        Этот файл читает system_manager через GET /api/v1/slam/status."""
-        # Приоритет: Int8-топик, иначе — из Pose-значений
+        """Write SLAM state to /tmp/terraslam_slam_status once per second."""
         state = self._tracking_state if self._tracking_state != -1 else self._pose_state
         state_name = TRACKING_STATE_NAMES.get(state, "UNKNOWN")
         initialized = (state == 2)
 
-        # Если давно не приходила поза — помечаем NO_IMAGES
+        # If no pose has arrived for a while, flag NO_IMAGES.
         if self._last_pose_ts > 0 and (time.time() - self._last_pose_ts) > 5.0:
             state = 0
             state_name = "NO_IMAGES_YET"
@@ -161,6 +111,5 @@ def main(args=None):
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-

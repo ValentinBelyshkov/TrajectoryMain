@@ -14,8 +14,13 @@ export default defineConfig(({ mode }) => ({
     },
     proxy: {
       "/api": {
-        target: "http://localhost:9000",
+        target: "http://127.0.0.1:9000",
         changeOrigin: true,
+        // The video (and other) live streams use WebSocket upgrades under
+        // /api/video/ws/..., so the /api proxy must forward WS too. Without
+        // ws:true the upgrade falls through to plain HTTP and the stream never
+        // connects (the canvas keeps showing the "connect the drone" placeholder).
+        ws: true,
       },
       "/ws": {
         target: "http://localhost:9000",

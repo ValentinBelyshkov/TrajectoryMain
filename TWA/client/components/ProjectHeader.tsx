@@ -30,7 +30,7 @@ export function ProjectHeader({ project, onBack, onSettingsClick }: ProjectHeade
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <SystemStatus />
+        <SystemStatus projectId={project.id} />
         <button 
           onClick={onSettingsClick}
           className="p-2 hover:bg-muted rounded-lg transition-colors"

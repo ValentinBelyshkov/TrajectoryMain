@@ -44,7 +44,9 @@ start_backend() {
         return
     fi
     echo "Starting backend..."
-    nohup python3 "$BASE_DIR/TerraSLAM_relay/system_manager.py" >"$PID_DIR/backend.log" 2>&1 &
+    # Append (not truncate) so repeated restarts keep the traceback that causes
+    # the manager to crash — a bare ">" would hide the very error we need.
+    nohup python3 "$BASE_DIR/TerraSLAM_relay/system_manager.py" >>"$PID_DIR/backend.log" 2>&1 &
     echo $! > "$BACKEND_PID_FILE"
     sleep 2
     if test_port 9000; then

@@ -1,14 +1,6575 @@
 {
-  "id": "calib_20260809_152453_80794c",
-  "created_at": 1786278293,
-  "status": "processing",
+  "id": "calib_20260809_175127_de7715",
+  "created_at": 1786287087,
+  "status": "correlating",
   "video_path": null,
   "trimmed_video_path": null,
   "trim_segments": [],
   "project_id": "dea7a45f-ec4c-474e-88fe-f9909081a9e7",
   "frames_dir": "/opt/main/Trajectory/Database/projects/dea7a45f-ec4c-474e-88fe-f9909081a9e7/frames",
   "procframe_dir": "/opt/main/Trajectory/Database/projects/dea7a45f-ec4c-474e-88fe-f9909081a9e7/procframe",
-  "frame_pose_data": [],
+  "frame_pose_data": [
+    {
+      "frame": "frame_000001.jpg",
+      "pose_file": "frame_000001.txt",
+      "pose": {
+        "x": -0.007973,
+        "y": 0.015514,
+        "z": 0.019364
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000002.jpg",
+      "pose_file": "frame_000002.txt",
+      "pose": {
+        "x": -0.007973,
+        "y": 0.015514,
+        "z": 0.019364
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000003.jpg",
+      "pose_file": "frame_000003.txt",
+      "pose": {
+        "x": -0.007973,
+        "y": 0.015514,
+        "z": 0.019364
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000004.jpg",
+      "pose_file": "frame_000004.txt",
+      "pose": {
+        "x": -0.00973,
+        "y": 0.019117,
+        "z": 0.02184
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000005.jpg",
+      "pose_file": "frame_000005.txt",
+      "pose": {
+        "x": -0.00973,
+        "y": 0.019117,
+        "z": 0.02184
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000006.jpg",
+      "pose_file": "frame_000006.txt",
+      "pose": {
+        "x": -0.009225,
+        "y": 0.022502,
+        "z": 0.018762
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000007.jpg",
+      "pose_file": "frame_000007.txt",
+      "pose": {
+        "x": -0.009225,
+        "y": 0.022502,
+        "z": 0.018762
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000008.jpg",
+      "pose_file": "frame_000008.txt",
+      "pose": {
+        "x": -0.009803,
+        "y": 0.024823,
+        "z": 0.019574
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000009.jpg",
+      "pose_file": "frame_000009.txt",
+      "pose": {
+        "x": -0.010076,
+        "y": 0.02784,
+        "z": 0.021124
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000010.jpg",
+      "pose_file": "frame_000010.txt",
+      "pose": {
+        "x": -0.010408,
+        "y": 0.027623,
+        "z": 0.020736
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000011.jpg",
+      "pose_file": "frame_000011.txt",
+      "pose": {
+        "x": -0.010408,
+        "y": 0.027623,
+        "z": 0.020736
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000012.jpg",
+      "pose_file": "frame_000012.txt",
+      "pose": {
+        "x": -0.009676,
+        "y": 0.028803,
+        "z": 0.019879
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000013.jpg",
+      "pose_file": "frame_000013.txt",
+      "pose": {
+        "x": -0.009676,
+        "y": 0.028803,
+        "z": 0.019879
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000014.jpg",
+      "pose_file": "frame_000014.txt",
+      "pose": {
+        "x": -0.009967,
+        "y": 0.029986,
+        "z": 0.020277
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000015.jpg",
+      "pose_file": "frame_000015.txt",
+      "pose": {
+        "x": -0.008186,
+        "y": 0.030001,
+        "z": 0.015703
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000016.jpg",
+      "pose_file": "frame_000016.txt",
+      "pose": {
+        "x": -0.008186,
+        "y": 0.030001,
+        "z": 0.015703
+      },
+      "timestamp": 1786287098
+    },
+    {
+      "frame": "frame_000017.jpg",
+      "pose_file": "frame_000017.txt",
+      "pose": {
+        "x": -0.008685,
+        "y": 0.03458,
+        "z": 0.017133
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000018.jpg",
+      "pose_file": "frame_000018.txt",
+      "pose": {
+        "x": -0.00787,
+        "y": 0.035907,
+        "z": 0.015346
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000019.jpg",
+      "pose_file": "frame_000019.txt",
+      "pose": {
+        "x": -0.010468,
+        "y": 0.041619,
+        "z": 0.015493
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000020.jpg",
+      "pose_file": "frame_000020.txt",
+      "pose": {
+        "x": -0.010468,
+        "y": 0.041619,
+        "z": 0.015493
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000021.jpg",
+      "pose_file": "frame_000021.txt",
+      "pose": {
+        "x": -0.008428,
+        "y": 0.046357,
+        "z": 0.015078
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000022.jpg",
+      "pose_file": "frame_000022.txt",
+      "pose": {
+        "x": -0.009652,
+        "y": 0.047052,
+        "z": 0.014239
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000023.jpg",
+      "pose_file": "frame_000023.txt",
+      "pose": {
+        "x": -0.009652,
+        "y": 0.047052,
+        "z": 0.014239
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000024.jpg",
+      "pose_file": "frame_000024.txt",
+      "pose": {
+        "x": -0.010013,
+        "y": 0.047281,
+        "z": 0.014381
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000025.jpg",
+      "pose_file": "frame_000025.txt",
+      "pose": {
+        "x": -0.010074,
+        "y": 0.04721,
+        "z": 0.014215
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000026.jpg",
+      "pose_file": "frame_000026.txt",
+      "pose": {
+        "x": -0.010876,
+        "y": 0.046945,
+        "z": 0.014934
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000027.jpg",
+      "pose_file": "frame_000027.txt",
+      "pose": {
+        "x": -0.010876,
+        "y": 0.046945,
+        "z": 0.014934
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000028.jpg",
+      "pose_file": "frame_000028.txt",
+      "pose": {
+        "x": -0.011233,
+        "y": 0.048135,
+        "z": 0.014849
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000029.jpg",
+      "pose_file": "frame_000029.txt",
+      "pose": {
+        "x": -0.011233,
+        "y": 0.048135,
+        "z": 0.014849
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000030.jpg",
+      "pose_file": "frame_000030.txt",
+      "pose": {
+        "x": -0.012094,
+        "y": 0.049706,
+        "z": 0.014641
+      },
+      "timestamp": 1786287099
+    },
+    {
+      "frame": "frame_000031.jpg",
+      "pose_file": "frame_000031.txt",
+      "pose": {
+        "x": -0.013385,
+        "y": 0.050188,
+        "z": 0.014695
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000032.jpg",
+      "pose_file": "frame_000032.txt",
+      "pose": {
+        "x": -0.013517,
+        "y": 0.052286,
+        "z": 0.013787
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000033.jpg",
+      "pose_file": "frame_000033.txt",
+      "pose": {
+        "x": -0.013517,
+        "y": 0.052286,
+        "z": 0.013787
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000034.jpg",
+      "pose_file": "frame_000034.txt",
+      "pose": {
+        "x": -0.01447,
+        "y": 0.056088,
+        "z": 0.013496
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000035.jpg",
+      "pose_file": "frame_000035.txt",
+      "pose": {
+        "x": -0.01447,
+        "y": 0.056088,
+        "z": 0.013496
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000036.jpg",
+      "pose_file": "frame_000036.txt",
+      "pose": {
+        "x": -0.01447,
+        "y": 0.056088,
+        "z": 0.013496
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000037.jpg",
+      "pose_file": "frame_000037.txt",
+      "pose": {
+        "x": -0.014701,
+        "y": 0.05959,
+        "z": 0.013165
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000038.jpg",
+      "pose_file": "frame_000038.txt",
+      "pose": {
+        "x": -0.010153,
+        "y": 0.071736,
+        "z": 0.012519
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000039.jpg",
+      "pose_file": "frame_000039.txt",
+      "pose": {
+        "x": -0.010153,
+        "y": 0.071736,
+        "z": 0.012519
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000040.jpg",
+      "pose_file": "frame_000040.txt",
+      "pose": {
+        "x": -0.010468,
+        "y": 0.073283,
+        "z": 0.012533
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000041.jpg",
+      "pose_file": "frame_000041.txt",
+      "pose": {
+        "x": -0.010468,
+        "y": 0.073283,
+        "z": 0.012533
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000042.jpg",
+      "pose_file": "frame_000042.txt",
+      "pose": {
+        "x": -0.010219,
+        "y": 0.076313,
+        "z": 0.01259
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000043.jpg",
+      "pose_file": "frame_000043.txt",
+      "pose": {
+        "x": -0.008399,
+        "y": 0.080065,
+        "z": 0.009409
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000044.jpg",
+      "pose_file": "frame_000044.txt",
+      "pose": {
+        "x": -0.008399,
+        "y": 0.080065,
+        "z": 0.009409
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000045.jpg",
+      "pose_file": "frame_000045.txt",
+      "pose": {
+        "x": -0.008429,
+        "y": 0.08176,
+        "z": 0.008711
+      },
+      "timestamp": 1786287100
+    },
+    {
+      "frame": "frame_000046.jpg",
+      "pose_file": "frame_000046.txt",
+      "pose": {
+        "x": -0.009374,
+        "y": 0.08348,
+        "z": 0.009821
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000047.jpg",
+      "pose_file": "frame_000047.txt",
+      "pose": {
+        "x": -0.009374,
+        "y": 0.08348,
+        "z": 0.009821
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000048.jpg",
+      "pose_file": "frame_000048.txt",
+      "pose": {
+        "x": -0.009139,
+        "y": 0.084447,
+        "z": 0.009522
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000049.jpg",
+      "pose_file": "frame_000049.txt",
+      "pose": {
+        "x": -0.010103,
+        "y": 0.090731,
+        "z": 0.009253
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000050.jpg",
+      "pose_file": "frame_000050.txt",
+      "pose": {
+        "x": -0.010103,
+        "y": 0.090731,
+        "z": 0.009253
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000051.jpg",
+      "pose_file": "frame_000051.txt",
+      "pose": {
+        "x": -0.008249,
+        "y": 0.095093,
+        "z": 0.00782
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000052.jpg",
+      "pose_file": "frame_000052.txt",
+      "pose": {
+        "x": -0.01008,
+        "y": 0.095922,
+        "z": 0.009792
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000053.jpg",
+      "pose_file": "frame_000053.txt",
+      "pose": {
+        "x": -0.01008,
+        "y": 0.095922,
+        "z": 0.009792
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000054.jpg",
+      "pose_file": "frame_000054.txt",
+      "pose": {
+        "x": -0.011423,
+        "y": 0.102929,
+        "z": 0.012364
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000055.jpg",
+      "pose_file": "frame_000055.txt",
+      "pose": {
+        "x": -0.012244,
+        "y": 0.106952,
+        "z": 0.012437
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000056.jpg",
+      "pose_file": "frame_000056.txt",
+      "pose": {
+        "x": -0.010551,
+        "y": 0.110297,
+        "z": 0.010188
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000057.jpg",
+      "pose_file": "frame_000057.txt",
+      "pose": {
+        "x": -0.011456,
+        "y": 0.116053,
+        "z": 0.012208
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000058.jpg",
+      "pose_file": "frame_000058.txt",
+      "pose": {
+        "x": -0.01155,
+        "y": 0.12677,
+        "z": 0.010787
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000059.jpg",
+      "pose_file": "frame_000059.txt",
+      "pose": {
+        "x": -0.01155,
+        "y": 0.12677,
+        "z": 0.010787
+      },
+      "timestamp": 1786287101
+    },
+    {
+      "frame": "frame_000060.jpg",
+      "pose_file": "frame_000060.txt",
+      "pose": {
+        "x": -0.012596,
+        "y": 0.127895,
+        "z": 0.010937
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000061.jpg",
+      "pose_file": "frame_000061.txt",
+      "pose": {
+        "x": -0.012596,
+        "y": 0.127895,
+        "z": 0.010937
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000062.jpg",
+      "pose_file": "frame_000062.txt",
+      "pose": {
+        "x": -0.012596,
+        "y": 0.127895,
+        "z": 0.010937
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000063.jpg",
+      "pose_file": "frame_000063.txt",
+      "pose": {
+        "x": -0.013245,
+        "y": 0.129633,
+        "z": 0.010678
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000064.jpg",
+      "pose_file": "frame_000064.txt",
+      "pose": {
+        "x": -0.013245,
+        "y": 0.129633,
+        "z": 0.010678
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000065.jpg",
+      "pose_file": "frame_000065.txt",
+      "pose": {
+        "x": -0.017903,
+        "y": 0.136767,
+        "z": 0.013494
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000066.jpg",
+      "pose_file": "frame_000066.txt",
+      "pose": {
+        "x": -0.017903,
+        "y": 0.136767,
+        "z": 0.013494
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000067.jpg",
+      "pose_file": "frame_000067.txt",
+      "pose": {
+        "x": -0.017903,
+        "y": 0.136767,
+        "z": 0.013494
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000068.jpg",
+      "pose_file": "frame_000068.txt",
+      "pose": {
+        "x": -0.020551,
+        "y": 0.140758,
+        "z": 0.013771
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000069.jpg",
+      "pose_file": "frame_000069.txt",
+      "pose": {
+        "x": -0.020551,
+        "y": 0.140758,
+        "z": 0.013771
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000070.jpg",
+      "pose_file": "frame_000070.txt",
+      "pose": {
+        "x": -0.020551,
+        "y": 0.140758,
+        "z": 0.013771
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000071.jpg",
+      "pose_file": "frame_000071.txt",
+      "pose": {
+        "x": -0.019674,
+        "y": 0.143338,
+        "z": 0.01401
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000072.jpg",
+      "pose_file": "frame_000072.txt",
+      "pose": {
+        "x": -0.019674,
+        "y": 0.143338,
+        "z": 0.01401
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000073.jpg",
+      "pose_file": "frame_000073.txt",
+      "pose": {
+        "x": -0.021545,
+        "y": 0.148153,
+        "z": 0.013933
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000074.jpg",
+      "pose_file": "frame_000074.txt",
+      "pose": {
+        "x": -0.021545,
+        "y": 0.148153,
+        "z": 0.013933
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000075.jpg",
+      "pose_file": "frame_000075.txt",
+      "pose": {
+        "x": -0.015733,
+        "y": 0.152527,
+        "z": 0.012825
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000076.jpg",
+      "pose_file": "frame_000076.txt",
+      "pose": {
+        "x": -0.015733,
+        "y": 0.152527,
+        "z": 0.012825
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000077.jpg",
+      "pose_file": "frame_000077.txt",
+      "pose": {
+        "x": -0.01435,
+        "y": 0.155172,
+        "z": 0.01092
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000078.jpg",
+      "pose_file": "frame_000078.txt",
+      "pose": {
+        "x": -0.014631,
+        "y": 0.162762,
+        "z": 0.011078
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000079.jpg",
+      "pose_file": "frame_000079.txt",
+      "pose": {
+        "x": -0.014631,
+        "y": 0.162762,
+        "z": 0.011078
+      },
+      "timestamp": 1786287102
+    },
+    {
+      "frame": "frame_000080.jpg",
+      "pose_file": "frame_000080.txt",
+      "pose": {
+        "x": -0.015918,
+        "y": 0.164793,
+        "z": 0.012517
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000081.jpg",
+      "pose_file": "frame_000081.txt",
+      "pose": {
+        "x": -0.015918,
+        "y": 0.164793,
+        "z": 0.012517
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000082.jpg",
+      "pose_file": "frame_000082.txt",
+      "pose": {
+        "x": -0.015425,
+        "y": 0.168235,
+        "z": 0.011583
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000083.jpg",
+      "pose_file": "frame_000083.txt",
+      "pose": {
+        "x": -0.016141,
+        "y": 0.168864,
+        "z": 0.012318
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000084.jpg",
+      "pose_file": "frame_000084.txt",
+      "pose": {
+        "x": -0.016141,
+        "y": 0.168864,
+        "z": 0.012318
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000085.jpg",
+      "pose_file": "frame_000085.txt",
+      "pose": {
+        "x": -0.016141,
+        "y": 0.168864,
+        "z": 0.012318
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000086.jpg",
+      "pose_file": "frame_000086.txt",
+      "pose": {
+        "x": -0.017023,
+        "y": 0.169972,
+        "z": 0.012534
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000087.jpg",
+      "pose_file": "frame_000087.txt",
+      "pose": {
+        "x": -0.017168,
+        "y": 0.170095,
+        "z": 0.012655
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000088.jpg",
+      "pose_file": "frame_000088.txt",
+      "pose": {
+        "x": -0.017168,
+        "y": 0.170095,
+        "z": 0.012655
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000089.jpg",
+      "pose_file": "frame_000089.txt",
+      "pose": {
+        "x": -0.017001,
+        "y": 0.170071,
+        "z": 0.012411
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000090.jpg",
+      "pose_file": "frame_000090.txt",
+      "pose": {
+        "x": -0.017001,
+        "y": 0.170071,
+        "z": 0.012411
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000091.jpg",
+      "pose_file": "frame_000091.txt",
+      "pose": {
+        "x": -0.016839,
+        "y": 0.166198,
+        "z": 0.01254
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000092.jpg",
+      "pose_file": "frame_000092.txt",
+      "pose": {
+        "x": -0.01739,
+        "y": 0.166787,
+        "z": 0.01319
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000093.jpg",
+      "pose_file": "frame_000093.txt",
+      "pose": {
+        "x": -0.01739,
+        "y": 0.166787,
+        "z": 0.01319
+      },
+      "timestamp": 1786287103
+    },
+    {
+      "frame": "frame_000094.jpg",
+      "pose_file": "frame_000094.txt",
+      "pose": {
+        "x": -0.017956,
+        "y": 0.165899,
+        "z": 0.013443
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000095.jpg",
+      "pose_file": "frame_000095.txt",
+      "pose": {
+        "x": -0.018324,
+        "y": 0.165765,
+        "z": 0.013674
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000096.jpg",
+      "pose_file": "frame_000096.txt",
+      "pose": {
+        "x": -0.018602,
+        "y": 0.166028,
+        "z": 0.013519
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000097.jpg",
+      "pose_file": "frame_000097.txt",
+      "pose": {
+        "x": -0.019214,
+        "y": 0.166542,
+        "z": 0.013401
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000098.jpg",
+      "pose_file": "frame_000098.txt",
+      "pose": {
+        "x": -0.019618,
+        "y": 0.16492,
+        "z": 0.014328
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000099.jpg",
+      "pose_file": "frame_000099.txt",
+      "pose": {
+        "x": -0.019618,
+        "y": 0.16492,
+        "z": 0.014328
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000100.jpg",
+      "pose_file": "frame_000100.txt",
+      "pose": {
+        "x": -0.019307,
+        "y": 0.165408,
+        "z": 0.013816
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000101.jpg",
+      "pose_file": "frame_000101.txt",
+      "pose": {
+        "x": -0.019307,
+        "y": 0.165408,
+        "z": 0.013816
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000102.jpg",
+      "pose_file": "frame_000102.txt",
+      "pose": {
+        "x": -0.019598,
+        "y": 0.165107,
+        "z": 0.014088
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000103.jpg",
+      "pose_file": "frame_000103.txt",
+      "pose": {
+        "x": -0.01994,
+        "y": 0.165196,
+        "z": 0.014027
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000104.jpg",
+      "pose_file": "frame_000104.txt",
+      "pose": {
+        "x": -0.01994,
+        "y": 0.165196,
+        "z": 0.014027
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000105.jpg",
+      "pose_file": "frame_000105.txt",
+      "pose": {
+        "x": -0.01994,
+        "y": 0.165196,
+        "z": 0.014027
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000106.jpg",
+      "pose_file": "frame_000106.txt",
+      "pose": {
+        "x": -0.020199,
+        "y": 0.168249,
+        "z": 0.015219
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000107.jpg",
+      "pose_file": "frame_000107.txt",
+      "pose": {
+        "x": -0.020543,
+        "y": 0.168327,
+        "z": 0.015404
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000108.jpg",
+      "pose_file": "frame_000108.txt",
+      "pose": {
+        "x": -0.020543,
+        "y": 0.168327,
+        "z": 0.015404
+      },
+      "timestamp": 1786287104
+    },
+    {
+      "frame": "frame_000109.jpg",
+      "pose_file": "frame_000109.txt",
+      "pose": {
+        "x": -0.020034,
+        "y": 0.168587,
+        "z": 0.014233
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000110.jpg",
+      "pose_file": "frame_000110.txt",
+      "pose": {
+        "x": -0.020034,
+        "y": 0.168587,
+        "z": 0.014233
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000111.jpg",
+      "pose_file": "frame_000111.txt",
+      "pose": {
+        "x": -0.020092,
+        "y": 0.168338,
+        "z": 0.013891
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000112.jpg",
+      "pose_file": "frame_000112.txt",
+      "pose": {
+        "x": -0.02058,
+        "y": 0.168459,
+        "z": 0.014231
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000113.jpg",
+      "pose_file": "frame_000113.txt",
+      "pose": {
+        "x": -0.020304,
+        "y": 0.169397,
+        "z": 0.014031
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000114.jpg",
+      "pose_file": "frame_000114.txt",
+      "pose": {
+        "x": -0.020328,
+        "y": 0.168982,
+        "z": 0.013934
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000115.jpg",
+      "pose_file": "frame_000115.txt",
+      "pose": {
+        "x": -0.020328,
+        "y": 0.168982,
+        "z": 0.013934
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000116.jpg",
+      "pose_file": "frame_000116.txt",
+      "pose": {
+        "x": -0.020407,
+        "y": 0.169067,
+        "z": 0.013846
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000117.jpg",
+      "pose_file": "frame_000117.txt",
+      "pose": {
+        "x": -0.020185,
+        "y": 0.168825,
+        "z": 0.013537
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000118.jpg",
+      "pose_file": "frame_000118.txt",
+      "pose": {
+        "x": -0.020185,
+        "y": 0.168825,
+        "z": 0.013537
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000119.jpg",
+      "pose_file": "frame_000119.txt",
+      "pose": {
+        "x": -0.020518,
+        "y": 0.168119,
+        "z": 0.014086
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000120.jpg",
+      "pose_file": "frame_000120.txt",
+      "pose": {
+        "x": -0.020518,
+        "y": 0.168119,
+        "z": 0.014086
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000121.jpg",
+      "pose_file": "frame_000121.txt",
+      "pose": {
+        "x": -0.020619,
+        "y": 0.166348,
+        "z": 0.013975
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000122.jpg",
+      "pose_file": "frame_000122.txt",
+      "pose": {
+        "x": -0.020619,
+        "y": 0.166348,
+        "z": 0.013975
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000123.jpg",
+      "pose_file": "frame_000123.txt",
+      "pose": {
+        "x": -0.020905,
+        "y": 0.165602,
+        "z": 0.014161
+      },
+      "timestamp": 1786287105
+    },
+    {
+      "frame": "frame_000124.jpg",
+      "pose_file": "frame_000124.txt",
+      "pose": {
+        "x": -0.021356,
+        "y": 0.165125,
+        "z": 0.014322
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000125.jpg",
+      "pose_file": "frame_000125.txt",
+      "pose": {
+        "x": -0.020983,
+        "y": 0.166429,
+        "z": 0.014136
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000126.jpg",
+      "pose_file": "frame_000126.txt",
+      "pose": {
+        "x": -0.020983,
+        "y": 0.166429,
+        "z": 0.014136
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000127.jpg",
+      "pose_file": "frame_000127.txt",
+      "pose": {
+        "x": -0.020817,
+        "y": 0.16583,
+        "z": 0.014263
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000128.jpg",
+      "pose_file": "frame_000128.txt",
+      "pose": {
+        "x": -0.021445,
+        "y": 0.164239,
+        "z": 0.014762
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000129.jpg",
+      "pose_file": "frame_000129.txt",
+      "pose": {
+        "x": -0.021445,
+        "y": 0.164239,
+        "z": 0.014762
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000130.jpg",
+      "pose_file": "frame_000130.txt",
+      "pose": {
+        "x": -0.021445,
+        "y": 0.164239,
+        "z": 0.014762
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000131.jpg",
+      "pose_file": "frame_000131.txt",
+      "pose": {
+        "x": -0.021333,
+        "y": 0.16359,
+        "z": 0.014829
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000132.jpg",
+      "pose_file": "frame_000132.txt",
+      "pose": {
+        "x": -0.021333,
+        "y": 0.16359,
+        "z": 0.014829
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000133.jpg",
+      "pose_file": "frame_000133.txt",
+      "pose": {
+        "x": -0.022632,
+        "y": 0.161901,
+        "z": 0.013926
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000134.jpg",
+      "pose_file": "frame_000134.txt",
+      "pose": {
+        "x": -0.022632,
+        "y": 0.161901,
+        "z": 0.013926
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000135.jpg",
+      "pose_file": "frame_000135.txt",
+      "pose": {
+        "x": -0.022704,
+        "y": 0.161353,
+        "z": 0.013832
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000136.jpg",
+      "pose_file": "frame_000136.txt",
+      "pose": {
+        "x": -0.022704,
+        "y": 0.161353,
+        "z": 0.013832
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000137.jpg",
+      "pose_file": "frame_000137.txt",
+      "pose": {
+        "x": -0.023183,
+        "y": 0.157426,
+        "z": 0.013465
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000138.jpg",
+      "pose_file": "frame_000138.txt",
+      "pose": {
+        "x": -0.023183,
+        "y": 0.157426,
+        "z": 0.013465
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000139.jpg",
+      "pose_file": "frame_000139.txt",
+      "pose": {
+        "x": -0.023183,
+        "y": 0.157426,
+        "z": 0.013465
+      },
+      "timestamp": 1786287106
+    },
+    {
+      "frame": "frame_000140.jpg",
+      "pose_file": "frame_000140.txt",
+      "pose": {
+        "x": -0.023118,
+        "y": 0.154398,
+        "z": 0.012591
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000141.jpg",
+      "pose_file": "frame_000141.txt",
+      "pose": {
+        "x": -0.023454,
+        "y": 0.152775,
+        "z": 0.013038
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000142.jpg",
+      "pose_file": "frame_000142.txt",
+      "pose": {
+        "x": -0.023454,
+        "y": 0.152775,
+        "z": 0.013038
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000143.jpg",
+      "pose_file": "frame_000143.txt",
+      "pose": {
+        "x": -0.023463,
+        "y": 0.151335,
+        "z": 0.012208
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000144.jpg",
+      "pose_file": "frame_000144.txt",
+      "pose": {
+        "x": -0.023294,
+        "y": 0.150487,
+        "z": 0.011909
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000145.jpg",
+      "pose_file": "frame_000145.txt",
+      "pose": {
+        "x": -0.023294,
+        "y": 0.150487,
+        "z": 0.011909
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000146.jpg",
+      "pose_file": "frame_000146.txt",
+      "pose": {
+        "x": -0.022748,
+        "y": 0.149844,
+        "z": 0.012164
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000147.jpg",
+      "pose_file": "frame_000147.txt",
+      "pose": {
+        "x": -0.023641,
+        "y": 0.146992,
+        "z": 0.011152
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000148.jpg",
+      "pose_file": "frame_000148.txt",
+      "pose": {
+        "x": -0.023709,
+        "y": 0.146714,
+        "z": 0.011317
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000149.jpg",
+      "pose_file": "frame_000149.txt",
+      "pose": {
+        "x": -0.023602,
+        "y": 0.142545,
+        "z": 0.010083
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000150.jpg",
+      "pose_file": "frame_000150.txt",
+      "pose": {
+        "x": -0.023429,
+        "y": 0.14216,
+        "z": 0.009827
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000151.jpg",
+      "pose_file": "frame_000151.txt",
+      "pose": {
+        "x": -0.023335,
+        "y": 0.14126,
+        "z": 0.00939
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000152.jpg",
+      "pose_file": "frame_000152.txt",
+      "pose": {
+        "x": -0.023335,
+        "y": 0.14126,
+        "z": 0.00939
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000153.jpg",
+      "pose_file": "frame_000153.txt",
+      "pose": {
+        "x": -0.02369,
+        "y": 0.143533,
+        "z": 0.010321
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000154.jpg",
+      "pose_file": "frame_000154.txt",
+      "pose": {
+        "x": -0.02369,
+        "y": 0.143533,
+        "z": 0.010321
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000155.jpg",
+      "pose_file": "frame_000155.txt",
+      "pose": {
+        "x": -0.024327,
+        "y": 0.141315,
+        "z": 0.010018
+      },
+      "timestamp": 1786287107
+    },
+    {
+      "frame": "frame_000156.jpg",
+      "pose_file": "frame_000156.txt",
+      "pose": {
+        "x": -0.024327,
+        "y": 0.141315,
+        "z": 0.010018
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000157.jpg",
+      "pose_file": "frame_000157.txt",
+      "pose": {
+        "x": -0.024335,
+        "y": 0.141085,
+        "z": 0.010228
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000158.jpg",
+      "pose_file": "frame_000158.txt",
+      "pose": {
+        "x": -0.024116,
+        "y": 0.141384,
+        "z": 0.010105
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000159.jpg",
+      "pose_file": "frame_000159.txt",
+      "pose": {
+        "x": -0.024746,
+        "y": 0.140235,
+        "z": 0.010664
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000160.jpg",
+      "pose_file": "frame_000160.txt",
+      "pose": {
+        "x": -0.024746,
+        "y": 0.140235,
+        "z": 0.010664
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000161.jpg",
+      "pose_file": "frame_000161.txt",
+      "pose": {
+        "x": -0.024809,
+        "y": 0.139943,
+        "z": 0.011084
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000162.jpg",
+      "pose_file": "frame_000162.txt",
+      "pose": {
+        "x": -0.024809,
+        "y": 0.139943,
+        "z": 0.011084
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000163.jpg",
+      "pose_file": "frame_000163.txt",
+      "pose": {
+        "x": -0.023732,
+        "y": 0.140237,
+        "z": 0.009417
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000164.jpg",
+      "pose_file": "frame_000164.txt",
+      "pose": {
+        "x": -0.023611,
+        "y": 0.14058,
+        "z": 0.009041
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000165.jpg",
+      "pose_file": "frame_000165.txt",
+      "pose": {
+        "x": -0.023611,
+        "y": 0.14058,
+        "z": 0.009041
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000166.jpg",
+      "pose_file": "frame_000166.txt",
+      "pose": {
+        "x": -0.023008,
+        "y": 0.141155,
+        "z": 0.008374
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000167.jpg",
+      "pose_file": "frame_000167.txt",
+      "pose": {
+        "x": -0.023008,
+        "y": 0.141155,
+        "z": 0.008374
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000168.jpg",
+      "pose_file": "frame_000168.txt",
+      "pose": {
+        "x": -0.023577,
+        "y": 0.141961,
+        "z": 0.009073
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000169.jpg",
+      "pose_file": "frame_000169.txt",
+      "pose": {
+        "x": -0.023973,
+        "y": 0.142212,
+        "z": 0.00954
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000170.jpg",
+      "pose_file": "frame_000170.txt",
+      "pose": {
+        "x": -0.023973,
+        "y": 0.142212,
+        "z": 0.00954
+      },
+      "timestamp": 1786287108
+    },
+    {
+      "frame": "frame_000171.jpg",
+      "pose_file": "frame_000171.txt",
+      "pose": {
+        "x": -0.023372,
+        "y": 0.142969,
+        "z": 0.009572
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000172.jpg",
+      "pose_file": "frame_000172.txt",
+      "pose": {
+        "x": -0.02365,
+        "y": 0.144801,
+        "z": 0.008759
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000173.jpg",
+      "pose_file": "frame_000173.txt",
+      "pose": {
+        "x": -0.02365,
+        "y": 0.144801,
+        "z": 0.008759
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000174.jpg",
+      "pose_file": "frame_000174.txt",
+      "pose": {
+        "x": -0.023879,
+        "y": 0.145384,
+        "z": 0.009734
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000175.jpg",
+      "pose_file": "frame_000175.txt",
+      "pose": {
+        "x": -0.023194,
+        "y": 0.146993,
+        "z": 0.009417
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000176.jpg",
+      "pose_file": "frame_000176.txt",
+      "pose": {
+        "x": -0.023194,
+        "y": 0.146993,
+        "z": 0.009417
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000177.jpg",
+      "pose_file": "frame_000177.txt",
+      "pose": {
+        "x": -0.023194,
+        "y": 0.146993,
+        "z": 0.009417
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000178.jpg",
+      "pose_file": "frame_000178.txt",
+      "pose": {
+        "x": -0.023289,
+        "y": 0.147941,
+        "z": 0.009217
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000179.jpg",
+      "pose_file": "frame_000179.txt",
+      "pose": {
+        "x": -0.023107,
+        "y": 0.14894,
+        "z": 0.009261
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000180.jpg",
+      "pose_file": "frame_000180.txt",
+      "pose": {
+        "x": -0.023107,
+        "y": 0.14894,
+        "z": 0.009261
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000181.jpg",
+      "pose_file": "frame_000181.txt",
+      "pose": {
+        "x": -0.023107,
+        "y": 0.14894,
+        "z": 0.009261
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000182.jpg",
+      "pose_file": "frame_000182.txt",
+      "pose": {
+        "x": -0.023753,
+        "y": 0.151841,
+        "z": 0.010309
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000183.jpg",
+      "pose_file": "frame_000183.txt",
+      "pose": {
+        "x": -0.023753,
+        "y": 0.151841,
+        "z": 0.010309
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000184.jpg",
+      "pose_file": "frame_000184.txt",
+      "pose": {
+        "x": -0.022901,
+        "y": 0.156552,
+        "z": 0.010374
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000185.jpg",
+      "pose_file": "frame_000185.txt",
+      "pose": {
+        "x": -0.022901,
+        "y": 0.156552,
+        "z": 0.010374
+      },
+      "timestamp": 1786287109
+    },
+    {
+      "frame": "frame_000186.jpg",
+      "pose_file": "frame_000186.txt",
+      "pose": {
+        "x": -0.023023,
+        "y": 0.157522,
+        "z": 0.01039
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000187.jpg",
+      "pose_file": "frame_000187.txt",
+      "pose": {
+        "x": -0.022431,
+        "y": 0.160135,
+        "z": 0.009403
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000188.jpg",
+      "pose_file": "frame_000188.txt",
+      "pose": {
+        "x": -0.022431,
+        "y": 0.160135,
+        "z": 0.009403
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000189.jpg",
+      "pose_file": "frame_000189.txt",
+      "pose": {
+        "x": -0.021975,
+        "y": 0.161085,
+        "z": 0.009252
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000190.jpg",
+      "pose_file": "frame_000190.txt",
+      "pose": {
+        "x": -0.021645,
+        "y": 0.163523,
+        "z": 0.009487
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000191.jpg",
+      "pose_file": "frame_000191.txt",
+      "pose": {
+        "x": -0.020587,
+        "y": 0.170329,
+        "z": 0.008524
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000192.jpg",
+      "pose_file": "frame_000192.txt",
+      "pose": {
+        "x": -0.020587,
+        "y": 0.170329,
+        "z": 0.008524
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000193.jpg",
+      "pose_file": "frame_000193.txt",
+      "pose": {
+        "x": -0.020177,
+        "y": 0.178748,
+        "z": 0.008604
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000194.jpg",
+      "pose_file": "frame_000194.txt",
+      "pose": {
+        "x": -0.020731,
+        "y": 0.180187,
+        "z": 0.008655
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000195.jpg",
+      "pose_file": "frame_000195.txt",
+      "pose": {
+        "x": -0.020731,
+        "y": 0.180187,
+        "z": 0.008655
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000196.jpg",
+      "pose_file": "frame_000196.txt",
+      "pose": {
+        "x": -0.019259,
+        "y": 0.183223,
+        "z": 0.007285
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000197.jpg",
+      "pose_file": "frame_000197.txt",
+      "pose": {
+        "x": -0.019106,
+        "y": 0.184926,
+        "z": 0.007486
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000198.jpg",
+      "pose_file": "frame_000198.txt",
+      "pose": {
+        "x": -0.017563,
+        "y": 0.188278,
+        "z": 0.005498
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000199.jpg",
+      "pose_file": "frame_000199.txt",
+      "pose": {
+        "x": -0.017563,
+        "y": 0.188278,
+        "z": 0.005498
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000200.jpg",
+      "pose_file": "frame_000200.txt",
+      "pose": {
+        "x": -0.018998,
+        "y": 0.188783,
+        "z": 0.007433
+      },
+      "timestamp": 1786287110
+    },
+    {
+      "frame": "frame_000201.jpg",
+      "pose_file": "frame_000201.txt",
+      "pose": {
+        "x": -0.018998,
+        "y": 0.188783,
+        "z": 0.007433
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000202.jpg",
+      "pose_file": "frame_000202.txt",
+      "pose": {
+        "x": -0.018059,
+        "y": 0.192762,
+        "z": 0.006209
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000203.jpg",
+      "pose_file": "frame_000203.txt",
+      "pose": {
+        "x": -0.017144,
+        "y": 0.19933,
+        "z": 0.005191
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000204.jpg",
+      "pose_file": "frame_000204.txt",
+      "pose": {
+        "x": -0.017144,
+        "y": 0.19933,
+        "z": 0.005191
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000205.jpg",
+      "pose_file": "frame_000205.txt",
+      "pose": {
+        "x": -0.01824,
+        "y": 0.20052,
+        "z": 0.006936
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000206.jpg",
+      "pose_file": "frame_000206.txt",
+      "pose": {
+        "x": -0.01824,
+        "y": 0.20052,
+        "z": 0.006936
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000207.jpg",
+      "pose_file": "frame_000207.txt",
+      "pose": {
+        "x": -0.017158,
+        "y": 0.206721,
+        "z": 0.005702
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000208.jpg",
+      "pose_file": "frame_000208.txt",
+      "pose": {
+        "x": -0.017158,
+        "y": 0.206721,
+        "z": 0.005702
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000209.jpg",
+      "pose_file": "frame_000209.txt",
+      "pose": {
+        "x": -0.016437,
+        "y": 0.209726,
+        "z": 0.005743
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000210.jpg",
+      "pose_file": "frame_000210.txt",
+      "pose": {
+        "x": -0.01686,
+        "y": 0.211633,
+        "z": 0.006822
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000211.jpg",
+      "pose_file": "frame_000211.txt",
+      "pose": {
+        "x": -0.016414,
+        "y": 0.213606,
+        "z": 0.006316
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000212.jpg",
+      "pose_file": "frame_000212.txt",
+      "pose": {
+        "x": -0.016414,
+        "y": 0.213606,
+        "z": 0.006316
+      },
+      "timestamp": 1786287111
+    },
+    {
+      "frame": "frame_000213.jpg",
+      "pose_file": "frame_000213.txt",
+      "pose": {
+        "x": -0.016406,
+        "y": 0.215466,
+        "z": 0.006108
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000214.jpg",
+      "pose_file": "frame_000214.txt",
+      "pose": {
+        "x": -0.016406,
+        "y": 0.215466,
+        "z": 0.006108
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000215.jpg",
+      "pose_file": "frame_000215.txt",
+      "pose": {
+        "x": -0.016406,
+        "y": 0.215466,
+        "z": 0.006108
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000216.jpg",
+      "pose_file": "frame_000216.txt",
+      "pose": {
+        "x": -0.015519,
+        "y": 0.224911,
+        "z": 0.005375
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000217.jpg",
+      "pose_file": "frame_000217.txt",
+      "pose": {
+        "x": -0.016051,
+        "y": 0.2257,
+        "z": 0.005765
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000218.jpg",
+      "pose_file": "frame_000218.txt",
+      "pose": {
+        "x": -0.016051,
+        "y": 0.2257,
+        "z": 0.005765
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000219.jpg",
+      "pose_file": "frame_000219.txt",
+      "pose": {
+        "x": -0.016051,
+        "y": 0.2257,
+        "z": 0.005765
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000220.jpg",
+      "pose_file": "frame_000220.txt",
+      "pose": {
+        "x": -0.016635,
+        "y": 0.223897,
+        "z": 0.005899
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000221.jpg",
+      "pose_file": "frame_000221.txt",
+      "pose": {
+        "x": -0.016635,
+        "y": 0.223897,
+        "z": 0.005899
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000222.jpg",
+      "pose_file": "frame_000222.txt",
+      "pose": {
+        "x": -0.016102,
+        "y": 0.22454,
+        "z": 0.005937
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000223.jpg",
+      "pose_file": "frame_000223.txt",
+      "pose": {
+        "x": -0.016102,
+        "y": 0.22454,
+        "z": 0.005937
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000224.jpg",
+      "pose_file": "frame_000224.txt",
+      "pose": {
+        "x": -0.016354,
+        "y": 0.226209,
+        "z": 0.006095
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000225.jpg",
+      "pose_file": "frame_000225.txt",
+      "pose": {
+        "x": -0.016146,
+        "y": 0.226567,
+        "z": 0.005969
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000226.jpg",
+      "pose_file": "frame_000226.txt",
+      "pose": {
+        "x": -0.016351,
+        "y": 0.226565,
+        "z": 0.006479
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000227.jpg",
+      "pose_file": "frame_000227.txt",
+      "pose": {
+        "x": -0.01575,
+        "y": 0.227571,
+        "z": 0.005574
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000228.jpg",
+      "pose_file": "frame_000228.txt",
+      "pose": {
+        "x": -0.01575,
+        "y": 0.227571,
+        "z": 0.005574
+      },
+      "timestamp": 1786287112
+    },
+    {
+      "frame": "frame_000229.jpg",
+      "pose_file": "frame_000229.txt",
+      "pose": {
+        "x": -0.015861,
+        "y": 0.22746,
+        "z": 0.006114
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000230.jpg",
+      "pose_file": "frame_000230.txt",
+      "pose": {
+        "x": -0.015861,
+        "y": 0.22746,
+        "z": 0.006114
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000231.jpg",
+      "pose_file": "frame_000231.txt",
+      "pose": {
+        "x": -0.016032,
+        "y": 0.227542,
+        "z": 0.005942
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000232.jpg",
+      "pose_file": "frame_000232.txt",
+      "pose": {
+        "x": -0.016032,
+        "y": 0.227542,
+        "z": 0.005942
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000233.jpg",
+      "pose_file": "frame_000233.txt",
+      "pose": {
+        "x": -0.016379,
+        "y": 0.227966,
+        "z": 0.006009
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000234.jpg",
+      "pose_file": "frame_000234.txt",
+      "pose": {
+        "x": -0.0165,
+        "y": 0.227857,
+        "z": 0.006118
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000235.jpg",
+      "pose_file": "frame_000235.txt",
+      "pose": {
+        "x": -0.0165,
+        "y": 0.227857,
+        "z": 0.006118
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000236.jpg",
+      "pose_file": "frame_000236.txt",
+      "pose": {
+        "x": -0.016872,
+        "y": 0.22463,
+        "z": 0.005815
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000237.jpg",
+      "pose_file": "frame_000237.txt",
+      "pose": {
+        "x": -0.016989,
+        "y": 0.224375,
+        "z": 0.005843
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000238.jpg",
+      "pose_file": "frame_000238.txt",
+      "pose": {
+        "x": -0.016988,
+        "y": 0.224274,
+        "z": 0.005964
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000239.jpg",
+      "pose_file": "frame_000239.txt",
+      "pose": {
+        "x": -0.016988,
+        "y": 0.224274,
+        "z": 0.005964
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000240.jpg",
+      "pose_file": "frame_000240.txt",
+      "pose": {
+        "x": -0.017113,
+        "y": 0.223977,
+        "z": 0.006056
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000241.jpg",
+      "pose_file": "frame_000241.txt",
+      "pose": {
+        "x": -0.017423,
+        "y": 0.223726,
+        "z": 0.006305
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000242.jpg",
+      "pose_file": "frame_000242.txt",
+      "pose": {
+        "x": -0.017423,
+        "y": 0.223726,
+        "z": 0.006305
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000243.jpg",
+      "pose_file": "frame_000243.txt",
+      "pose": {
+        "x": -0.017527,
+        "y": 0.222463,
+        "z": 0.006355
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000244.jpg",
+      "pose_file": "frame_000244.txt",
+      "pose": {
+        "x": -0.018458,
+        "y": 0.217573,
+        "z": 0.006704
+      },
+      "timestamp": 1786287113
+    },
+    {
+      "frame": "frame_000245.jpg",
+      "pose_file": "frame_000245.txt",
+      "pose": {
+        "x": -0.018458,
+        "y": 0.217573,
+        "z": 0.006704
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000246.jpg",
+      "pose_file": "frame_000246.txt",
+      "pose": {
+        "x": -0.018638,
+        "y": 0.217386,
+        "z": 0.006905
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000247.jpg",
+      "pose_file": "frame_000247.txt",
+      "pose": {
+        "x": -0.018638,
+        "y": 0.217386,
+        "z": 0.006905
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000248.jpg",
+      "pose_file": "frame_000248.txt",
+      "pose": {
+        "x": -0.018638,
+        "y": 0.217386,
+        "z": 0.006905
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000249.jpg",
+      "pose_file": "frame_000249.txt",
+      "pose": {
+        "x": -0.018891,
+        "y": 0.216484,
+        "z": 0.007191
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000250.jpg",
+      "pose_file": "frame_000250.txt",
+      "pose": {
+        "x": -0.019361,
+        "y": 0.214862,
+        "z": 0.007646
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000251.jpg",
+      "pose_file": "frame_000251.txt",
+      "pose": {
+        "x": -0.019361,
+        "y": 0.214862,
+        "z": 0.007646
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000252.jpg",
+      "pose_file": "frame_000252.txt",
+      "pose": {
+        "x": -0.019755,
+        "y": 0.213831,
+        "z": 0.007893
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000253.jpg",
+      "pose_file": "frame_000253.txt",
+      "pose": {
+        "x": -0.019755,
+        "y": 0.213831,
+        "z": 0.007893
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000254.jpg",
+      "pose_file": "frame_000254.txt",
+      "pose": {
+        "x": -0.020751,
+        "y": 0.208916,
+        "z": 0.008343
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000255.jpg",
+      "pose_file": "frame_000255.txt",
+      "pose": {
+        "x": -0.020751,
+        "y": 0.208916,
+        "z": 0.008343
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000256.jpg",
+      "pose_file": "frame_000256.txt",
+      "pose": {
+        "x": -0.020283,
+        "y": 0.207408,
+        "z": 0.007797
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000257.jpg",
+      "pose_file": "frame_000257.txt",
+      "pose": {
+        "x": -0.020283,
+        "y": 0.207408,
+        "z": 0.007797
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000258.jpg",
+      "pose_file": "frame_000258.txt",
+      "pose": {
+        "x": -0.020185,
+        "y": 0.205192,
+        "z": 0.006348
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000259.jpg",
+      "pose_file": "frame_000259.txt",
+      "pose": {
+        "x": -0.020185,
+        "y": 0.205192,
+        "z": 0.006348
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000260.jpg",
+      "pose_file": "frame_000260.txt",
+      "pose": {
+        "x": -0.020185,
+        "y": 0.205192,
+        "z": 0.006348
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000261.jpg",
+      "pose_file": "frame_000261.txt",
+      "pose": {
+        "x": -0.01981,
+        "y": 0.201138,
+        "z": 0.005708
+      },
+      "timestamp": 1786287114
+    },
+    {
+      "frame": "frame_000262.jpg",
+      "pose_file": "frame_000262.txt",
+      "pose": {
+        "x": -0.02092,
+        "y": 0.197328,
+        "z": 0.007257
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000263.jpg",
+      "pose_file": "frame_000263.txt",
+      "pose": {
+        "x": -0.02092,
+        "y": 0.197328,
+        "z": 0.007257
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000264.jpg",
+      "pose_file": "frame_000264.txt",
+      "pose": {
+        "x": -0.021415,
+        "y": 0.194092,
+        "z": 0.006657
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000265.jpg",
+      "pose_file": "frame_000265.txt",
+      "pose": {
+        "x": -0.021415,
+        "y": 0.194092,
+        "z": 0.006657
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000266.jpg",
+      "pose_file": "frame_000266.txt",
+      "pose": {
+        "x": -0.022418,
+        "y": 0.189146,
+        "z": 0.007152
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000267.jpg",
+      "pose_file": "frame_000267.txt",
+      "pose": {
+        "x": -0.021742,
+        "y": 0.187285,
+        "z": 0.00604
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000268.jpg",
+      "pose_file": "frame_000268.txt",
+      "pose": {
+        "x": -0.021742,
+        "y": 0.187285,
+        "z": 0.00604
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000269.jpg",
+      "pose_file": "frame_000269.txt",
+      "pose": {
+        "x": -0.022683,
+        "y": 0.184337,
+        "z": 0.006307
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000270.jpg",
+      "pose_file": "frame_000270.txt",
+      "pose": {
+        "x": -0.022783,
+        "y": 0.182765,
+        "z": 0.006961
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000271.jpg",
+      "pose_file": "frame_000271.txt",
+      "pose": {
+        "x": -0.023219,
+        "y": 0.179549,
+        "z": 0.007379
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000272.jpg",
+      "pose_file": "frame_000272.txt",
+      "pose": {
+        "x": -0.023219,
+        "y": 0.179549,
+        "z": 0.007379
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000273.jpg",
+      "pose_file": "frame_000273.txt",
+      "pose": {
+        "x": -0.023664,
+        "y": 0.177206,
+        "z": 0.007372
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000274.jpg",
+      "pose_file": "frame_000274.txt",
+      "pose": {
+        "x": -0.02441,
+        "y": 0.174856,
+        "z": 0.007701
+      },
+      "timestamp": 1786287115
+    },
+    {
+      "frame": "frame_000275.jpg",
+      "pose_file": "frame_000275.txt",
+      "pose": {
+        "x": -0.02441,
+        "y": 0.174856,
+        "z": 0.007701
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000276.jpg",
+      "pose_file": "frame_000276.txt",
+      "pose": {
+        "x": -0.023826,
+        "y": 0.172798,
+        "z": 0.007226
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000277.jpg",
+      "pose_file": "frame_000277.txt",
+      "pose": {
+        "x": -0.023826,
+        "y": 0.172798,
+        "z": 0.007226
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000278.jpg",
+      "pose_file": "frame_000278.txt",
+      "pose": {
+        "x": -0.025394,
+        "y": 0.165778,
+        "z": 0.00766
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000279.jpg",
+      "pose_file": "frame_000279.txt",
+      "pose": {
+        "x": -0.025394,
+        "y": 0.165778,
+        "z": 0.00766
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000280.jpg",
+      "pose_file": "frame_000280.txt",
+      "pose": {
+        "x": -0.02582,
+        "y": 0.159641,
+        "z": 0.008878
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000281.jpg",
+      "pose_file": "frame_000281.txt",
+      "pose": {
+        "x": -0.025747,
+        "y": 0.155762,
+        "z": 0.008778
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000282.jpg",
+      "pose_file": "frame_000282.txt",
+      "pose": {
+        "x": -0.026211,
+        "y": 0.153839,
+        "z": 0.008838
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000283.jpg",
+      "pose_file": "frame_000283.txt",
+      "pose": {
+        "x": -0.025814,
+        "y": 0.151886,
+        "z": 0.007908
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000284.jpg",
+      "pose_file": "frame_000284.txt",
+      "pose": {
+        "x": -0.025814,
+        "y": 0.151886,
+        "z": 0.007908
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000285.jpg",
+      "pose_file": "frame_000285.txt",
+      "pose": {
+        "x": -0.026669,
+        "y": 0.145874,
+        "z": 0.008681
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000286.jpg",
+      "pose_file": "frame_000286.txt",
+      "pose": {
+        "x": -0.026669,
+        "y": 0.145874,
+        "z": 0.008681
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000287.jpg",
+      "pose_file": "frame_000287.txt",
+      "pose": {
+        "x": -0.025966,
+        "y": 0.144482,
+        "z": 0.008064
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000288.jpg",
+      "pose_file": "frame_000288.txt",
+      "pose": {
+        "x": -0.025966,
+        "y": 0.144482,
+        "z": 0.008064
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000289.jpg",
+      "pose_file": "frame_000289.txt",
+      "pose": {
+        "x": -0.025966,
+        "y": 0.144482,
+        "z": 0.008064
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000290.jpg",
+      "pose_file": "frame_000290.txt",
+      "pose": {
+        "x": -0.025966,
+        "y": 0.144482,
+        "z": 0.008064
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000291.jpg",
+      "pose_file": "frame_000291.txt",
+      "pose": {
+        "x": -0.027353,
+        "y": 0.141769,
+        "z": 0.009367
+      },
+      "timestamp": 1786287116
+    },
+    {
+      "frame": "frame_000292.jpg",
+      "pose_file": "frame_000292.txt",
+      "pose": {
+        "x": -0.026614,
+        "y": 0.140734,
+        "z": 0.00904
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000293.jpg",
+      "pose_file": "frame_000293.txt",
+      "pose": {
+        "x": -0.027434,
+        "y": 0.138308,
+        "z": 0.009579
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000294.jpg",
+      "pose_file": "frame_000294.txt",
+      "pose": {
+        "x": -0.027434,
+        "y": 0.138308,
+        "z": 0.009579
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000295.jpg",
+      "pose_file": "frame_000295.txt",
+      "pose": {
+        "x": -0.027434,
+        "y": 0.138308,
+        "z": 0.009579
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000296.jpg",
+      "pose_file": "frame_000296.txt",
+      "pose": {
+        "x": -0.027613,
+        "y": 0.134034,
+        "z": 0.009423
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000297.jpg",
+      "pose_file": "frame_000297.txt",
+      "pose": {
+        "x": -0.027613,
+        "y": 0.134034,
+        "z": 0.009423
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000298.jpg",
+      "pose_file": "frame_000298.txt",
+      "pose": {
+        "x": -0.027654,
+        "y": 0.12408,
+        "z": 0.00902
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000299.jpg",
+      "pose_file": "frame_000299.txt",
+      "pose": {
+        "x": -0.02704,
+        "y": 0.123905,
+        "z": 0.008734
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000300.jpg",
+      "pose_file": "frame_000300.txt",
+      "pose": {
+        "x": -0.02699,
+        "y": 0.123122,
+        "z": 0.009077
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000301.jpg",
+      "pose_file": "frame_000301.txt",
+      "pose": {
+        "x": -0.026666,
+        "y": 0.121223,
+        "z": 0.008559
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000302.jpg",
+      "pose_file": "frame_000302.txt",
+      "pose": {
+        "x": -0.026666,
+        "y": 0.121223,
+        "z": 0.008559
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000303.jpg",
+      "pose_file": "frame_000303.txt",
+      "pose": {
+        "x": -0.027542,
+        "y": 0.11983,
+        "z": 0.009431
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000304.jpg",
+      "pose_file": "frame_000304.txt",
+      "pose": {
+        "x": -0.027357,
+        "y": 0.119121,
+        "z": 0.009027
+      },
+      "timestamp": 1786287117
+    },
+    {
+      "frame": "frame_000305.jpg",
+      "pose_file": "frame_000305.txt",
+      "pose": {
+        "x": -0.027582,
+        "y": 0.118189,
+        "z": 0.009472
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000306.jpg",
+      "pose_file": "frame_000306.txt",
+      "pose": {
+        "x": -0.027278,
+        "y": 0.114914,
+        "z": 0.008601
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000307.jpg",
+      "pose_file": "frame_000307.txt",
+      "pose": {
+        "x": -0.027278,
+        "y": 0.114914,
+        "z": 0.008601
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000308.jpg",
+      "pose_file": "frame_000308.txt",
+      "pose": {
+        "x": -0.027068,
+        "y": 0.114622,
+        "z": 0.008418
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000309.jpg",
+      "pose_file": "frame_000309.txt",
+      "pose": {
+        "x": -0.027068,
+        "y": 0.114622,
+        "z": 0.008418
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000310.jpg",
+      "pose_file": "frame_000310.txt",
+      "pose": {
+        "x": -0.027024,
+        "y": 0.115257,
+        "z": 0.008486
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000311.jpg",
+      "pose_file": "frame_000311.txt",
+      "pose": {
+        "x": -0.027024,
+        "y": 0.115257,
+        "z": 0.008486
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000312.jpg",
+      "pose_file": "frame_000312.txt",
+      "pose": {
+        "x": -0.027024,
+        "y": 0.115257,
+        "z": 0.008486
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000313.jpg",
+      "pose_file": "frame_000313.txt",
+      "pose": {
+        "x": -0.028358,
+        "y": 0.110477,
+        "z": 0.009965
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000314.jpg",
+      "pose_file": "frame_000314.txt",
+      "pose": {
+        "x": -0.029266,
+        "y": 0.109533,
+        "z": 0.010009
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000315.jpg",
+      "pose_file": "frame_000315.txt",
+      "pose": {
+        "x": -0.029266,
+        "y": 0.109533,
+        "z": 0.010009
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000316.jpg",
+      "pose_file": "frame_000316.txt",
+      "pose": {
+        "x": -0.029266,
+        "y": 0.109533,
+        "z": 0.010009
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000317.jpg",
+      "pose_file": "frame_000317.txt",
+      "pose": {
+        "x": -0.029266,
+        "y": 0.109533,
+        "z": 0.010009
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000318.jpg",
+      "pose_file": "frame_000318.txt",
+      "pose": {
+        "x": -0.029622,
+        "y": 0.109091,
+        "z": 0.010605
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000319.jpg",
+      "pose_file": "frame_000319.txt",
+      "pose": {
+        "x": -0.02957,
+        "y": 0.107532,
+        "z": 0.009399
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000320.jpg",
+      "pose_file": "frame_000320.txt",
+      "pose": {
+        "x": -0.02957,
+        "y": 0.107532,
+        "z": 0.009399
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000321.jpg",
+      "pose_file": "frame_000321.txt",
+      "pose": {
+        "x": -0.030226,
+        "y": 0.106907,
+        "z": 0.009694
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000322.jpg",
+      "pose_file": "frame_000322.txt",
+      "pose": {
+        "x": -0.030226,
+        "y": 0.106907,
+        "z": 0.009694
+      },
+      "timestamp": 1786287118
+    },
+    {
+      "frame": "frame_000323.jpg",
+      "pose_file": "frame_000323.txt",
+      "pose": {
+        "x": -0.031575,
+        "y": 0.106334,
+        "z": 0.011986
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000324.jpg",
+      "pose_file": "frame_000324.txt",
+      "pose": {
+        "x": -0.031575,
+        "y": 0.106334,
+        "z": 0.011986
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000325.jpg",
+      "pose_file": "frame_000325.txt",
+      "pose": {
+        "x": -0.031162,
+        "y": 0.106595,
+        "z": 0.01067
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000326.jpg",
+      "pose_file": "frame_000326.txt",
+      "pose": {
+        "x": -0.031293,
+        "y": 0.106952,
+        "z": 0.010859
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000327.jpg",
+      "pose_file": "frame_000327.txt",
+      "pose": {
+        "x": -0.031293,
+        "y": 0.106952,
+        "z": 0.010859
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000328.jpg",
+      "pose_file": "frame_000328.txt",
+      "pose": {
+        "x": -0.03139,
+        "y": 0.107369,
+        "z": 0.010723
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000329.jpg",
+      "pose_file": "frame_000329.txt",
+      "pose": {
+        "x": -0.032685,
+        "y": 0.108414,
+        "z": 0.011991
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000330.jpg",
+      "pose_file": "frame_000330.txt",
+      "pose": {
+        "x": -0.032685,
+        "y": 0.108414,
+        "z": 0.011991
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000331.jpg",
+      "pose_file": "frame_000331.txt",
+      "pose": {
+        "x": -0.03261,
+        "y": 0.108319,
+        "z": 0.011866
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000332.jpg",
+      "pose_file": "frame_000332.txt",
+      "pose": {
+        "x": -0.03409,
+        "y": 0.108886,
+        "z": 0.013328
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000333.jpg",
+      "pose_file": "frame_000333.txt",
+      "pose": {
+        "x": -0.034318,
+        "y": 0.110002,
+        "z": 0.012986
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000334.jpg",
+      "pose_file": "frame_000334.txt",
+      "pose": {
+        "x": -0.034318,
+        "y": 0.110002,
+        "z": 0.012986
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000335.jpg",
+      "pose_file": "frame_000335.txt",
+      "pose": {
+        "x": -0.034792,
+        "y": 0.109664,
+        "z": 0.013721
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000336.jpg",
+      "pose_file": "frame_000336.txt",
+      "pose": {
+        "x": -0.034792,
+        "y": 0.109664,
+        "z": 0.013721
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000337.jpg",
+      "pose_file": "frame_000337.txt",
+      "pose": {
+        "x": -0.0351,
+        "y": 0.110779,
+        "z": 0.013314
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000338.jpg",
+      "pose_file": "frame_000338.txt",
+      "pose": {
+        "x": -0.035323,
+        "y": 0.111189,
+        "z": 0.013433
+      },
+      "timestamp": 1786287119
+    },
+    {
+      "frame": "frame_000339.jpg",
+      "pose_file": "frame_000339.txt",
+      "pose": {
+        "x": -0.035934,
+        "y": 0.11284,
+        "z": 0.013521
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000340.jpg",
+      "pose_file": "frame_000340.txt",
+      "pose": {
+        "x": -0.035934,
+        "y": 0.11284,
+        "z": 0.013521
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000341.jpg",
+      "pose_file": "frame_000341.txt",
+      "pose": {
+        "x": -0.036,
+        "y": 0.113438,
+        "z": 0.013483
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000342.jpg",
+      "pose_file": "frame_000342.txt",
+      "pose": {
+        "x": -0.036526,
+        "y": 0.116096,
+        "z": 0.01243
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000343.jpg",
+      "pose_file": "frame_000343.txt",
+      "pose": {
+        "x": -0.036476,
+        "y": 0.117624,
+        "z": 0.012873
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000344.jpg",
+      "pose_file": "frame_000344.txt",
+      "pose": {
+        "x": -0.036476,
+        "y": 0.117624,
+        "z": 0.012873
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000345.jpg",
+      "pose_file": "frame_000345.txt",
+      "pose": {
+        "x": -0.036969,
+        "y": 0.119087,
+        "z": 0.013056
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000346.jpg",
+      "pose_file": "frame_000346.txt",
+      "pose": {
+        "x": -0.036969,
+        "y": 0.119087,
+        "z": 0.013056
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000347.jpg",
+      "pose_file": "frame_000347.txt",
+      "pose": {
+        "x": -0.036883,
+        "y": 0.121999,
+        "z": 0.012679
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000348.jpg",
+      "pose_file": "frame_000348.txt",
+      "pose": {
+        "x": -0.03693,
+        "y": 0.126476,
+        "z": 0.011078
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000349.jpg",
+      "pose_file": "frame_000349.txt",
+      "pose": {
+        "x": -0.036906,
+        "y": 0.128639,
+        "z": 0.011254
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000350.jpg",
+      "pose_file": "frame_000350.txt",
+      "pose": {
+        "x": -0.036906,
+        "y": 0.128639,
+        "z": 0.011254
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000351.jpg",
+      "pose_file": "frame_000351.txt",
+      "pose": {
+        "x": -0.038497,
+        "y": 0.132653,
+        "z": 0.012835
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000352.jpg",
+      "pose_file": "frame_000352.txt",
+      "pose": {
+        "x": -0.038497,
+        "y": 0.132653,
+        "z": 0.012835
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000353.jpg",
+      "pose_file": "frame_000353.txt",
+      "pose": {
+        "x": -0.039626,
+        "y": 0.134718,
+        "z": 0.014346
+      },
+      "timestamp": 1786287120
+    },
+    {
+      "frame": "frame_000354.jpg",
+      "pose_file": "frame_000354.txt",
+      "pose": {
+        "x": -0.039626,
+        "y": 0.134718,
+        "z": 0.014346
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000355.jpg",
+      "pose_file": "frame_000355.txt",
+      "pose": {
+        "x": -0.039626,
+        "y": 0.134718,
+        "z": 0.014346
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000356.jpg",
+      "pose_file": "frame_000356.txt",
+      "pose": {
+        "x": -0.039626,
+        "y": 0.134718,
+        "z": 0.014346
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000357.jpg",
+      "pose_file": "frame_000357.txt",
+      "pose": {
+        "x": -0.039831,
+        "y": 0.14312,
+        "z": 0.01344
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000358.jpg",
+      "pose_file": "frame_000358.txt",
+      "pose": {
+        "x": -0.039253,
+        "y": 0.144667,
+        "z": 0.012557
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000359.jpg",
+      "pose_file": "frame_000359.txt",
+      "pose": {
+        "x": -0.039253,
+        "y": 0.144667,
+        "z": 0.012557
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000360.jpg",
+      "pose_file": "frame_000360.txt",
+      "pose": {
+        "x": -0.040013,
+        "y": 0.145852,
+        "z": 0.012885
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000361.jpg",
+      "pose_file": "frame_000361.txt",
+      "pose": {
+        "x": -0.040013,
+        "y": 0.145852,
+        "z": 0.012885
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000362.jpg",
+      "pose_file": "frame_000362.txt",
+      "pose": {
+        "x": -0.040475,
+        "y": 0.150284,
+        "z": 0.013124
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000363.jpg",
+      "pose_file": "frame_000363.txt",
+      "pose": {
+        "x": -0.040475,
+        "y": 0.150284,
+        "z": 0.013124
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000364.jpg",
+      "pose_file": "frame_000364.txt",
+      "pose": {
+        "x": -0.041493,
+        "y": 0.151618,
+        "z": 0.014471
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000365.jpg",
+      "pose_file": "frame_000365.txt",
+      "pose": {
+        "x": -0.041104,
+        "y": 0.153208,
+        "z": 0.013984
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000366.jpg",
+      "pose_file": "frame_000366.txt",
+      "pose": {
+        "x": -0.041104,
+        "y": 0.153208,
+        "z": 0.013984
+      },
+      "timestamp": 1786287121
+    },
+    {
+      "frame": "frame_000367.jpg",
+      "pose_file": "frame_000367.txt",
+      "pose": {
+        "x": -0.041338,
+        "y": 0.153839,
+        "z": 0.014066
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000368.jpg",
+      "pose_file": "frame_000368.txt",
+      "pose": {
+        "x": -0.041338,
+        "y": 0.153839,
+        "z": 0.014066
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000369.jpg",
+      "pose_file": "frame_000369.txt",
+      "pose": {
+        "x": -0.042967,
+        "y": 0.156731,
+        "z": 0.015477
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000370.jpg",
+      "pose_file": "frame_000370.txt",
+      "pose": {
+        "x": -0.042934,
+        "y": 0.162705,
+        "z": 0.015929
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000371.jpg",
+      "pose_file": "frame_000371.txt",
+      "pose": {
+        "x": -0.042424,
+        "y": 0.163986,
+        "z": 0.014778
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000372.jpg",
+      "pose_file": "frame_000372.txt",
+      "pose": {
+        "x": -0.043004,
+        "y": 0.167898,
+        "z": 0.015657
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000373.jpg",
+      "pose_file": "frame_000373.txt",
+      "pose": {
+        "x": -0.043004,
+        "y": 0.167898,
+        "z": 0.015657
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000374.jpg",
+      "pose_file": "frame_000374.txt",
+      "pose": {
+        "x": -0.044053,
+        "y": 0.172698,
+        "z": 0.016449
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000375.jpg",
+      "pose_file": "frame_000375.txt",
+      "pose": {
+        "x": -0.043602,
+        "y": 0.176972,
+        "z": 0.016034
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000376.jpg",
+      "pose_file": "frame_000376.txt",
+      "pose": {
+        "x": -0.043602,
+        "y": 0.176972,
+        "z": 0.016034
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000377.jpg",
+      "pose_file": "frame_000377.txt",
+      "pose": {
+        "x": -0.043685,
+        "y": 0.178598,
+        "z": 0.015654
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000378.jpg",
+      "pose_file": "frame_000378.txt",
+      "pose": {
+        "x": -0.044166,
+        "y": 0.182179,
+        "z": 0.015547
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000379.jpg",
+      "pose_file": "frame_000379.txt",
+      "pose": {
+        "x": -0.044341,
+        "y": 0.184353,
+        "z": 0.015965
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000380.jpg",
+      "pose_file": "frame_000380.txt",
+      "pose": {
+        "x": -0.044341,
+        "y": 0.184353,
+        "z": 0.015965
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000381.jpg",
+      "pose_file": "frame_000381.txt",
+      "pose": {
+        "x": -0.0445,
+        "y": 0.188343,
+        "z": 0.015926
+      },
+      "timestamp": 1786287122
+    },
+    {
+      "frame": "frame_000382.jpg",
+      "pose_file": "frame_000382.txt",
+      "pose": {
+        "x": -0.0445,
+        "y": 0.188343,
+        "z": 0.015926
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000383.jpg",
+      "pose_file": "frame_000383.txt",
+      "pose": {
+        "x": -0.04466,
+        "y": 0.192586,
+        "z": 0.016205
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000384.jpg",
+      "pose_file": "frame_000384.txt",
+      "pose": {
+        "x": -0.045453,
+        "y": 0.196869,
+        "z": 0.016823
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000385.jpg",
+      "pose_file": "frame_000385.txt",
+      "pose": {
+        "x": -0.045615,
+        "y": 0.19818,
+        "z": 0.016571
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000386.jpg",
+      "pose_file": "frame_000386.txt",
+      "pose": {
+        "x": -0.045615,
+        "y": 0.19818,
+        "z": 0.016571
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000387.jpg",
+      "pose_file": "frame_000387.txt",
+      "pose": {
+        "x": -0.045826,
+        "y": 0.200556,
+        "z": 0.016647
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000388.jpg",
+      "pose_file": "frame_000388.txt",
+      "pose": {
+        "x": -0.045652,
+        "y": 0.202317,
+        "z": 0.01655
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000389.jpg",
+      "pose_file": "frame_000389.txt",
+      "pose": {
+        "x": -0.045652,
+        "y": 0.202317,
+        "z": 0.01655
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000390.jpg",
+      "pose_file": "frame_000390.txt",
+      "pose": {
+        "x": -0.046478,
+        "y": 0.205634,
+        "z": 0.017162
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000391.jpg",
+      "pose_file": "frame_000391.txt",
+      "pose": {
+        "x": -0.04576,
+        "y": 0.209898,
+        "z": 0.016004
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000392.jpg",
+      "pose_file": "frame_000392.txt",
+      "pose": {
+        "x": -0.046119,
+        "y": 0.212107,
+        "z": 0.01727
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000393.jpg",
+      "pose_file": "frame_000393.txt",
+      "pose": {
+        "x": -0.046119,
+        "y": 0.212107,
+        "z": 0.01727
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000394.jpg",
+      "pose_file": "frame_000394.txt",
+      "pose": {
+        "x": -0.046119,
+        "y": 0.212107,
+        "z": 0.01727
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000395.jpg",
+      "pose_file": "frame_000395.txt",
+      "pose": {
+        "x": -0.046187,
+        "y": 0.216116,
+        "z": 0.016647
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000396.jpg",
+      "pose_file": "frame_000396.txt",
+      "pose": {
+        "x": -0.046774,
+        "y": 0.218128,
+        "z": 0.016762
+      },
+      "timestamp": 1786287123
+    },
+    {
+      "frame": "frame_000397.jpg",
+      "pose_file": "frame_000397.txt",
+      "pose": {
+        "x": -0.047069,
+        "y": 0.224674,
+        "z": 0.017892
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000398.jpg",
+      "pose_file": "frame_000398.txt",
+      "pose": {
+        "x": -0.0459,
+        "y": 0.227806,
+        "z": 0.015873
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000399.jpg",
+      "pose_file": "frame_000399.txt",
+      "pose": {
+        "x": -0.0459,
+        "y": 0.227806,
+        "z": 0.015873
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000400.jpg",
+      "pose_file": "frame_000400.txt",
+      "pose": {
+        "x": -0.047185,
+        "y": 0.232177,
+        "z": 0.017594
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000401.jpg",
+      "pose_file": "frame_000401.txt",
+      "pose": {
+        "x": -0.047341,
+        "y": 0.239387,
+        "z": 0.017248
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000402.jpg",
+      "pose_file": "frame_000402.txt",
+      "pose": {
+        "x": -0.047341,
+        "y": 0.239387,
+        "z": 0.017248
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000403.jpg",
+      "pose_file": "frame_000403.txt",
+      "pose": {
+        "x": -0.047192,
+        "y": 0.241418,
+        "z": 0.01689
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000404.jpg",
+      "pose_file": "frame_000404.txt",
+      "pose": {
+        "x": -0.047192,
+        "y": 0.241418,
+        "z": 0.01689
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000405.jpg",
+      "pose_file": "frame_000405.txt",
+      "pose": {
+        "x": -0.047265,
+        "y": 0.244162,
+        "z": 0.016881
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000406.jpg",
+      "pose_file": "frame_000406.txt",
+      "pose": {
+        "x": -0.046653,
+        "y": 0.246917,
+        "z": 0.016454
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000407.jpg",
+      "pose_file": "frame_000407.txt",
+      "pose": {
+        "x": -0.046653,
+        "y": 0.246917,
+        "z": 0.016454
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000408.jpg",
+      "pose_file": "frame_000408.txt",
+      "pose": {
+        "x": -0.047676,
+        "y": 0.250896,
+        "z": 0.017285
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000409.jpg",
+      "pose_file": "frame_000409.txt",
+      "pose": {
+        "x": -0.046794,
+        "y": 0.25365,
+        "z": 0.016586
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000410.jpg",
+      "pose_file": "frame_000410.txt",
+      "pose": {
+        "x": -0.046794,
+        "y": 0.25365,
+        "z": 0.016586
+      },
+      "timestamp": 1786287124
+    },
+    {
+      "frame": "frame_000411.jpg",
+      "pose_file": "frame_000411.txt",
+      "pose": {
+        "x": -0.046928,
+        "y": 0.255904,
+        "z": 0.016337
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000412.jpg",
+      "pose_file": "frame_000412.txt",
+      "pose": {
+        "x": -0.047034,
+        "y": 0.262202,
+        "z": 0.016616
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000413.jpg",
+      "pose_file": "frame_000413.txt",
+      "pose": {
+        "x": -0.047034,
+        "y": 0.262202,
+        "z": 0.016616
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000414.jpg",
+      "pose_file": "frame_000414.txt",
+      "pose": {
+        "x": -0.047006,
+        "y": 0.266441,
+        "z": 0.016149
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000415.jpg",
+      "pose_file": "frame_000415.txt",
+      "pose": {
+        "x": -0.047006,
+        "y": 0.266441,
+        "z": 0.016149
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000416.jpg",
+      "pose_file": "frame_000416.txt",
+      "pose": {
+        "x": -0.046772,
+        "y": 0.26884,
+        "z": 0.015304
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000417.jpg",
+      "pose_file": "frame_000417.txt",
+      "pose": {
+        "x": -0.046588,
+        "y": 0.271196,
+        "z": 0.015108
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000418.jpg",
+      "pose_file": "frame_000418.txt",
+      "pose": {
+        "x": -0.046588,
+        "y": 0.271196,
+        "z": 0.015108
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000419.jpg",
+      "pose_file": "frame_000419.txt",
+      "pose": {
+        "x": -0.046019,
+        "y": 0.276684,
+        "z": 0.013951
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000420.jpg",
+      "pose_file": "frame_000420.txt",
+      "pose": {
+        "x": -0.046019,
+        "y": 0.276684,
+        "z": 0.013951
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000421.jpg",
+      "pose_file": "frame_000421.txt",
+      "pose": {
+        "x": -0.044335,
+        "y": 0.290464,
+        "z": 0.010762
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000422.jpg",
+      "pose_file": "frame_000422.txt",
+      "pose": {
+        "x": -0.045194,
+        "y": 0.292624,
+        "z": 0.011985
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000423.jpg",
+      "pose_file": "frame_000423.txt",
+      "pose": {
+        "x": -0.044232,
+        "y": 0.297487,
+        "z": 0.010559
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000424.jpg",
+      "pose_file": "frame_000424.txt",
+      "pose": {
+        "x": -0.044002,
+        "y": 0.300087,
+        "z": 0.009501
+      },
+      "timestamp": 1786287125
+    },
+    {
+      "frame": "frame_000425.jpg",
+      "pose_file": "frame_000425.txt",
+      "pose": {
+        "x": -0.044002,
+        "y": 0.300087,
+        "z": 0.009501
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000426.jpg",
+      "pose_file": "frame_000426.txt",
+      "pose": {
+        "x": -0.04562,
+        "y": 0.301948,
+        "z": 0.011835
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000427.jpg",
+      "pose_file": "frame_000427.txt",
+      "pose": {
+        "x": -0.044882,
+        "y": 0.303835,
+        "z": 0.010785
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000428.jpg",
+      "pose_file": "frame_000428.txt",
+      "pose": {
+        "x": -0.045196,
+        "y": 0.306279,
+        "z": 0.010605
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000429.jpg",
+      "pose_file": "frame_000429.txt",
+      "pose": {
+        "x": -0.045574,
+        "y": 0.31076,
+        "z": 0.011087
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000430.jpg",
+      "pose_file": "frame_000430.txt",
+      "pose": {
+        "x": -0.045574,
+        "y": 0.31076,
+        "z": 0.011087
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000431.jpg",
+      "pose_file": "frame_000431.txt",
+      "pose": {
+        "x": -0.045002,
+        "y": 0.316936,
+        "z": 0.009352
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000432.jpg",
+      "pose_file": "frame_000432.txt",
+      "pose": {
+        "x": -0.045002,
+        "y": 0.316936,
+        "z": 0.009352
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000433.jpg",
+      "pose_file": "frame_000433.txt",
+      "pose": {
+        "x": -0.04525,
+        "y": 0.314087,
+        "z": 0.009481
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000434.jpg",
+      "pose_file": "frame_000434.txt",
+      "pose": {
+        "x": -0.045959,
+        "y": 0.31635,
+        "z": 0.010336
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000435.jpg",
+      "pose_file": "frame_000435.txt",
+      "pose": {
+        "x": -0.045959,
+        "y": 0.31635,
+        "z": 0.010336
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000436.jpg",
+      "pose_file": "frame_000436.txt",
+      "pose": {
+        "x": -0.046483,
+        "y": 0.318463,
+        "z": 0.00921
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000437.jpg",
+      "pose_file": "frame_000437.txt",
+      "pose": {
+        "x": -0.046483,
+        "y": 0.318463,
+        "z": 0.00921
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000438.jpg",
+      "pose_file": "frame_000438.txt",
+      "pose": {
+        "x": -0.045142,
+        "y": 0.32612,
+        "z": 0.008569
+      },
+      "timestamp": 1786287126
+    },
+    {
+      "frame": "frame_000439.jpg",
+      "pose_file": "frame_000439.txt",
+      "pose": {
+        "x": -0.045142,
+        "y": 0.32612,
+        "z": 0.008569
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000440.jpg",
+      "pose_file": "frame_000440.txt",
+      "pose": {
+        "x": -0.045638,
+        "y": 0.323518,
+        "z": 0.009321
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000441.jpg",
+      "pose_file": "frame_000441.txt",
+      "pose": {
+        "x": -0.045638,
+        "y": 0.323518,
+        "z": 0.009321
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000442.jpg",
+      "pose_file": "frame_000442.txt",
+      "pose": {
+        "x": -0.045638,
+        "y": 0.323518,
+        "z": 0.009321
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000443.jpg",
+      "pose_file": "frame_000443.txt",
+      "pose": {
+        "x": -0.046678,
+        "y": 0.328814,
+        "z": 0.010147
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000444.jpg",
+      "pose_file": "frame_000444.txt",
+      "pose": {
+        "x": -0.046758,
+        "y": 0.333486,
+        "z": 0.010353
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000445.jpg",
+      "pose_file": "frame_000445.txt",
+      "pose": {
+        "x": -0.046758,
+        "y": 0.333486,
+        "z": 0.010353
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000446.jpg",
+      "pose_file": "frame_000446.txt",
+      "pose": {
+        "x": -0.04622,
+        "y": 0.330787,
+        "z": 0.010035
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000447.jpg",
+      "pose_file": "frame_000447.txt",
+      "pose": {
+        "x": -0.046475,
+        "y": 0.336007,
+        "z": 0.009968
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000448.jpg",
+      "pose_file": "frame_000448.txt",
+      "pose": {
+        "x": -0.04724,
+        "y": 0.339784,
+        "z": 0.010169
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000449.jpg",
+      "pose_file": "frame_000449.txt",
+      "pose": {
+        "x": -0.045899,
+        "y": 0.348906,
+        "z": 0.008081
+      },
+      "timestamp": 1786287127
+    },
+    {
+      "frame": "frame_000450.jpg",
+      "pose_file": "frame_000450.txt",
+      "pose": {
+        "x": -0.047227,
+        "y": 0.349435,
+        "z": 0.009862
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000451.jpg",
+      "pose_file": "frame_000451.txt",
+      "pose": {
+        "x": -0.047227,
+        "y": 0.349435,
+        "z": 0.009862
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000452.jpg",
+      "pose_file": "frame_000452.txt",
+      "pose": {
+        "x": -0.047288,
+        "y": 0.353266,
+        "z": 0.009843
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000453.jpg",
+      "pose_file": "frame_000453.txt",
+      "pose": {
+        "x": -0.047288,
+        "y": 0.353266,
+        "z": 0.009843
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000454.jpg",
+      "pose_file": "frame_000454.txt",
+      "pose": {
+        "x": -0.048258,
+        "y": 0.355567,
+        "z": 0.01002
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000455.jpg",
+      "pose_file": "frame_000455.txt",
+      "pose": {
+        "x": -0.047826,
+        "y": 0.359593,
+        "z": 0.009705
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000456.jpg",
+      "pose_file": "frame_000456.txt",
+      "pose": {
+        "x": -0.047826,
+        "y": 0.359593,
+        "z": 0.009705
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000457.jpg",
+      "pose_file": "frame_000457.txt",
+      "pose": {
+        "x": -0.047526,
+        "y": 0.358305,
+        "z": 0.010523
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000458.jpg",
+      "pose_file": "frame_000458.txt",
+      "pose": {
+        "x": -0.047526,
+        "y": 0.358305,
+        "z": 0.010523
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000459.jpg",
+      "pose_file": "frame_000459.txt",
+      "pose": {
+        "x": -0.047526,
+        "y": 0.358305,
+        "z": 0.010523
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000460.jpg",
+      "pose_file": "frame_000460.txt",
+      "pose": {
+        "x": -0.046898,
+        "y": 0.361122,
+        "z": 0.009919
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000461.jpg",
+      "pose_file": "frame_000461.txt",
+      "pose": {
+        "x": -0.046898,
+        "y": 0.361122,
+        "z": 0.009919
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000462.jpg",
+      "pose_file": "frame_000462.txt",
+      "pose": {
+        "x": -0.046898,
+        "y": 0.361122,
+        "z": 0.009919
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000463.jpg",
+      "pose_file": "frame_000463.txt",
+      "pose": {
+        "x": -0.047065,
+        "y": 0.363993,
+        "z": 0.010004
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000464.jpg",
+      "pose_file": "frame_000464.txt",
+      "pose": {
+        "x": -0.047065,
+        "y": 0.363993,
+        "z": 0.010004
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000465.jpg",
+      "pose_file": "frame_000465.txt",
+      "pose": {
+        "x": -0.047065,
+        "y": 0.363993,
+        "z": 0.010004
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000466.jpg",
+      "pose_file": "frame_000466.txt",
+      "pose": {
+        "x": -0.046355,
+        "y": 0.373411,
+        "z": 0.009549
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000467.jpg",
+      "pose_file": "frame_000467.txt",
+      "pose": {
+        "x": -0.046355,
+        "y": 0.373411,
+        "z": 0.009549
+      },
+      "timestamp": 1786287128
+    },
+    {
+      "frame": "frame_000468.jpg",
+      "pose_file": "frame_000468.txt",
+      "pose": {
+        "x": -0.046355,
+        "y": 0.373411,
+        "z": 0.009549
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000469.jpg",
+      "pose_file": "frame_000469.txt",
+      "pose": {
+        "x": -0.046454,
+        "y": 0.374756,
+        "z": 0.010158
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000470.jpg",
+      "pose_file": "frame_000470.txt",
+      "pose": {
+        "x": -0.046454,
+        "y": 0.374756,
+        "z": 0.010158
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000471.jpg",
+      "pose_file": "frame_000471.txt",
+      "pose": {
+        "x": -0.046454,
+        "y": 0.374756,
+        "z": 0.010158
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000472.jpg",
+      "pose_file": "frame_000472.txt",
+      "pose": {
+        "x": -0.046844,
+        "y": 0.36971,
+        "z": 0.011559
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000473.jpg",
+      "pose_file": "frame_000473.txt",
+      "pose": {
+        "x": -0.046844,
+        "y": 0.36971,
+        "z": 0.011559
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000474.jpg",
+      "pose_file": "frame_000474.txt",
+      "pose": {
+        "x": -0.046487,
+        "y": 0.37342,
+        "z": 0.011388
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000475.jpg",
+      "pose_file": "frame_000475.txt",
+      "pose": {
+        "x": -0.046487,
+        "y": 0.37342,
+        "z": 0.011388
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000476.jpg",
+      "pose_file": "frame_000476.txt",
+      "pose": {
+        "x": -0.045218,
+        "y": 0.37938,
+        "z": 0.01112
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000477.jpg",
+      "pose_file": "frame_000477.txt",
+      "pose": {
+        "x": -0.045928,
+        "y": 0.380524,
+        "z": 0.011904
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000478.jpg",
+      "pose_file": "frame_000478.txt",
+      "pose": {
+        "x": -0.045928,
+        "y": 0.380524,
+        "z": 0.011904
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000479.jpg",
+      "pose_file": "frame_000479.txt",
+      "pose": {
+        "x": -0.044522,
+        "y": 0.381508,
+        "z": 0.009617
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000480.jpg",
+      "pose_file": "frame_000480.txt",
+      "pose": {
+        "x": -0.044522,
+        "y": 0.381508,
+        "z": 0.009617
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000481.jpg",
+      "pose_file": "frame_000481.txt",
+      "pose": {
+        "x": -0.04588,
+        "y": 0.374599,
+        "z": 0.011292
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000482.jpg",
+      "pose_file": "frame_000482.txt",
+      "pose": {
+        "x": -0.04588,
+        "y": 0.374599,
+        "z": 0.011292
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000483.jpg",
+      "pose_file": "frame_000483.txt",
+      "pose": {
+        "x": -0.045483,
+        "y": 0.375228,
+        "z": 0.010924
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000484.jpg",
+      "pose_file": "frame_000484.txt",
+      "pose": {
+        "x": -0.045483,
+        "y": 0.375228,
+        "z": 0.010924
+      },
+      "timestamp": 1786287129
+    },
+    {
+      "frame": "frame_000485.jpg",
+      "pose_file": "frame_000485.txt",
+      "pose": {
+        "x": -0.046212,
+        "y": 0.373972,
+        "z": 0.010955
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000486.jpg",
+      "pose_file": "frame_000486.txt",
+      "pose": {
+        "x": -0.046212,
+        "y": 0.373972,
+        "z": 0.010955
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000487.jpg",
+      "pose_file": "frame_000487.txt",
+      "pose": {
+        "x": -0.047018,
+        "y": 0.373374,
+        "z": 0.011149
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000488.jpg",
+      "pose_file": "frame_000488.txt",
+      "pose": {
+        "x": -0.047018,
+        "y": 0.373374,
+        "z": 0.011149
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000489.jpg",
+      "pose_file": "frame_000489.txt",
+      "pose": {
+        "x": -0.046798,
+        "y": 0.37243,
+        "z": 0.011183
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000490.jpg",
+      "pose_file": "frame_000490.txt",
+      "pose": {
+        "x": -0.046798,
+        "y": 0.37243,
+        "z": 0.011183
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000491.jpg",
+      "pose_file": "frame_000491.txt",
+      "pose": {
+        "x": -0.046945,
+        "y": 0.372382,
+        "z": 0.011485
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000492.jpg",
+      "pose_file": "frame_000492.txt",
+      "pose": {
+        "x": -0.046945,
+        "y": 0.372382,
+        "z": 0.011485
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000493.jpg",
+      "pose_file": "frame_000493.txt",
+      "pose": {
+        "x": -0.047469,
+        "y": 0.366283,
+        "z": 0.01214
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000494.jpg",
+      "pose_file": "frame_000494.txt",
+      "pose": {
+        "x": -0.047469,
+        "y": 0.366283,
+        "z": 0.01214
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000495.jpg",
+      "pose_file": "frame_000495.txt",
+      "pose": {
+        "x": -0.047469,
+        "y": 0.366283,
+        "z": 0.01214
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000496.jpg",
+      "pose_file": "frame_000496.txt",
+      "pose": {
+        "x": -0.047352,
+        "y": 0.366364,
+        "z": 0.011704
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000497.jpg",
+      "pose_file": "frame_000497.txt",
+      "pose": {
+        "x": -0.047352,
+        "y": 0.366364,
+        "z": 0.011704
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000498.jpg",
+      "pose_file": "frame_000498.txt",
+      "pose": {
+        "x": -0.047352,
+        "y": 0.366364,
+        "z": 0.011704
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000499.jpg",
+      "pose_file": "frame_000499.txt",
+      "pose": {
+        "x": -0.047229,
+        "y": 0.365622,
+        "z": 0.011778
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000500.jpg",
+      "pose_file": "frame_000500.txt",
+      "pose": {
+        "x": -0.047229,
+        "y": 0.365622,
+        "z": 0.011778
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000501.jpg",
+      "pose_file": "frame_000501.txt",
+      "pose": {
+        "x": -0.047229,
+        "y": 0.365622,
+        "z": 0.011778
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000502.jpg",
+      "pose_file": "frame_000502.txt",
+      "pose": {
+        "x": -0.047242,
+        "y": 0.365682,
+        "z": 0.011943
+      },
+      "timestamp": 1786287130
+    },
+    {
+      "frame": "frame_000503.jpg",
+      "pose_file": "frame_000503.txt",
+      "pose": {
+        "x": -0.047242,
+        "y": 0.365682,
+        "z": 0.011943
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000504.jpg",
+      "pose_file": "frame_000504.txt",
+      "pose": {
+        "x": -0.047609,
+        "y": 0.365695,
+        "z": 0.012017
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000505.jpg",
+      "pose_file": "frame_000505.txt",
+      "pose": {
+        "x": -0.047609,
+        "y": 0.365695,
+        "z": 0.012017
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000506.jpg",
+      "pose_file": "frame_000506.txt",
+      "pose": {
+        "x": -0.047609,
+        "y": 0.365695,
+        "z": 0.012017
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000507.jpg",
+      "pose_file": "frame_000507.txt",
+      "pose": {
+        "x": -0.047667,
+        "y": 0.366361,
+        "z": 0.012756
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000508.jpg",
+      "pose_file": "frame_000508.txt",
+      "pose": {
+        "x": -0.047667,
+        "y": 0.366361,
+        "z": 0.012756
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000509.jpg",
+      "pose_file": "frame_000509.txt",
+      "pose": {
+        "x": -0.047667,
+        "y": 0.366361,
+        "z": 0.012756
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000510.jpg",
+      "pose_file": "frame_000510.txt",
+      "pose": {
+        "x": -0.047667,
+        "y": 0.366361,
+        "z": 0.012756
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000511.jpg",
+      "pose_file": "frame_000511.txt",
+      "pose": {
+        "x": -0.046923,
+        "y": 0.361898,
+        "z": 0.011932
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000512.jpg",
+      "pose_file": "frame_000512.txt",
+      "pose": {
+        "x": -0.046923,
+        "y": 0.361898,
+        "z": 0.011932
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000513.jpg",
+      "pose_file": "frame_000513.txt",
+      "pose": {
+        "x": -0.046923,
+        "y": 0.361898,
+        "z": 0.011932
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000514.jpg",
+      "pose_file": "frame_000514.txt",
+      "pose": {
+        "x": -0.047297,
+        "y": 0.364775,
+        "z": 0.012785
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000515.jpg",
+      "pose_file": "frame_000515.txt",
+      "pose": {
+        "x": -0.047297,
+        "y": 0.364775,
+        "z": 0.012785
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000516.jpg",
+      "pose_file": "frame_000516.txt",
+      "pose": {
+        "x": -0.047297,
+        "y": 0.364775,
+        "z": 0.012785
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000517.jpg",
+      "pose_file": "frame_000517.txt",
+      "pose": {
+        "x": -0.047526,
+        "y": 0.365803,
+        "z": 0.013364
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000518.jpg",
+      "pose_file": "frame_000518.txt",
+      "pose": {
+        "x": -0.047526,
+        "y": 0.365803,
+        "z": 0.013364
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000519.jpg",
+      "pose_file": "frame_000519.txt",
+      "pose": {
+        "x": -0.046544,
+        "y": 0.368658,
+        "z": 0.012848
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000520.jpg",
+      "pose_file": "frame_000520.txt",
+      "pose": {
+        "x": -0.046436,
+        "y": 0.370389,
+        "z": 0.013009
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000521.jpg",
+      "pose_file": "frame_000521.txt",
+      "pose": {
+        "x": -0.046436,
+        "y": 0.370389,
+        "z": 0.013009
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000522.jpg",
+      "pose_file": "frame_000522.txt",
+      "pose": {
+        "x": -0.046436,
+        "y": 0.370389,
+        "z": 0.013009
+      },
+      "timestamp": 1786287131
+    },
+    {
+      "frame": "frame_000523.jpg",
+      "pose_file": "frame_000523.txt",
+      "pose": {
+        "x": -0.046009,
+        "y": 0.372535,
+        "z": 0.013013
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000524.jpg",
+      "pose_file": "frame_000524.txt",
+      "pose": {
+        "x": -0.046009,
+        "y": 0.372535,
+        "z": 0.013013
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000525.jpg",
+      "pose_file": "frame_000525.txt",
+      "pose": {
+        "x": -0.045806,
+        "y": 0.374818,
+        "z": 0.013156
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000526.jpg",
+      "pose_file": "frame_000526.txt",
+      "pose": {
+        "x": -0.045806,
+        "y": 0.374818,
+        "z": 0.013156
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000527.jpg",
+      "pose_file": "frame_000527.txt",
+      "pose": {
+        "x": -0.045806,
+        "y": 0.374818,
+        "z": 0.013156
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000528.jpg",
+      "pose_file": "frame_000528.txt",
+      "pose": {
+        "x": -0.045654,
+        "y": 0.378063,
+        "z": 0.013964
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000529.jpg",
+      "pose_file": "frame_000529.txt",
+      "pose": {
+        "x": -0.045654,
+        "y": 0.378063,
+        "z": 0.013964
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000530.jpg",
+      "pose_file": "frame_000530.txt",
+      "pose": {
+        "x": -0.045108,
+        "y": 0.380579,
+        "z": 0.013606
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000531.jpg",
+      "pose_file": "frame_000531.txt",
+      "pose": {
+        "x": -0.045108,
+        "y": 0.380579,
+        "z": 0.013606
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000532.jpg",
+      "pose_file": "frame_000532.txt",
+      "pose": {
+        "x": -0.043406,
+        "y": 0.379241,
+        "z": 0.012069
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000533.jpg",
+      "pose_file": "frame_000533.txt",
+      "pose": {
+        "x": -0.043406,
+        "y": 0.379241,
+        "z": 0.012069
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000534.jpg",
+      "pose_file": "frame_000534.txt",
+      "pose": {
+        "x": -0.045112,
+        "y": 0.380719,
+        "z": 0.014307
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000535.jpg",
+      "pose_file": "frame_000535.txt",
+      "pose": {
+        "x": -0.045112,
+        "y": 0.380719,
+        "z": 0.014307
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000536.jpg",
+      "pose_file": "frame_000536.txt",
+      "pose": {
+        "x": -0.045112,
+        "y": 0.380719,
+        "z": 0.014307
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000537.jpg",
+      "pose_file": "frame_000537.txt",
+      "pose": {
+        "x": -0.045112,
+        "y": 0.380719,
+        "z": 0.014307
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000538.jpg",
+      "pose_file": "frame_000538.txt",
+      "pose": {
+        "x": -0.044871,
+        "y": 0.383047,
+        "z": 0.014283
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000539.jpg",
+      "pose_file": "frame_000539.txt",
+      "pose": {
+        "x": -0.044871,
+        "y": 0.383047,
+        "z": 0.014283
+      },
+      "timestamp": 1786287132
+    },
+    {
+      "frame": "frame_000540.jpg",
+      "pose_file": "frame_000540.txt",
+      "pose": {
+        "x": -0.04375,
+        "y": 0.389838,
+        "z": 0.014236
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000541.jpg",
+      "pose_file": "frame_000541.txt",
+      "pose": {
+        "x": -0.04355,
+        "y": 0.393422,
+        "z": 0.014469
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000542.jpg",
+      "pose_file": "frame_000542.txt",
+      "pose": {
+        "x": -0.043308,
+        "y": 0.39462,
+        "z": 0.01505
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000543.jpg",
+      "pose_file": "frame_000543.txt",
+      "pose": {
+        "x": -0.043308,
+        "y": 0.39462,
+        "z": 0.01505
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000544.jpg",
+      "pose_file": "frame_000544.txt",
+      "pose": {
+        "x": -0.043308,
+        "y": 0.39462,
+        "z": 0.01505
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000545.jpg",
+      "pose_file": "frame_000545.txt",
+      "pose": {
+        "x": -0.043941,
+        "y": 0.396582,
+        "z": 0.015332
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000546.jpg",
+      "pose_file": "frame_000546.txt",
+      "pose": {
+        "x": -0.042683,
+        "y": 0.399535,
+        "z": 0.015175
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000547.jpg",
+      "pose_file": "frame_000547.txt",
+      "pose": {
+        "x": -0.042831,
+        "y": 0.403379,
+        "z": 0.015448
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000548.jpg",
+      "pose_file": "frame_000548.txt",
+      "pose": {
+        "x": -0.042689,
+        "y": 0.404566,
+        "z": 0.015754
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000549.jpg",
+      "pose_file": "frame_000549.txt",
+      "pose": {
+        "x": -0.04311,
+        "y": 0.405087,
+        "z": 0.015684
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000550.jpg",
+      "pose_file": "frame_000550.txt",
+      "pose": {
+        "x": -0.04296,
+        "y": 0.407176,
+        "z": 0.015975
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000551.jpg",
+      "pose_file": "frame_000551.txt",
+      "pose": {
+        "x": -0.04296,
+        "y": 0.407176,
+        "z": 0.015975
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000552.jpg",
+      "pose_file": "frame_000552.txt",
+      "pose": {
+        "x": -0.04296,
+        "y": 0.407176,
+        "z": 0.015975
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000553.jpg",
+      "pose_file": "frame_000553.txt",
+      "pose": {
+        "x": -0.041652,
+        "y": 0.409837,
+        "z": 0.01514
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000554.jpg",
+      "pose_file": "frame_000554.txt",
+      "pose": {
+        "x": -0.041652,
+        "y": 0.409837,
+        "z": 0.01514
+      },
+      "timestamp": 1786287133
+    },
+    {
+      "frame": "frame_000555.jpg",
+      "pose_file": "frame_000555.txt",
+      "pose": {
+        "x": -0.041234,
+        "y": 0.413901,
+        "z": 0.014588
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000556.jpg",
+      "pose_file": "frame_000556.txt",
+      "pose": {
+        "x": -0.041234,
+        "y": 0.413901,
+        "z": 0.014588
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000557.jpg",
+      "pose_file": "frame_000557.txt",
+      "pose": {
+        "x": -0.040848,
+        "y": 0.415565,
+        "z": 0.014434
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000558.jpg",
+      "pose_file": "frame_000558.txt",
+      "pose": {
+        "x": -0.040848,
+        "y": 0.415565,
+        "z": 0.014434
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000559.jpg",
+      "pose_file": "frame_000559.txt",
+      "pose": {
+        "x": -0.039854,
+        "y": 0.420021,
+        "z": 0.013435
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000560.jpg",
+      "pose_file": "frame_000560.txt",
+      "pose": {
+        "x": -0.039854,
+        "y": 0.420021,
+        "z": 0.013435
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000561.jpg",
+      "pose_file": "frame_000561.txt",
+      "pose": {
+        "x": -0.040133,
+        "y": 0.422367,
+        "z": 0.01432
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000562.jpg",
+      "pose_file": "frame_000562.txt",
+      "pose": {
+        "x": -0.039418,
+        "y": 0.424928,
+        "z": 0.013757
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000563.jpg",
+      "pose_file": "frame_000563.txt",
+      "pose": {
+        "x": -0.038746,
+        "y": 0.419072,
+        "z": 0.013484
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000564.jpg",
+      "pose_file": "frame_000564.txt",
+      "pose": {
+        "x": -0.038746,
+        "y": 0.419072,
+        "z": 0.013484
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000565.jpg",
+      "pose_file": "frame_000565.txt",
+      "pose": {
+        "x": -0.03787,
+        "y": 0.42087,
+        "z": 0.012645
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000566.jpg",
+      "pose_file": "frame_000566.txt",
+      "pose": {
+        "x": -0.03787,
+        "y": 0.42087,
+        "z": 0.012645
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000567.jpg",
+      "pose_file": "frame_000567.txt",
+      "pose": {
+        "x": -0.037491,
+        "y": 0.423711,
+        "z": 0.012198
+      },
+      "timestamp": 1786287134
+    },
+    {
+      "frame": "frame_000568.jpg",
+      "pose_file": "frame_000568.txt",
+      "pose": {
+        "x": -0.037491,
+        "y": 0.423711,
+        "z": 0.012198
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000569.jpg",
+      "pose_file": "frame_000569.txt",
+      "pose": {
+        "x": -0.036424,
+        "y": 0.43135,
+        "z": 0.011795
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000570.jpg",
+      "pose_file": "frame_000570.txt",
+      "pose": {
+        "x": -0.035532,
+        "y": 0.431625,
+        "z": 0.011561
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000571.jpg",
+      "pose_file": "frame_000571.txt",
+      "pose": {
+        "x": -0.035532,
+        "y": 0.431625,
+        "z": 0.011561
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000572.jpg",
+      "pose_file": "frame_000572.txt",
+      "pose": {
+        "x": -0.035623,
+        "y": 0.436068,
+        "z": 0.011109
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000573.jpg",
+      "pose_file": "frame_000573.txt",
+      "pose": {
+        "x": -0.035623,
+        "y": 0.436068,
+        "z": 0.011109
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000574.jpg",
+      "pose_file": "frame_000574.txt",
+      "pose": {
+        "x": -0.035623,
+        "y": 0.436068,
+        "z": 0.011109
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000575.jpg",
+      "pose_file": "frame_000575.txt",
+      "pose": {
+        "x": -0.034723,
+        "y": 0.439911,
+        "z": 0.010814
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000576.jpg",
+      "pose_file": "frame_000576.txt",
+      "pose": {
+        "x": -0.034723,
+        "y": 0.439911,
+        "z": 0.010814
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000577.jpg",
+      "pose_file": "frame_000577.txt",
+      "pose": {
+        "x": -0.034649,
+        "y": 0.440906,
+        "z": 0.010939
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000578.jpg",
+      "pose_file": "frame_000578.txt",
+      "pose": {
+        "x": -0.034649,
+        "y": 0.440906,
+        "z": 0.010939
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000579.jpg",
+      "pose_file": "frame_000579.txt",
+      "pose": {
+        "x": -0.034649,
+        "y": 0.440906,
+        "z": 0.010939
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000580.jpg",
+      "pose_file": "frame_000580.txt",
+      "pose": {
+        "x": -0.034436,
+        "y": 0.434325,
+        "z": 0.010717
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000581.jpg",
+      "pose_file": "frame_000581.txt",
+      "pose": {
+        "x": -0.034436,
+        "y": 0.434325,
+        "z": 0.010717
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000582.jpg",
+      "pose_file": "frame_000582.txt",
+      "pose": {
+        "x": -0.034352,
+        "y": 0.437464,
+        "z": 0.010608
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000583.jpg",
+      "pose_file": "frame_000583.txt",
+      "pose": {
+        "x": -0.034366,
+        "y": 0.438853,
+        "z": 0.010907
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000584.jpg",
+      "pose_file": "frame_000584.txt",
+      "pose": {
+        "x": -0.034366,
+        "y": 0.438853,
+        "z": 0.010907
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000585.jpg",
+      "pose_file": "frame_000585.txt",
+      "pose": {
+        "x": -0.034366,
+        "y": 0.438853,
+        "z": 0.010907
+      },
+      "timestamp": 1786287135
+    },
+    {
+      "frame": "frame_000586.jpg",
+      "pose_file": "frame_000586.txt",
+      "pose": {
+        "x": -0.034366,
+        "y": 0.438853,
+        "z": 0.010907
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000587.jpg",
+      "pose_file": "frame_000587.txt",
+      "pose": {
+        "x": -0.032185,
+        "y": 0.449879,
+        "z": 0.01008
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000588.jpg",
+      "pose_file": "frame_000588.txt",
+      "pose": {
+        "x": -0.032185,
+        "y": 0.449879,
+        "z": 0.01008
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000589.jpg",
+      "pose_file": "frame_000589.txt",
+      "pose": {
+        "x": -0.029273,
+        "y": 0.462186,
+        "z": 0.008453
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000590.jpg",
+      "pose_file": "frame_000590.txt",
+      "pose": {
+        "x": -0.028704,
+        "y": 0.463381,
+        "z": 0.007951
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000591.jpg",
+      "pose_file": "frame_000591.txt",
+      "pose": {
+        "x": -0.028704,
+        "y": 0.463381,
+        "z": 0.007951
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000592.jpg",
+      "pose_file": "frame_000592.txt",
+      "pose": {
+        "x": -0.02873,
+        "y": 0.46544,
+        "z": 0.00792
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000593.jpg",
+      "pose_file": "frame_000593.txt",
+      "pose": {
+        "x": -0.02873,
+        "y": 0.46544,
+        "z": 0.00792
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000594.jpg",
+      "pose_file": "frame_000594.txt",
+      "pose": {
+        "x": -0.02873,
+        "y": 0.46544,
+        "z": 0.00792
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000595.jpg",
+      "pose_file": "frame_000595.txt",
+      "pose": {
+        "x": -0.027589,
+        "y": 0.469517,
+        "z": 0.006756
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000596.jpg",
+      "pose_file": "frame_000596.txt",
+      "pose": {
+        "x": -0.02569,
+        "y": 0.471606,
+        "z": 0.004713
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000597.jpg",
+      "pose_file": "frame_000597.txt",
+      "pose": {
+        "x": -0.02569,
+        "y": 0.471606,
+        "z": 0.004713
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000598.jpg",
+      "pose_file": "frame_000598.txt",
+      "pose": {
+        "x": -0.026886,
+        "y": 0.467971,
+        "z": 0.007006
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000599.jpg",
+      "pose_file": "frame_000599.txt",
+      "pose": {
+        "x": -0.026886,
+        "y": 0.467971,
+        "z": 0.007006
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000600.jpg",
+      "pose_file": "frame_000600.txt",
+      "pose": {
+        "x": -0.027571,
+        "y": 0.47166,
+        "z": 0.007906
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000601.jpg",
+      "pose_file": "frame_000601.txt",
+      "pose": {
+        "x": -0.026051,
+        "y": 0.47537,
+        "z": 0.007074
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000602.jpg",
+      "pose_file": "frame_000602.txt",
+      "pose": {
+        "x": -0.025396,
+        "y": 0.479047,
+        "z": 0.006687
+      },
+      "timestamp": 1786287136
+    },
+    {
+      "frame": "frame_000603.jpg",
+      "pose_file": "frame_000603.txt",
+      "pose": {
+        "x": -0.025396,
+        "y": 0.479047,
+        "z": 0.006687
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000604.jpg",
+      "pose_file": "frame_000604.txt",
+      "pose": {
+        "x": -0.023769,
+        "y": 0.487969,
+        "z": 0.005554
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000605.jpg",
+      "pose_file": "frame_000605.txt",
+      "pose": {
+        "x": -0.022506,
+        "y": 0.485096,
+        "z": 0.004177
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000606.jpg",
+      "pose_file": "frame_000606.txt",
+      "pose": {
+        "x": -0.022506,
+        "y": 0.485096,
+        "z": 0.004177
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000607.jpg",
+      "pose_file": "frame_000607.txt",
+      "pose": {
+        "x": -0.020953,
+        "y": 0.489929,
+        "z": 0.003011
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000608.jpg",
+      "pose_file": "frame_000608.txt",
+      "pose": {
+        "x": -0.018665,
+        "y": 0.496965,
+        "z": 0.001259
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000609.jpg",
+      "pose_file": "frame_000609.txt",
+      "pose": {
+        "x": -0.018665,
+        "y": 0.496965,
+        "z": 0.001259
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000610.jpg",
+      "pose_file": "frame_000610.txt",
+      "pose": {
+        "x": -0.018665,
+        "y": 0.496965,
+        "z": 0.001259
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000611.jpg",
+      "pose_file": "frame_000611.txt",
+      "pose": {
+        "x": -0.021347,
+        "y": 0.499068,
+        "z": 0.004749
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000612.jpg",
+      "pose_file": "frame_000612.txt",
+      "pose": {
+        "x": -0.019254,
+        "y": 0.508864,
+        "z": 0.003941
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000613.jpg",
+      "pose_file": "frame_000613.txt",
+      "pose": {
+        "x": -0.017515,
+        "y": 0.509987,
+        "z": 0.001961
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000614.jpg",
+      "pose_file": "frame_000614.txt",
+      "pose": {
+        "x": -0.017515,
+        "y": 0.509987,
+        "z": 0.001961
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000615.jpg",
+      "pose_file": "frame_000615.txt",
+      "pose": {
+        "x": -0.01683,
+        "y": 0.515545,
+        "z": 0.001624
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000616.jpg",
+      "pose_file": "frame_000616.txt",
+      "pose": {
+        "x": -0.014227,
+        "y": 0.52032,
+        "z": -0.001643
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000617.jpg",
+      "pose_file": "frame_000617.txt",
+      "pose": {
+        "x": -0.01694,
+        "y": 0.521847,
+        "z": 0.001842
+      },
+      "timestamp": 1786287137
+    },
+    {
+      "frame": "frame_000618.jpg",
+      "pose_file": "frame_000618.txt",
+      "pose": {
+        "x": -0.015778,
+        "y": 0.523979,
+        "z": 0.002146
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000619.jpg",
+      "pose_file": "frame_000619.txt",
+      "pose": {
+        "x": -0.015778,
+        "y": 0.523979,
+        "z": 0.002146
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000620.jpg",
+      "pose_file": "frame_000620.txt",
+      "pose": {
+        "x": -0.017504,
+        "y": 0.524886,
+        "z": 0.003671
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000621.jpg",
+      "pose_file": "frame_000621.txt",
+      "pose": {
+        "x": -0.017504,
+        "y": 0.524886,
+        "z": 0.003671
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000622.jpg",
+      "pose_file": "frame_000622.txt",
+      "pose": {
+        "x": -0.017504,
+        "y": 0.524886,
+        "z": 0.003671
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000623.jpg",
+      "pose_file": "frame_000623.txt",
+      "pose": {
+        "x": -0.012822,
+        "y": 0.535237,
+        "z": -0.001045
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000624.jpg",
+      "pose_file": "frame_000624.txt",
+      "pose": {
+        "x": -0.012822,
+        "y": 0.535237,
+        "z": -0.001045
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000625.jpg",
+      "pose_file": "frame_000625.txt",
+      "pose": {
+        "x": -0.013809,
+        "y": 0.522443,
+        "z": 0.000503
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000626.jpg",
+      "pose_file": "frame_000626.txt",
+      "pose": {
+        "x": -0.013809,
+        "y": 0.522443,
+        "z": 0.000503
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000627.jpg",
+      "pose_file": "frame_000627.txt",
+      "pose": {
+        "x": -0.016313,
+        "y": 0.523164,
+        "z": 0.003126
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000628.jpg",
+      "pose_file": "frame_000628.txt",
+      "pose": {
+        "x": -0.015505,
+        "y": 0.526744,
+        "z": 0.001513
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000629.jpg",
+      "pose_file": "frame_000629.txt",
+      "pose": {
+        "x": -0.013737,
+        "y": 0.529103,
+        "z": -0.000353
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000630.jpg",
+      "pose_file": "frame_000630.txt",
+      "pose": {
+        "x": -0.013737,
+        "y": 0.529103,
+        "z": -0.000353
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000631.jpg",
+      "pose_file": "frame_000631.txt",
+      "pose": {
+        "x": -0.012091,
+        "y": 0.53146,
+        "z": -0.001804
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000632.jpg",
+      "pose_file": "frame_000632.txt",
+      "pose": {
+        "x": -0.012091,
+        "y": 0.53146,
+        "z": -0.001804
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000633.jpg",
+      "pose_file": "frame_000633.txt",
+      "pose": {
+        "x": -0.0111,
+        "y": 0.539165,
+        "z": -0.002555
+      },
+      "timestamp": 1786287138
+    },
+    {
+      "frame": "frame_000634.jpg",
+      "pose_file": "frame_000634.txt",
+      "pose": {
+        "x": -0.014042,
+        "y": 0.539775,
+        "z": 0.000434
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000635.jpg",
+      "pose_file": "frame_000635.txt",
+      "pose": {
+        "x": -0.014042,
+        "y": 0.539775,
+        "z": 0.000434
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000636.jpg",
+      "pose_file": "frame_000636.txt",
+      "pose": {
+        "x": -0.013802,
+        "y": 0.542244,
+        "z": -2.8e-05
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000637.jpg",
+      "pose_file": "frame_000637.txt",
+      "pose": {
+        "x": -0.013802,
+        "y": 0.542244,
+        "z": -2.8e-05
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000638.jpg",
+      "pose_file": "frame_000638.txt",
+      "pose": {
+        "x": -0.013802,
+        "y": 0.542244,
+        "z": -2.8e-05
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000639.jpg",
+      "pose_file": "frame_000639.txt",
+      "pose": {
+        "x": -0.013352,
+        "y": 0.543192,
+        "z": -0.000397
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000640.jpg",
+      "pose_file": "frame_000640.txt",
+      "pose": {
+        "x": -0.012916,
+        "y": 0.555732,
+        "z": -0.000552
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000641.jpg",
+      "pose_file": "frame_000641.txt",
+      "pose": {
+        "x": -0.011546,
+        "y": 0.557264,
+        "z": -0.001984
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000642.jpg",
+      "pose_file": "frame_000642.txt",
+      "pose": {
+        "x": -0.011546,
+        "y": 0.557264,
+        "z": -0.001984
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000643.jpg",
+      "pose_file": "frame_000643.txt",
+      "pose": {
+        "x": -0.011546,
+        "y": 0.557264,
+        "z": -0.001984
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000644.jpg",
+      "pose_file": "frame_000644.txt",
+      "pose": {
+        "x": -0.013674,
+        "y": 0.55748,
+        "z": -0.000393
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000645.jpg",
+      "pose_file": "frame_000645.txt",
+      "pose": {
+        "x": -0.013674,
+        "y": 0.55748,
+        "z": -0.000393
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000646.jpg",
+      "pose_file": "frame_000646.txt",
+      "pose": {
+        "x": -0.011786,
+        "y": 0.563338,
+        "z": -0.002063
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000647.jpg",
+      "pose_file": "frame_000647.txt",
+      "pose": {
+        "x": -0.012196,
+        "y": 0.565839,
+        "z": -0.001393
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000648.jpg",
+      "pose_file": "frame_000648.txt",
+      "pose": {
+        "x": -0.010406,
+        "y": 0.560037,
+        "z": -0.002976
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000649.jpg",
+      "pose_file": "frame_000649.txt",
+      "pose": {
+        "x": -0.01136,
+        "y": 0.566543,
+        "z": -0.002266
+      },
+      "timestamp": 1786287139
+    },
+    {
+      "frame": "frame_000650.jpg",
+      "pose_file": "frame_000650.txt",
+      "pose": {
+        "x": -0.008746,
+        "y": 0.569401,
+        "z": -0.004975
+      },
+      "timestamp": 1786287140
+    },
+    {
+      "frame": "frame_000651.jpg",
+      "pose_file": "frame_000651.txt",
+      "pose": {
+        "x": -0.010557,
+        "y": 0.570441,
+        "z": -0.00302
+      },
+      "timestamp": 1786287140
+    },
+    {
+      "frame": "frame_000652.jpg",
+      "pose_file": "frame_000652.txt",
+      "pose": {
+        "x": -0.010557,
+        "y": 0.570441,
+        "z": -0.00302
+      },
+      "timestamp": 1786287140
+    },
+    {
+      "frame": "frame_000653.jpg",
+      "pose_file": "frame_000653.txt",
+      "pose": {
+        "x": -0.007958,
+        "y": 0.579487,
+        "z": -0.005434
+      },
+      "timestamp": 1786287140
+    },
+    {
+      "frame": "frame_000654.jpg",
+      "pose_file": "frame_000654.txt",
+      "pose": {
+        "x": -0.00919,
+        "y": 0.581232,
+        "z": -0.003886
+      },
+      "timestamp": 1786287140
+    },
+    {
+      "frame": "frame_000655.jpg",
+      "pose_file": "frame_000655.txt",
+      "pose": {
+        "x": -0.00919,
+        "y": 0.581232,
+        "z": -0.003886
+      },
+      "timestamp": 1786287140
+    },
+    {
+      "frame": "frame_000656.jpg",
+      "pose_file": "frame_000656.txt",
+      "pose": {
+        "x": -0.007529,
+        "y": 0.582601,
+        "z": -0.005216
+      },
+      "timestamp": 1786287140
+    }
+  ],
   "correlation_points": [],
   "transform": null,
   "calib_gpc_path": null

@@ -221,8 +221,17 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
         load_path = None
         save_path = None
         if project and project.calibration_status == "calibrated":
-            load_path = f"Database/projects/{action.project_id}/calibrations/map"
             save_path = f"Database/projects/{action.project_id}/calibrations/map"
+            # Only load a previously-saved atlas if it actually exists on disk.
+            # A simulation calibration does not produce an atlas, so loading a
+            # non-existent map file makes ORB-SLAM3 crash on startup
+            # ("Load file not found"). When the atlas is absent we start in
+            # mapping mode (build a fresh map) instead of localization.
+            calib_dir = os.path.join(PROJECTS_DIR, action.project_id, "calibrations")
+            if os.path.exists(os.path.join(calib_dir, "map")) or os.path.exists(
+                os.path.join(calib_dir, "map.osa")
+            ):
+                load_path = save_path
         logger.info(
             f"Updating SLAM YAML before {action.action}: load_filename={load_path}, save_filename={save_path}"
         )
@@ -230,10 +239,10 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
 
     if action.component == "all" and action.action in ("start", "restart", "stop", "kill"):
         if project_type == "симуляция":
-            target_components = ["slam", "publisher_folder", "rosbridge"]
+            target_components = ["slam", "publisher_folder", "gps_filter", "gps_bridge"]
             others = ["publisher_realsense"]
         else:
-            target_components = ["slam", "publisher_realsense", "rosbridge"]
+            target_components = ["slam", "publisher_realsense", "gps_filter", "gps_bridge"]
             others = ["publisher_folder"]
 
         combined_output = ""
@@ -319,45 +328,66 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
 
 
 @router.get("/terraslam/status")
-async def get_terraslam_status():
-    """Get detailed status of all TerraSLAM components from gateway."""
+async def get_terraslam_status(request: Request, project_id: Optional[str] = None):
+    """Get detailed status of all TerraSLAM components from gateway.
+
+    `publisher_mode` is derived from the project type ("симуляция" -> folder
+    publisher, "камера" -> realsense publisher), matching how components are
+    actually started. The gateway does not report a `publisher_mode` value, so
+    relying on it alone always fell back to "folder" and mislabeled camera
+    projects as folder/image-publisher mode.
+    """
+    # Project type is the source of truth for which publisher belongs to this project.
+    project_publisher_mode: Optional[str] = None
+    if project_id:
+        try:
+            projects_root = get_projects_root(request)
+            project = read_project_metadata(projects_root, project_id)
+            if project:
+                project_publisher_mode = "folder" if project.type == "симуляция" else "realsense"
+        except Exception:
+            logger.warning("Failed to read project %s for publisher_mode", project_id, exc_info=True)
+
     gateway_data = await _gateway_status()
     if not gateway_data:
         return {
             "system_status": "not_working",
             "error": "Gateway unavailable",
             "components": {},
-            "publisher_mode": "unknown",
+            "publisher_mode": project_publisher_mode or "unknown",
             "orphaned_processes": {},
             "supervisor_output": ""
         }
 
     components = gateway_data.get("components", [])
     components_status: dict[str, str] = {}
-    publisher_mode = "folder"
+    gateway_publisher_mode: Optional[str] = None
     for comp in components:
         name = comp.get("name", "")
         short_name = name.split("/")[-1] if "/" in name else name
         components_status[short_name] = comp.get("message", "UNKNOWN")
         values = comp.get("values", {})
         if "publisher_mode" in values:
-            publisher_mode = values["publisher_mode"]
+            gateway_publisher_mode = values["publisher_mode"]
+
+    publisher_mode = project_publisher_mode or gateway_publisher_mode or "folder"
 
     main_components = ["slam"]
     if publisher_mode == "folder":
         main_components.append("publisher_folder")
     else:
         main_components.append("publisher_realsense")
-        main_components.append("rosbridge")
+    main_components.append("gps_bridge")
+    main_components.append("rosbridge")
 
     all_running = all(
-        components_status.get(comp, "").upper() == "RUNNING"
+        components_status.get(comp, "").upper().startswith("RUNNING")
         for comp in main_components
     )
 
     orphaned_processes: dict[str, int] = {}
     for comp_name, state in components_status.items():
-        if comp_name not in main_components and state.upper() == "RUNNING":
+        if comp_name not in main_components and state.upper().startswith("RUNNING"):
             orphaned_processes[comp_name] = 1
 
     if all_running and not orphaned_processes:

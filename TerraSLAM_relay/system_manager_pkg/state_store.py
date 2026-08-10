@@ -20,7 +20,7 @@ STATE_VERSION = 1
 # Components that should come up automatically on a (re)start. rosbridge is the
 # manager's own transport and slam_mode_manager drives the SLAM lifecycle, so both
 # are desired+autostart by default. Everything else is operator-driven.
-AUTOSTART_DEFAULTS = {"rosbridge", "slam_mode_manager"}
+AUTOSTART_DEFAULTS = {"rosbridge", "slam_mode_manager", "gps_client"}
 
 
 def atomic_write(path: str, text: str) -> None:

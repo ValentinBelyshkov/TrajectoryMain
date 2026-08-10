@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { StepLayout } from "./StepLayout";
 import { ErrorBanner } from "./ErrorBanner";
-import { checkProjectHasFrames } from "@/lib/api";
+import { checkProjectHasFrames, getCalibrationRecordingStatus } from "@/lib/api";
 
 interface CameraRecordingStepProps {
   onStart: () => void;
@@ -9,6 +9,7 @@ interface CameraRecordingStepProps {
   videoCanvasRef: RefObject<HTMLCanvasElement | null>;
   hasVideoStream: boolean;
   calibrationSessionId: string | null;
+  sessionStatus?: string | null;
   startSession: () => Promise<{ id: string }>;
   onComplete: () => void;
   onBack: () => void;
@@ -16,6 +17,7 @@ interface CameraRecordingStepProps {
   error?: string | null;
   projectId?: string;
   onStartPublisher?: (projectId: string) => Promise<void>;
+  setCalibrationSessionId?: (id: string) => void;
 }
 
 export function CameraRecordingStep({
@@ -24,20 +26,20 @@ export function CameraRecordingStep({
   videoCanvasRef,
   hasVideoStream,
   calibrationSessionId,
+  sessionStatus,
   startSession,
   onComplete,
   onBack,
+  onSkip,
   error,
   projectId,
   onStartPublisher,
-  onSkip,
+  setCalibrationSessionId,
 }: CameraRecordingStepProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const timerRef = useRef<number | null>(null);
 
-  // Показываем кнопку «Пропустить», только если в папке frames проекта
-  // уже есть сохранённые кадры — тогда запись не обязательна.
   const [hasExistingFrames, setHasExistingFrames] = useState(false);
   useEffect(() => {
     if (!projectId) {
@@ -57,8 +59,69 @@ export function CameraRecordingStep({
     };
   }, [projectId]);
 
+  const startTimer = () => {
+    if (timerRef.current !== null) return;
+    timerRef.current = window.setInterval(() => {
+      setSeconds((s) => s + 1);
+    }, 1000);
+  };
+
+  const stopTimer = () => {
+    if (timerRef.current !== null) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    let cancelled = false;
+
+    const sync = async () => {
+      try {
+        const status = await getCalibrationRecordingStatus(projectId);
+        if (cancelled) return;
+        // The server is now authoritative. Keep the live session id in sync so
+        // the Stop button always targets the recording that is actually active
+        // (e.g. after a page refresh the URL may still hold a stale id).
+        if (status.session_id && status.session_id !== calibrationSessionId) {
+          setCalibrationSessionId?.(status.session_id);
+          try {
+            localStorage.setItem(
+              `calib_session_id:${projectId}`,
+              status.session_id,
+            );
+          } catch {
+            // ignore storage errors
+          }
+        }
+        setIsRecording(status.recording);
+        if (status.recording) {
+          setSeconds(status.elapsed || 0);
+          startTimer();
+        } else {
+          stopTimer();
+        }
+      } catch {
+        if (!cancelled) {
+          // Network/backend error: do NOT clobber the current recording state.
+          // A transient 502 (backend down) must not flip the button back to
+          // "Записать" while a capture process may still be running.
+        }
+      }
+    };
+
+    sync();
+    const id = window.setInterval(sync, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      stopTimer();
+    };
+  }, [projectId, calibrationSessionId, sessionStatus, setCalibrationSessionId]);
+
   const start = async () => {
-    // Создаём калибровочную сессию (нужна для шага обработки), если ещё нет
     if (!calibrationSessionId) {
       try {
         await startSession();
@@ -66,7 +129,6 @@ export function CameraRecordingStep({
         console.error("Failed to start calibration session:", err);
       }
     }
-    // Запускаем publisher_realsense с папкой procframe проекта (пишет кадры на диск)
     if (projectId && onStartPublisher) {
       try {
         await onStartPublisher(projectId);
@@ -75,25 +137,16 @@ export function CameraRecordingStep({
       }
     }
     setSeconds(0);
-    onStart(); // бэкенд: запуск записи с камеры RealSense
+    onStart();
     setIsRecording(true);
-    timerRef.current = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+    startTimer();
   };
 
   const stop = () => {
-    if (timerRef.current !== null) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    onStop(); // бэкенд: остановка записи
+    stopTimer();
+    onStop();
     setIsRecording(false);
   };
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current !== null) window.clearInterval(timerRef.current);
-    };
-  }, []);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -103,12 +156,10 @@ export function CameraRecordingStep({
 
   return (
     <StepLayout>
-      {error && (
-        <ErrorBanner message={error} />
-      )}
+      {error && <ErrorBanner message={error} />}
       <div className="text-center">
         <h3 className="text-2xl font-bold text-foreground mb-2">
-          Запись с камеры дрона (RealSense)
+          Запись с камерой дрона (RealSense)
         </h3>
         <p className="text-muted-foreground">
           Запись ведётся с бортовой камеры. Кадры сохраняются на сервере.
@@ -125,7 +176,7 @@ export function CameraRecordingStep({
         />
         {!hasVideoStream && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-            <p className="text-white/60 text-sm">Нет видеопотока с камеры</p>
+            <p className="text-white/60 text-sm">Нет видеопотока с камерой</p>
           </div>
         )}
         {isRecording && (
@@ -137,9 +188,9 @@ export function CameraRecordingStep({
       </div>
 
       <div className="text-center">
-        <div className="text-4xl font-mono font-bold text-foreground mb-4">
-          {formatTime(seconds)}
-        </div>
+          <div className="text-4xl font-mono font-bold text-foreground mb-4">
+            {formatTime(seconds)}
+          </div>
         <div className="flex justify-center gap-4">
           {!isRecording ? (
             <button

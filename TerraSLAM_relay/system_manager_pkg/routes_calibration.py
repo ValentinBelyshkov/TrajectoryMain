@@ -137,14 +137,27 @@ def _session_path(session_id: str, project_id: Optional[str] = None) -> Path:
 
     Sessions live under projects/<id>/calibrations/1.json. If project_id
     is known it is used directly; otherwise every project's calibrations dir
-    is searched for the fixed 1.json file.
+    is searched. Because ALL projects share the fixed filename 1.json, we must
+    match by the session id stored INSIDE the file — otherwise we'd return a
+    different project's session (e.g. one already in "correlating") and every
+    operation on the real session would hit the wrong file.
     """
     if project_id:
         return _session_dir(project_id) / SESSION_FILENAME
+    # Prefer the project whose 1.json actually holds this session id.
     for proj in PROJECTS_DIR.glob("*"):
         cand = proj / "calibrations" / SESSION_FILENAME
         if cand.exists():
-            return cand
+            try:
+                with open(cand, "r", encoding="utf-8-sig") as f:
+                    data = json.load(f)
+                if data.get("id") == session_id:
+                    return cand
+            except Exception:
+                continue
+    # No project owns this session id: do NOT fall back to an arbitrary
+    # project's 1.json, otherwise operations (stop/resume) silently hit the
+    # wrong project and stop/return a foreign recording session.
     raise HTTPException(404, detail=f"Session {session_id} not found")
 
 
@@ -321,11 +334,17 @@ async def upload_chunk(session_id: str, chunk: UploadFile = File(...)):
 async def stop_recording(session_id: str):
     """Finalize recording, ready for trimming."""
     session = _load_session(session_id)
-    if session["status"] != SessionStatus.RECORDING:
-        raise HTTPException(400, detail=f"Session not in recording state: {session['status']}")
+    # Idempotent: if a previous stop already moved the session past recording
+    # (e.g. the page was refreshed after Stop), just return the current state
+    # instead of failing with 400.
+    if session["status"] == SessionStatus.RECORDING:
+        session["status"] = SessionStatus.TRIMMING
+        session["recording_stopped_at"] = int(time.time())
+        _save_session(session)
 
-    session["status"] = SessionStatus.TRIMMING
-    _save_session(session)
+    # Always attempt to stop the publisher so a stale capture process is
+    # terminated even on a repeated stop call.
+    project_id = session.get("project_id")
 
     # Останавливаем publisher_realsense, чтобы он перестал дописывать кадры
     # в папку frames проекта после завершения записи.
@@ -369,6 +388,127 @@ async def get_session(session_id: str):
     """Get full session data."""
     session = _load_session(session_id)
     return {"success": True, "session": session}
+
+
+@router.get("/api/v1/calibration/recording-status/{project_id}")
+async def get_recording_status(project_id: str):
+    """Report the live recording state for a project.
+
+    The frontend uses this (e.g. after a page refresh) to discover whether a
+    calibration recording is still in progress, instead of trusting only the
+    in-memory UI state. We return the session status plus an authoritative
+    check of whether the RealSense publisher process is actually running, so a
+    session stuck in "recording" (e.g. the page was closed without pressing
+    Stop) is reported as NOT recording when the capture process is gone.
+    """
+
+    path = PROJECTS_DIR / project_id / "calibrations" / SESSION_FILENAME
+
+    if not path.exists():
+        return {
+            "recording": False,
+            "status": None,
+            "session_id": None,
+            "elapsed": 0,
+            "publisher_running": False,
+            "server_time": int(time.time()),
+        }
+
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            session = json.load(f)
+    except Exception:
+        return {
+            "recording": False,
+            "status": None,
+            "session_id": None,
+            "elapsed": 0,
+            "publisher_running": False,
+            "server_time": int(time.time()),
+        }
+
+    status = session.get("status")
+    session_id = session.get("id")
+
+    publisher_running = _is_realsense_publisher_alive(project_id)
+
+    is_recording = status == SessionStatus.RECORDING and publisher_running
+
+    # Self-heal: a session that is marked "recording" but has no live capture
+    # process (e.g. the manager crashed, or the page was closed without Stop)
+    # is stale. Flip it to "trimming" so the UI stops claiming a recording and
+    # the next status poll is consistent. Only the project that owns this
+    # session file is touched.
+    if status == SessionStatus.RECORDING and not publisher_running:
+        try:
+            session["status"] = SessionStatus.TRIMMING
+            session["recording_stopped_at"] = int(time.time())
+            _save_session(session)
+            print(
+                f"[recording-status] healed stale 'recording' session "
+                f"{session_id} (no live publisher) -> trimming",
+                flush=True,
+            )
+            status = session.get("status")
+        except Exception as exc:
+            print(f"[recording-status] WARNING heal failed: {exc}", flush=True)
+
+    # Elapsed recording time (seconds) as seen by the server clock.
+    started_at = session.get("created_at") or session.get("recording_started_at")
+    elapsed = 0
+    if started_at and status == SessionStatus.RECORDING:
+        elapsed = max(0, int(time.time()) - int(started_at))
+
+    return {
+        "recording": is_recording,
+        "status": status,
+        "session_id": session_id,
+        "elapsed": elapsed,
+        "publisher_running": publisher_running,
+        "server_time": int(time.time()),
+    }
+
+
+def _is_realsense_publisher_alive(project_id: Optional[str] = None) -> bool:
+    """Authoritative check of whether the RealSense capture is actually running.
+
+    manager._procs is in-memory only and is wiped on every backend restart, so a
+    session stuck in "recording" after the manager died would be reported as
+    still recording even though no capture process exists. To stay correct after
+    a restart we also probe the OS process table directly (the publisher is
+    started with start_new_session=True, so it survives a manager crash as an
+    orphan and keeps writing frames).
+
+    During calibration recording the running process is publisher_realsense,
+    which receives a project-specific --frames-dir argument. We therefore
+    additionally match the process command line against this project's frames
+    directory, so a publisher recording a *different* project is not mistaken
+    for the current one.
+    """
+    info = manager._procs.get("publisher_realsense")
+    proc = info.get("proc") if info else None
+    if proc is not None and proc.returncode is None:
+        return True
+
+    try:
+        if project_id:
+            frames_dir = str(PROJECTS_DIR / project_id / "frames")
+            pattern = f"frames-dir[ =]{frames_dir}"
+            out = subprocess.run(
+                ["pgrep", "-f", pattern],
+                capture_output=True, text=True, timeout=3,
+            )
+            if out.returncode == 0 and out.stdout.strip():
+                return True
+        out = subprocess.run(
+            ["pgrep", "-f", "publisher_realsense"],
+            capture_output=True, text=True, timeout=3,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return True
+    except Exception:
+        pass
+    return False
 
 
 # ========== VIDEO TRIMMING ==========
@@ -821,6 +961,8 @@ async def process_calibration(req: ProcessReq):
         SessionStatus.PROCESSING,
         SessionStatus.TRIMMING,
         SessionStatus.ERROR,
+        SessionStatus.CORRELATING,
+        SessionStatus.DONE,
     ):
         raise HTTPException(400, detail=f"Session not in processable state: {status}")
 

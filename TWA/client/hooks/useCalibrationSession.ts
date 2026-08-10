@@ -7,6 +7,7 @@ import {
   type AutoCalibrationRegion,
   type Project,
   startCalibrationSession,
+  startCalibrationSessionFromProject,
   stopCalibrationSession,
   getCalibrationSession,
   trimCalibrationVideo,
@@ -76,6 +77,8 @@ export function useCalibrationSession({
     null,
   );
   const [calibrationSession, setCalibrationSession] = useState<any>(null);
+  const calibrationSessionRef = useRef(calibrationSession);
+  calibrationSessionRef.current = calibrationSession;
   const [recordingStatus, setRecordingStatus] = useState<
     "idle" | "recording" | "stopped"
   >("idle");
@@ -93,24 +96,48 @@ export function useCalibrationSession({
   useEffect(() => {
     if (project) {
       if (isCalibrated) {
-        setCalibrationStep("complete");
+        // Only auto-jump to "complete" from the neutral state. Otherwise a
+        // background project refetch (or a restored ?calib=... step) would
+        // kick the user out of an in-progress re-calibration.
+        if (calibrationStep === "idle") {
+          setCalibrationStep("complete");
+        }
       } else if (calibrationStep === "complete") {
         setCalibrationStep("idle");
       }
     }
-  }, [project, isCalibrated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [project, isCalibrated, calibrationStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCalibrate = useCallback(() => {
     setCalibrationStep("type-selection");
   }, []);
 
-  const handleCalibrationTypeSelect = useCallback((type: "manual" | "auto") => {
+  const handleCalibrationTypeSelect = useCallback(async (type: "manual" | "auto") => {
     if (type === "auto") {
       setCalibrationStep("auto-region");
-    } else {
-      setCalibrationStep("recording");
+      return;
     }
-  }, []);
+
+    // Manual calibration: if the project already has a video (uploaded at
+    // creation time), skip the upload/recording step and go straight to the
+    // video editor (trimming) using the existing project video.
+    if (project?.videoFilename && projectId) {
+      try {
+        const data = await startCalibrationSessionFromProject(projectId);
+        if (data.success) {
+          setCalibrationSessionId(data.session.id);
+          setCalibrationSession(data.session);
+          localStorage.setItem("calib_session_id", data.session.id);
+          setCalibrationStep("trimming");
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to start session from project video:", err);
+      }
+    }
+
+    setCalibrationStep("recording");
+  }, [project, projectId]);
 
   const handleInstructionsNext = useCallback(() => {
     setCalibrationStep("test-run");
@@ -222,7 +249,11 @@ export function useCalibrationSession({
     if (!data.success) throw new Error("Failed to start session");
     setCalibrationSessionId(data.session.id);
     setCalibrationSession(data.session);
-    localStorage.setItem("calib_session_id", data.session.id);
+    try {
+      localStorage.setItem(`calib_session_id:${projectId}`, data.session.id);
+    } catch {
+      // ignore storage errors
+    }
     return data.session;
   }, [projectId]);
 
@@ -234,12 +265,29 @@ export function useCalibrationSession({
     return data.session;
   }, []);
 
+  // Keep the session in sync when arriving at the correlating step (e.g. after
+  // skipping earlier steps). Without this, c.calibrationSession could be stale
+  // with an empty frame_pose_data, so CorrelationStep would fall back to the
+  // pose-less procframe list and every point would reject.
+  useEffect(() => {
+    if (calibrationStep === "correlating" && calibrationSessionId) {
+      resumeCalibrationSession(calibrationSessionId).catch((err) =>
+        console.error("Failed to refresh calibration session:", err),
+      );
+    }
+  }, [calibrationStep, calibrationSessionId, resumeCalibrationSession]);
+
   const handleStartRecording = useCallback(async () => {
     try {
       setRecordingError(null);
-      let session = calibrationSession;
+      // The session id is owned by the server. Trust localStorage (namespaced
+      // per project) for the *current* project, not the stale in-memory
+      // calibrationSession captured in this closure, otherwise a resume() on an
+      // unrelated/stale id could start the UI pointing at the wrong session.
+      let session = calibrationSessionRef.current;
+      const storedKey = projectId ? `calib_session_id:${projectId}` : null;
+      const stored = storedKey ? localStorage.getItem(storedKey) : null;
       if (!session) {
-        const stored = localStorage.getItem("calib_session_id");
         if (stored) {
           try {
             session = await resumeCalibrationSession(stored);
@@ -258,7 +306,7 @@ export function useCalibrationSession({
       setRecordingError(msg);
       console.error("Failed to start recording session:", err);
     }
-  }, [calibrationSession, startNewCalibrationSession, resumeCalibrationSession]);
+  }, [projectId, calibrationSessionRef, startNewCalibrationSession, resumeCalibrationSession]);
 
   const handleStopRecording = useCallback(async () => {
     if (calibrationSessionId) {
@@ -286,6 +334,23 @@ export function useCalibrationSession({
       } catch (err) {
         console.error("Failed to trim frames:", err);
       }
+
+      // Start a FRESH calibration session from the (now trimmed) project
+      // frames. This resets the session to a processable state (trimming,
+      // empty frame_pose_data) so that clicking «Обработать» actually runs
+      // SLAM instead of being rejected with "not in processable state" when
+      // reusing an already-correlating session.
+      try {
+        const data = await startCalibrationSessionFromProject(projectId);
+        if (data.success) {
+          setCalibrationSessionId(data.session.id);
+          setCalibrationSession(data.session);
+          localStorage.setItem(`calib_session_id:${projectId}`, data.session.id);
+        }
+      } catch (err) {
+        console.error("Failed to start fresh session after trim:", err);
+      }
+
       setCalibrationStep("processing");
     },
     [projectId],
@@ -306,23 +371,44 @@ export function useCalibrationSession({
   const handleRunProcessing = useCallback(async () => {
     if (!calibrationSessionId || !projectId) return;
 
-    try {
-      const existing = await getCalibrationSession(calibrationSessionId);
-      if (existing.success && existing.session.status === "correlating") {
-        setCalibrationSession(existing.session);
-        setCalibrationStep("correlating");
-        return;
-      }
-    } catch {
-      // сессия ещё не готова — продолжаем запуск
-    }
+    // The session we actually drive. May be swapped to a freshly created one
+    // below (when re-running on an already-processed session).
+    let activeSessionId = calibrationSessionId;
 
     try {
-      const startData = await processCalibrationSession(
-        calibrationSessionId,
-        projectId,
-      );
-      if (!startData.success) throw new Error("Не удалось запустить обработку");
+      // «Обработать» always attempts to run SLAM. If the current session is
+      // already processed (correlating/done) the backend refuses with
+      // "not in processable state" — in that case we start a FRESH session
+      // from the project's (already trimmed) frames and retry, so processing
+      // actually runs instead of being silently skipped.
+      try {
+        const startData = await processCalibrationSession(
+          activeSessionId,
+          projectId,
+        );
+        if (!startData.success) throw new Error("Не удалось запустить обработку");
+      } catch (startErr) {
+        const msg = startErr instanceof Error ? startErr.message : "";
+        if (msg.includes("not in processable state") && projectId) {
+          const fresh = await startCalibrationSessionFromProject(projectId);
+          if (fresh.success) {
+            activeSessionId = fresh.session.id;
+            setCalibrationSessionId(fresh.session.id);
+            setCalibrationSession(fresh.session);
+            localStorage.setItem(`calib_session_id:${projectId}`, fresh.session.id);
+            const startData = await processCalibrationSession(
+              fresh.session.id,
+              projectId,
+            );
+            if (!startData.success)
+              throw new Error("Не удалось запустить обработку");
+          } else {
+            throw startErr;
+          }
+        } else {
+          throw startErr;
+        }
+      }
 
       const deadline = Date.now() + 30 * 60 * 1000;
 
@@ -333,37 +419,40 @@ export function useCalibrationSession({
 
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        const prog = await getCalibrationProgress(calibrationSessionId);
-
-        if (!prog.found) {
-          if (
-            prog.session_status === "correlating" ||
-            prog.session_status === "done"
-          ) {
-            const sess = await getCalibrationSession(calibrationSessionId);
-            setCalibrationSession(sess.session);
-            setCalibrationStep("correlating");
-            return;
-          }
-          continue;
-        }
-
-        const label = prog.step_label || "Обработка...";
-        const frames = prog.frames_total
-          ? ` (${prog.frames_done ?? 0}/${prog.frames_total})`
-          : "";
-        const elapsed = prog.elapsed != null ? ` — ${prog.elapsed} с` : "";
-        setProcessingProgress(`${label}${frames}${elapsed}`);
-
-        if (prog.step === "error" || prog.slam_crashed) {
-          throw new Error(prog.error || "Ошибка при обработке SLAM");
-        }
-
-        if (prog.step === "done") {
-          const sess = await getCalibrationSession(calibrationSessionId);
+        // Poll the AUTHORITATIVE session status. The in-memory progress
+        // tracker does not carry session_status when a run is in flight, so
+        // we read the real session instead of relying on prog.session_status.
+        let status: string | null = null;
+        try {
+          const sess = await getCalibrationSession(activeSessionId);
           setCalibrationSession(sess.session);
+          status = sess.session.status;
+        } catch {
+          // session not readable yet — fall through to progress text
+        }
+
+        if (status === "correlating" || status === "done") {
           setCalibrationStep("correlating");
           return;
+        }
+
+        if (status === "error") {
+          const prog = await getCalibrationProgress(activeSessionId).catch(
+            () => null,
+          );
+          throw new Error(prog?.error || "Ошибка при обработке SLAM");
+        }
+
+        const prog = await getCalibrationProgress(activeSessionId).catch(
+          () => null,
+        );
+        if (prog?.found) {
+          const label = prog.step_label || "Обработка...";
+          const frames = prog.frames_total
+            ? ` (${prog.frames_done ?? 0}/${prog.frames_total})`
+            : "";
+          const elapsed = prog.elapsed != null ? ` — ${prog.elapsed} с` : "";
+          setProcessingProgress(`${label}${frames}${elapsed}`);
         }
       }
     } catch (err) {
@@ -373,6 +462,20 @@ export function useCalibrationSession({
       console.error("Processing failed:", err);
     }
   }, [calibrationSessionId, projectId]);
+
+  // "Пропустить" on the processing step must advance to the next screen
+  // (correlating), never re-run SLAM. The correlating step refreshes the
+  // session data via its own resume effect, so any collected frames/poses are
+  // picked up there. Re-running SLAM here was the cause of
+  // "пропустить перезапускает обработку".
+  const handleSkipProcessing = useCallback(async () => {
+    if (calibrationSessionId) {
+      resumeCalibrationSession(calibrationSessionId).catch((err) =>
+        console.error("Failed to refresh calibration session:", err),
+      );
+    }
+    setCalibrationStep("correlating");
+  }, [calibrationSessionId, resumeCalibrationSession]);
 
   const handleComputeCorrelation = useCallback(
     async (points: any[]) => {
@@ -392,7 +495,7 @@ export function useCalibrationSession({
     const data = await finalizeCalibrationSession(calibrationSessionId);
     if (!data.success) throw new Error("Finalize failed");
     setCalibrationStep("complete");
-    localStorage.removeItem("calib_session_id");
+    localStorage.removeItem(`calib_session_id:${projectId}`);
     await refetch();
   }, [calibrationSessionId, refetch]);
 
@@ -477,6 +580,7 @@ export function useCalibrationSession({
     handleApplyTrim,
     handleApplyFrameTrim,
     handleRunProcessing,
+    handleSkipProcessing,
     handleComputeCorrelation,
     handleFinalizeCalibration,
     startNewCalibrationSession,

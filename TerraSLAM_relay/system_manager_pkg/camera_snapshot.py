@@ -1,7 +1,7 @@
 """
 On-demand single-frame camera snapshot.
 
-Grabs one message from /camera/image_raw (sensor_msgs/Image) via a
+Grabs one message from /cam0/image_raw (sensor_msgs/Image) via a
 short-lived rclpy subscription, saves it as an image file at a
 user-specified path, and writes a sibling `<same-basename>.txt` file with
 the current /orb_slam3/robot_pose_slam reading — reused directly from the already
@@ -26,7 +26,10 @@ except ImportError as e:
     CAMERA_DEPS_AVAILABLE = False
     _IMPORT_ERROR = str(e)
 
-CAMERA_TOPIC = "/camera/image_raw"
+# Match the raw topic both publishers (realsense.py / image_publish.py) emit
+# and ORB-SLAM3 consumes (real.yaml image_topic_name). The previous
+# /camera/image_raw was never published by the simulation publisher.
+CAMERA_TOPIC = "/cam0/image_raw"
 
 
 def _grab_one_frame(topic: str, timeout: float):

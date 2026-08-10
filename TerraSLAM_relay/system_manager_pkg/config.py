@@ -19,7 +19,10 @@ COMPONENT_CONFIG = {
             'export PATH="/usr/bin:/bin:/usr/local/bin:/opt/ros/humble/bin:$PATH" && '
             'export LD_LIBRARY_PATH="/opt/ros/humble/lib:/opt/main/Trajectory/lib:$LD_LIBRARY_PATH" && '
             'mkdir -p /opt/main/Trajectory/.ros/log && '
-            'ros2 launch orb_slam3_ros2_wrapper unirobot.launch.py'
+            # xvfb-run gives Pangolin a headless display so visualization can be
+            # enabled without aborting; monitor_enabled:=false avoids the
+            # hardcoded /root/colcon_ws monitor script (PermissionError as droneai).
+            'xvfb-run -a ros2 launch orb_slam3_ros2_wrapper unirobot.launch.py monitor_enabled:=false'
         ],
         "cwd": "/opt/main/Trajectory",
         "env": {"ROS_DOMAIN_ID": "0", "QT_X11_NO_MITSHM": "1"},
@@ -27,6 +30,15 @@ COMPONENT_CONFIG = {
         "max_restarts": 0,
     },
     "publisher_folder": {
+        "cmd": [
+            "bash", "-lc",
+            "source /opt/ros/humble/setup.bash && "
+            "source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
+            "exec python3 /opt/main/Trajectory/Database/image_publish.py "
+            "{frames_dir} "
+            "--procframe-dir /opt/main/Trajectory/Database/projects/{project_id}/procframe "
+            "--fps 25"
+        ],
         "cwd": "/opt/main/Trajectory/Database",
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": False,
@@ -48,12 +60,30 @@ COMPONENT_CONFIG = {
             "source /opt/ros/humble/setup.bash && source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
             "python3 /opt/main/Trajectory/TerraSLAM_relay/Serial/gps_bridge_node.py --ros-args "
             "-p protocol:=msp -p hw_type:=uart -p port:=/dev/ttyTHS1 -p baudrate:=115200 "
-            "-p pose_topic:=/orb_slam3/robot_pose_slam -p pose_type:=pose_stamped"
+            "-p pose_topic:=/orb_slam3/robot_pose_slam_filtered -p pose_type:=pose_stamped"
         ],
         "cwd": "/opt/main/Trajectory/TerraSLAM_relay/Serial",
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": True,
         "max_restarts": 3,
+        "restart_window": 60,
+    },
+    "gps_client": {
+        # Publishes /camera/gps (NavSatFix) for the web UI map by transforming the
+        # live SLAM pose (/orb_slam3/robot_pose_slam) with calib.gpc. This is the
+        # bridge that drives the drone marker on the map; gps_bridge (above) instead
+        # writes NMEA to the flight-controller UART, so it does NOT feed the UI.
+        "cmd": [
+            "bash", "-lc",
+            "source /opt/ros/humble/setup.bash && "
+            "source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
+            "exec python3 /opt/main/Trajectory/TerraSLAM_relay/gps_client.py "
+            "/opt/main/Trajectory/TerraSLAM_relay/Serial/calib.gpc"
+        ],
+        "cwd": "/opt/main/Trajectory/TerraSLAM_relay",
+        "env": {"ROS_DOMAIN_ID": "0"},
+        "autorestart": True,
+        "max_restarts": 5,
         "restart_window": 60,
     },
     "rosbridge": {
@@ -67,6 +97,19 @@ COMPONENT_CONFIG = {
         "env": {"ROS_DOMAIN_ID": "0"},
         "autorestart": True,
         "max_restarts": 999,
+        "restart_window": 60,
+    },
+    "gps_filter": {
+        "cmd": [
+            "bash", "-lc",
+            "source /opt/ros/humble/setup.bash && "
+            "source /opt/main/Trajectory/host_colcon_ws/install/setup.bash && "
+            "python3 /opt/main/Trajectory/TerraSLAM_relay/Serial/gps_filter_node.py"
+        ],
+        "cwd": "/opt/main/Trajectory/TerraSLAM_relay/Serial",
+        "env": {"ROS_DOMAIN_ID": "0"},
+        "autorestart": True,
+        "max_restarts": 5,
         "restart_window": 60,
     },
     "slam_mode_manager": {
@@ -103,7 +146,7 @@ COMPONENT_CONFIG = {
 # info on /orb_slam3/slam_info (slam_msgs/SlamInfo: num_maps,
 # num_keyframes_in_current_map, tracking_frequency). The old /orb_slam3/tracking_state
 # (Int8) and /orb_slam3/covariance topics no longer exist.
-POSE_TOPIC = "/orb_slam3/robot_pose_slam"
+POSE_TOPIC = "/orb_slam3/robot_pose_slam_filtered"
 SLAM_INFO_TOPIC = "/orb_slam3/slam_info"
 # Legacy alias kept for any code that imported it — point it at the new topic.
 TRACKING_STATE_TOPIC = "/orb_slam3/slam_info"

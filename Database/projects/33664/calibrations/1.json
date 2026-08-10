@@ -1,0 +1,16 @@
+{
+  "id": "calib_20260810_131805_1116ff",
+  "created_at": 1786357085,
+  "status": "trimming",
+  "video_path": "/opt/main/Trajectory/Database/projects/33664/calib/calib_20260810_131805_1116ff_raw.mp4",
+  "trimmed_video_path": null,
+  "trim_segments": [],
+  "project_id": "33664",
+  "frames_dir": "/opt/main/Trajectory/Database/projects/33664/frames",
+  "procframe_dir": "/opt/main/Trajectory/Database/projects/33664/procframe",
+  "frame_pose_data": [],
+  "correlation_points": [],
+  "transform": null,
+  "calib_gpc_path": null,
+  "recording_stopped_at": 1786357096
+}

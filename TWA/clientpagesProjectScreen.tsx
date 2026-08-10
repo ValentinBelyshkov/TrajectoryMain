@@ -1,7 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TelemetryBar } from "@/components/TelemetryBar";
 import { Button } from "@/components/ui/button";
 import { getProject } from "@/lib/api";
 import { useProject } from "@/hooks/useProject";
@@ -22,7 +21,6 @@ export default function ProjectScreen() {
     isRecording,
     dronePosition,
     dronePath,
-    telemetry,
     showCalibration,
     calibrationStep,
     uploadedImage,
@@ -119,8 +117,6 @@ export default function ProjectScreen() {
         onBack={() => navigate("/")} 
         onSettingsClick={() => setIsSettingsOpen(true)}
       />
-
-      <TelemetryBar data={telemetry} />
 
       {calibrationStep === "idle" || calibrationStep === "complete" ? (
         <OperationScreen

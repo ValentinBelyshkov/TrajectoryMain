@@ -24,7 +24,12 @@ except ImportError as e:
     DEPS_AVAILABLE = False
     _IMPORT_ERROR = str(e)
 
-CAMERA_TOPIC = "/camera/image_raw"
+# Both publishers (realsense.py and image_publish.py) publish the raw camera
+# frame to /cam0/image_raw (matching the topic ORB-SLAM3 subscribes to via
+# real.yaml's image_topic_name). The old /camera/image_raw topic was never
+# published by the simulation (folder) publisher, so the MJPEG preview stayed
+# blank in simulation mode. Subscribe to the topic that is actually produced.
+CAMERA_TOPIC = "/cam0/image_raw"
 JPEG_QUALITY = 75  # 0-100; lower = smaller, faster network transfer
 
 # ── shared state ─────────────────────────────────────────────────────────────

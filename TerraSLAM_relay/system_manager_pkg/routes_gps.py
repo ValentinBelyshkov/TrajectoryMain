@@ -49,7 +49,7 @@ def _apply_calib(filepath: str, x: float, y: float, z: float):
     if len(pts) < 3:
         raise ValueError(f"Need ≥3 calibration points, got {len(pts)}")
 
-    A = np.array([[p[0], p[1], p[2], 1.0] for p in pts])
+    A = np.array([[p[0], p[1], 1.0] for p in pts])  # 2D: calib z ~constant -> 4D fit explodes
     lats = np.array([p[4] for p in pts])
     lons = np.array([p[3] for p in pts])
     alts = np.array([p[5] for p in pts])
@@ -57,20 +57,11 @@ def _apply_calib(filepath: str, x: float, y: float, z: float):
     coeff_lat, *_ = np.linalg.lstsq(A, lats, rcond=None)
     coeff_lon, *_ = np.linalg.lstsq(A, lons, rcond=None)
 
-    v = np.array([x, y, z, 1.0])
+    v = np.array([x, y, 1.0])
     lat_out = float(np.dot(coeff_lat, v))
     lon_out = float(np.dot(coeff_lon, v))
 
-    if np.std(alts) < 1e-6:
-        # All calibration points at the same altitude — can't determine scale.
-        # x is the altitude axis: more negative x = higher drone (nadir camera).
-        # Best estimate: mean calibration altitude shifted by the x offset from
-        # the mean calibration x, negated because altitude grows as x decreases.
-        mean_px = float(np.mean([p[0] for p in pts]))
-        alt_out = float(np.mean(alts)) - (x - mean_px)
-    else:
-        coeff_alt, *_ = np.linalg.lstsq(A, alts, rcond=None)
-        alt_out = float(np.dot(coeff_alt, v))
+    alt_out = float(np.mean(alts))
 
     return lat_out, lon_out, alt_out
 

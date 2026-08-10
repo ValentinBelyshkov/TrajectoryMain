@@ -285,15 +285,30 @@ async def control_terraslam_component(action: ComponentAction, request: Request)
 
 
 @router.get("/terraslam/status")
-async def get_terraslam_status():
-    """Get detailed status of all TerraSLAM components from gateway."""
+async def get_terraslam_status(request: Request, project_id: Optional[str] = None):
+    """Get detailed status of all TerraSLAM components from gateway.
+
+    `publisher_mode` is derived from the project type ("симуляция" -> folder
+    publisher, "камера" -> realsense publisher), matching how components are
+    actually started in `control_terraslam_component`. The gateway itself does
+    not report a `publisher_mode`, so relying on it would always fall back to
+    "folder" and mislabel camera projects.
+    """
+    # Project type is the source of truth for which publisher belongs to this project.
+    project_publisher_mode: Optional[str] = None
+    if project_id:
+        projects_root = get_projects_root(request)
+        project = read_project_metadata(projects_root, project_id)
+        if project:
+            project_publisher_mode = "folder" if project.type == "симуляция" else "realsense"
+
     gateway_data = await _gateway_status()
     if not gateway_data:
         return {
             "system_status": "not_working",
             "error": "Gateway unavailable",
             "components": {},
-            "publisher_mode": "unknown",
+            "publisher_mode": project_publisher_mode or "unknown",
             "orphaned_processes": {},
             "supervisor_output": ""
         }
@@ -301,15 +316,19 @@ async def get_terraslam_status():
     components = gateway_data.get("components", [])
     # Build flat components dict
     components_status: dict[str, str] = {}
-    publisher_mode = "folder"
+    gateway_publisher_mode: Optional[str] = None
     for comp in components:
         name = comp.get("name", "")
         # name like "terraslam/publisher_folder"
         short_name = name.split("/")[-1] if "/" in name else name
-        components_status[short_name] = comp.get("level_name", "UNKNOWN")
+        # `message` holds the real runtime state (e.g. "RUNNING (pid 360030)"
+        # or "NOT RUNNING (idle)"); `level_name` only reflects config validity.
+        components_status[short_name] = comp.get("message") or comp.get("level_name", "UNKNOWN")
         values = comp.get("values", {})
         if "publisher_mode" in values:
-            publisher_mode = values["publisher_mode"]
+            gateway_publisher_mode = values["publisher_mode"]
+
+    publisher_mode = project_publisher_mode or gateway_publisher_mode or "folder"
 
     # Determine main components based on publisher mode
     main_components = ["slam", "relay"]
@@ -320,14 +339,14 @@ async def get_terraslam_status():
         main_components.append("rosbridge")
 
     all_running = all(
-        components_status.get(comp, "").upper() == "RUNNING"
+        "RUNNING" in components_status.get(comp, "").upper()
         for comp in main_components
     )
 
     # Gateway has no orphan count; we approximate from ERROR states not in main list
     orphaned_processes: dict[str, int] = {}
     for comp_name, state in components_status.items():
-        if comp_name not in main_components and state.upper() == "RUNNING":
+        if comp_name not in main_components and "RUNNING" in state.upper():
             orphaned_processes[comp_name] = 1
 
     if all_running and not orphaned_processes:

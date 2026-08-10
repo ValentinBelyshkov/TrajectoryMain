@@ -1,6 +1,5 @@
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { TelemetryBar } from "@/components/TelemetryBar";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/hooks/useProject";
 import type { CalibrationStep } from "@/hooks/useProject";
@@ -23,9 +22,29 @@ const RESTORABLE_STEPS: CalibrationStep[] = [
 export default function ProjectScreen() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const hasRestoredRef = useRef(false);
+
+  // Snapshot of the calibration params as they were when the page was opened.
+  // This must be read once, synchronously on the first render: the
+  // "step → URL" effect below runs before the project finishes loading and
+  // would otherwise strip ?calib/?session from the URL (calibrationStep is
+  // still "idle" at that point), losing the state we want to restore.
+  const [initialCalib] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const step = params.get("calib") as CalibrationStep | null;
+    return {
+      step: step && RESTORABLE_STEPS.includes(step) ? step : null,
+      session: params.get("session"),
+    };
+  });
+
+  // While a restore is pending, the URL is the source of truth and must not be
+  // overwritten by the (still default) calibration step.
+  const [isRestorePending, setIsRestorePending] = useState(
+    () => initialCalib.step !== null,
+  );
 
   const controller = useProject(projectId);
   const {
@@ -35,7 +54,6 @@ export default function ProjectScreen() {
     isRecording,
     dronePosition,
     dronePath,
-    telemetry,
     showCalibration,
     hasVideoStream,
     videoCanvasRef,
@@ -49,32 +67,44 @@ export default function ProjectScreen() {
 
   // ── Restore calibration step from URL on project load (once) ─────────
   useEffect(() => {
-    if (!project || hasRestoredRef.current) return;
+    if (!isRestorePending || hasRestoredRef.current) return;
+    if (!project) return;
     hasRestoredRef.current = true;
 
-    const calibParam = searchParams.get("calib") as CalibrationStep | null;
-    const sessionParam = searchParams.get("session");
-
-    if (calibParam && RESTORABLE_STEPS.includes(calibParam)) {
-      if (sessionParam) {
-        setCalibrationSessionId(sessionParam);
-        controller
-          .resumeCalibrationSession(sessionParam)
-          .then(() => {
-            setCalibrationStep(calibParam);
-          })
-          .catch((e) => {
-            console.error("Failed to resume calibration session:", e);
-            setCalibrationStep(calibParam);
-          });
-      } else {
-        setCalibrationStep(calibParam);
-      }
+    const calibParam = initialCalib.step;
+    const sessionParam = initialCalib.session;
+    if (!calibParam) {
+      setIsRestorePending(false);
+      return;
     }
-  }, [project, searchParams, setCalibrationStep, setCalibrationSessionId, controller]);
+
+    // Switch to the calibration step immediately so the user never sees the
+    // main screen flash while the session payload is being fetched. The
+    // session data is loaded in the background; steps that need it re-read it
+    // once it arrives.
+    if (sessionParam) {
+      setCalibrationSessionId(sessionParam);
+      controller.resumeCalibrationSession(sessionParam).catch((e) => {
+        console.error("Failed to resume calibration session:", e);
+      });
+    }
+    setCalibrationStep(calibParam);
+    setIsRestorePending(false);
+  }, [
+    project,
+    isRestorePending,
+    initialCalib,
+    setCalibrationStep,
+    setCalibrationSessionId,
+    controller,
+  ]);
 
   // ── Sync calibration step → URL ───────────────────────────────────────
   useEffect(() => {
+    // Do not touch the URL until the pending restore has been applied,
+    // otherwise a page refresh wipes ?calib/?session before they are read.
+    if (isRestorePending) return;
+
     if (!RESTORABLE_STEPS.includes(calibrationStep)) {
       setSearchParams(
         (prev) => {
@@ -100,7 +130,7 @@ export default function ProjectScreen() {
         { replace: true },
       );
     }
-  }, [calibrationStep, calibrationSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [calibrationStep, calibrationSessionId, isRestorePending]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Loading / error states ────────────────────────────────────────────
   if (isLoading) {
@@ -141,11 +171,10 @@ export default function ProjectScreen() {
         onSettingsClick={() => setIsSettingsOpen(true)}
       />
 
-      <TelemetryBar data={telemetry} />
-
       {calibrationStep === "idle" || calibrationStep === "complete" ? (
         <OperationScreen
           isRecording={isRecording}
+          isBusy={controller.isBusy}
           onStartRecording={controller.startRecording}
           onStopRecording={controller.stopRecording}
           dronePosition={dronePosition}

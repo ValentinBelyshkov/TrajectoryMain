@@ -269,7 +269,7 @@ export async function getTerraSLAMHealth(): Promise<{
   }>("/api/control/terraslam/health");
 }
 
-export async function getTerraSLAMStatus(): Promise<{
+export async function getTerraSLAMStatus(projectId?: string): Promise<{
   system_status: string;
   components: Record<string, string>;
   publisher_mode: string;
@@ -277,6 +277,7 @@ export async function getTerraSLAMStatus(): Promise<{
   supervisor_output: string;
   error?: string;
 }> {
+  const query = projectId ? `?project_id=${encodeURIComponent(projectId)}` : "";
   return request<{
     system_status: string;
     components: Record<string, string>;
@@ -284,7 +285,7 @@ export async function getTerraSLAMStatus(): Promise<{
     orphaned_processes: Record<string, number>;
     supervisor_output: string;
     error?: string;
-  }>("/api/control/terraslam/status");
+  }>(`/api/control/terraslam/status${query}`);
 }
 
 export async function getTerraSLAMLogs(
@@ -492,6 +493,19 @@ export async function getCalibrationSessions(): Promise<{ success: boolean; sess
 
 export async function getCalibrationSession(sessionId: string): Promise<{ success: boolean; session: CalibrationSession }> {
   return request<{ success: boolean; session: CalibrationSession }>(`/api/v1/calibration/session/${sessionId}`);
+}
+
+export interface CalibrationRecordingStatus {
+  recording: boolean;
+  status: string | null;
+  session_id: string | null;
+  elapsed: number;
+  publisher_running: boolean;
+  server_time: number;
+}
+
+export async function getCalibrationRecordingStatus(projectId: string): Promise<CalibrationRecordingStatus> {
+  return request<CalibrationRecordingStatus>(`/api/v1/calibration/recording-status/${projectId}`);
 }
 
 export async function trimCalibrationVideo(

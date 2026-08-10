@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { useTerraSLAMStatus } from "@/hooks/useTerraSLAMStatus";
+import { useTerraSLAMStatus, isSlamRunning } from "@/hooks/useTerraSLAMStatus";
 import { useCalibrationSession } from "@/hooks/useCalibrationSession";
 import { getProject, controlTerraSLAMComponent, type Project } from "@/lib/api";
 
@@ -46,7 +46,10 @@ export interface GPSStatus {
 }
 
 export function useProject(projectId: string | undefined) {
-  const [isRecording, setIsRecording] = useState(false);
+  // Optimistic override applied while a start/stop request is in flight.
+  // Once the backend status catches up, it becomes the source of truth again.
+  const [pendingRecording, setPendingRecording] = useState<boolean | null>(null);
+  const [isBusy, setIsBusy] = useState(false);
   const [dronePosition, setDronePosition] = useState<DronePosition>({
     lat: 55.7558,
     lng: 37.6173,
@@ -90,6 +93,27 @@ export function useProject(projectId: string | undefined) {
   const showCalibration = project ? !isCalibrated : true;
 
   const systemStatus = useTerraSLAMStatus(projectId);
+
+  // SLAM is the source of truth for the Start/Stop button. While a start/stop
+  // request is in flight we optimistically show the requested state, then fall
+  // back to the real backend state as soon as it agrees.
+  const slamRunning = isSlamRunning(systemStatus);
+  const isRecording = pendingRecording ?? slamRunning;
+
+  // Clear the optimistic override once the backend reports the expected state.
+  useEffect(() => {
+    if (pendingRecording !== null && pendingRecording === slamRunning) {
+      setPendingRecording(null);
+    }
+  }, [pendingRecording, slamRunning]);
+
+  // Keep telemetry in sync with the real SLAM state.
+  useEffect(() => {
+    setTelemetry((prev) => {
+      const status = isRecording ? "recording" : "idle";
+      return prev.status === status ? prev : { ...prev, status };
+    });
+  }, [isRecording]);
 
   // Video WebSocket — draws incoming frames onto the canvas
   const wsRef = useWebSocket(
@@ -184,25 +208,36 @@ export function useProject(projectId: string | undefined) {
   );
 
   const startRecording = useCallback(async () => {
+    // Guard: never launch a second SLAM session if one is already running.
+    if (isBusy || isRecording) return;
+
+    setIsBusy(true);
+    setPendingRecording(true);
     try {
       await controlTerraSLAMComponent("all", "restart", projectId, saveFrames);
 
       if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
         wsRef.current = null;
       }
+
+      if (gpsStatus.lat && gpsStatus.lon) {
+        setDronePath([{ lat: gpsStatus.lat, lng: gpsStatus.lon }]);
+      }
     } catch (err) {
       console.error("Failed to restart TerraSLAM:", err);
+      // Roll back the optimistic state so the button reflects reality.
+      setPendingRecording(null);
+    } finally {
+      setIsBusy(false);
     }
-
-    setIsRecording(true);
-    setTelemetry((prev) => ({ ...prev, status: "recording" }));
-
-    if (gpsStatus.lat && gpsStatus.lon) {
-      setDronePath([{ lat: gpsStatus.lat, lng: gpsStatus.lon }]);
-    }
-  }, [gpsStatus, projectId, saveFrames]);
+  }, [gpsStatus, projectId, saveFrames, isBusy, isRecording]);
 
   const stopRecording = useCallback(async () => {
+    if (isBusy) return;
+
+    setIsBusy(true);
+    setPendingRecording(false);
+
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
       recordingIntervalRef.current = null;
@@ -216,11 +251,11 @@ export function useProject(projectId: string | undefined) {
       }
     } catch (err) {
       console.error("Failed to stop TerraSLAM:", err);
+      setPendingRecording(null);
+    } finally {
+      setIsBusy(false);
     }
-
-    setIsRecording(false);
-    setTelemetry((prev) => ({ ...prev, status: "idle" }));
-  }, [projectId]);
+  }, [projectId, isBusy]);
 
   const setTelemetryStatus = useCallback(
     (status: "idle" | "recording" | "active") =>
@@ -241,6 +276,7 @@ export function useProject(projectId: string | undefined) {
     isLoading,
     error,
     isRecording,
+    isBusy,
     dronePosition,
     dronePath,
     telemetry,

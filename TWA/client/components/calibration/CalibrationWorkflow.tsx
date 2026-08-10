@@ -185,6 +185,7 @@ export function CalibrationWorkflow({
         videoCanvasRef={c.videoCanvasRef}
         hasVideoStream={c.hasVideoStream}
         calibrationSessionId={c.calibrationSessionId}
+        sessionStatus={c.calibrationSession?.status}
         startSession={c.startNewCalibrationSession}
         onComplete={goTo.bind(null, "processing") as () => void}
         onBack={c.handleCalibrationCancel}
@@ -203,6 +204,7 @@ export function CalibrationWorkflow({
         error={c.recordingError}
         projectId={projectId}
         onStartPublisher={onStartPublisher}
+        setCalibrationSessionId={c.setCalibrationSessionId}
       />,
     );
   }
@@ -229,7 +231,7 @@ export function CalibrationWorkflow({
         progress={c.processingProgress}
         onComplete={c.handleRunProcessing}
         onBack={goTo.bind(null, "trimming") as () => void}
-        onSkip={goTo.bind(null, "correlating") as () => void}
+        onSkip={c.handleSkipProcessing}
       />,
     );
   }

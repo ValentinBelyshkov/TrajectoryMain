@@ -103,18 +103,24 @@ class ProcFrameCapture(Node):
         except OSError as exc:
             self.get_logger().error(f"procframe dir NOT writable: {self.procframe_dir} ({exc})")
 
-        # Pose subscriber.
-        self.pose_sub = self.create_subscription(
-            PoseStamped, pose_topic, self.pose_cb, 10
-        )
+        # The ORB-SLAM3 wrapper publishes pose/slam_info under a topic whose
+        # namespace depends on how the node is launched. In the current
+        # unirobot.launch.py the node runs with an EMPTY namespace, so the pose
+        # lands on `/robot_pose_slam` (NOT `/orb_slam3/robot_pose_slam`). To be
+        # robust against both layouts we subscribe to BOTH the given topic and
+        # its prefixed/unprefixed variant.
+        self._pose_topics = self._topic_variants(pose_topic)
+        for t in self._pose_topics:
+            self.create_subscription(PoseStamped, t, self.pose_cb, 10)
 
         # slam_info subscriber (slam_msgs/msg/SlamInfo). Published only while
         # tracking is active; carries tracking_frequency (>0 while tracking).
         # Best-effort: if slam_msgs isn't built in this workspace we skip it.
+        self._info_topics = []
         if SlamInfo is not None:
-            self.slam_info_sub = self.create_subscription(
-                SlamInfo, slam_info_topic, self.slam_info_cb, 10
-            )
+            self._info_topics = self._topic_variants(slam_info_topic)
+            for t in self._info_topics:
+                self.create_subscription(SlamInfo, t, self.slam_info_cb, 10)
         else:
             self.get_logger().warn(
                 "slam_msgs/SlamInfo not available — tracking_frequency gate disabled"
@@ -131,13 +137,30 @@ class ProcFrameCapture(Node):
             )
 
         self.get_logger().info(
-            f"ProcFrame capture: image={image_topic} pose={pose_topic} "
-            f"slam_info={slam_info_topic} "
+            f"ProcFrame capture: image={image_topic} "
+            f"pose_topics={self._pose_topics} slam_info_topics={self._info_topics} "
             f"procframe={self.procframe_dir}"
         )
 
         # Heartbeat timer (1 Hz) for logs.
         self.timer = self.create_timer(1.0, self._report)
+
+    @staticmethod
+    def _topic_variants(topic: str):
+        """Return [topic, prefixed/unprefixed-orb_slam3-variant] de-duplicated."""
+        topic = topic.strip()
+        if not topic.startswith("/"):
+            topic = "/" + topic
+        ns = "/orb_slam3"
+        if topic.startswith(ns + "/"):
+            alt = topic[len(ns):]                  # "/robot_pose_slam"
+        else:
+            alt = ns + topic                      # "/orb_slam3/robot_pose_slam"
+        out = []
+        for t in (topic, alt):
+            if t not in out:
+                out.append(t)
+        return out
 
     def _capture_enabled(self) -> bool:
         return os.path.exists(self.flag_file)
