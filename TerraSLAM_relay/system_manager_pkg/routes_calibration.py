@@ -11,6 +11,7 @@ import asyncio
 import glob
 import json
 import os
+import signal
 import subprocess
 import time
 import uuid
@@ -226,6 +227,7 @@ async def start_recording(req: Optional[Dict] = None):
     session = {
         "id": session_id,
         "created_at": int(time.time()),
+        "recording_started_at": int(time.time()),
         "status": SessionStatus.RECORDING,
         "video_path": str(video_path),
         "trimmed_video_path": None,
@@ -355,6 +357,10 @@ async def stop_recording(session_id: str):
             print(f"[stop_recording] publisher_realsense stopped for project {project_id}")
         except Exception as e:
             print(f"[stop_recording] WARNING: failed to stop publisher_realsense: {e}")
+        # If the manager was restarted while recording, it no longer owns the
+        # process in manager._procs. Stop the orphaned RealSense process too,
+        # otherwise the UI changes to "Start" but frames keep being written.
+        _stop_orphan_realsense_publisher(project_id)
 
     return {"success": True, "session": session}
 
@@ -432,31 +438,21 @@ async def get_recording_status(project_id: str):
 
     publisher_running = _is_realsense_publisher_alive(project_id)
 
-    is_recording = status == SessionStatus.RECORDING and publisher_running
-
-    # Self-heal: a session that is marked "recording" but has no live capture
-    # process (e.g. the manager crashed, or the page was closed without Stop)
-    # is stale. Flip it to "trimming" so the UI stops claiming a recording and
-    # the next status poll is consistent. Only the project that owns this
-    # session file is touched.
-    if status == SessionStatus.RECORDING and not publisher_running:
-        try:
-            session["status"] = SessionStatus.TRIMMING
-            session["recording_stopped_at"] = int(time.time())
-            _save_session(session)
-            print(
-                f"[recording-status] healed stale 'recording' session "
-                f"{session_id} (no live publisher) -> trimming",
-                flush=True,
-            )
-            status = session.get("status")
-        except Exception as exc:
-            print(f"[recording-status] WARNING heal failed: {exc}", flush=True)
+    # The persisted session is authoritative for the operator-facing state.
+    # Do not derive `recording` from publisher_running: the process check is
+    # best-effort (the publisher can be launched by another supervisor, or its
+    # command line can differ), and a false negative used to turn the Stop
+    # button back into Start while frames were still being recorded.
+    #
+    # A missing publisher is exposed separately for diagnostics. The explicit
+    # Stop action remains the operation that transitions the session to
+    # `trimming` and stops the publisher.
+    is_recording = status == SessionStatus.RECORDING
 
     # Elapsed recording time (seconds) as seen by the server clock.
     started_at = session.get("created_at") or session.get("recording_started_at")
     elapsed = 0
-    if started_at and status == SessionStatus.RECORDING:
+    if started_at and is_recording:
         elapsed = max(0, int(time.time()) - int(started_at))
 
     return {
@@ -490,25 +486,58 @@ def _is_realsense_publisher_alive(project_id: Optional[str] = None) -> bool:
     if proc is not None and proc.returncode is None:
         return True
 
+    return bool(_realsense_pids(project_id))
+
+
+def _realsense_pids(project_id: Optional[str]) -> List[int]:
+    """Find RealSense capture processes belonging to one project.
+
+    Do not use `pgrep -f publisher_realsense`: that is the manager component
+    name, not the actual command line (`realsense.py`), so it gives false
+    negatives after a backend restart.
+    """
+    if not project_id:
+        return []
+
+    frames_dir = str(PROJECTS_DIR / project_id / "frames")
+    found: List[int] = []
     try:
-        if project_id:
-            frames_dir = str(PROJECTS_DIR / project_id / "frames")
-            pattern = f"frames-dir[ =]{frames_dir}"
-            out = subprocess.run(
-                ["pgrep", "-f", pattern],
-                capture_output=True, text=True, timeout=3,
-            )
-            if out.returncode == 0 and out.stdout.strip():
-                return True
         out = subprocess.run(
-            ["pgrep", "-f", "publisher_realsense"],
+            ["ps", "-eo", "pid=,args="],
             capture_output=True, text=True, timeout=3,
         )
-        if out.returncode == 0 and out.stdout.strip():
-            return True
+        for line in out.stdout.splitlines():
+            line = line.strip()
+            if not line or "realsense.py" not in line or frames_dir not in line:
+                continue
+            parts = line.split(None, 1)
+            if not parts:
+                continue
+            try:
+                pid = int(parts[0])
+            except ValueError:
+                continue
+            if pid != os.getpid() and pid not in found:
+                found.append(pid)
     except Exception:
         pass
-    return False
+    return found
+
+
+def _stop_orphan_realsense_publisher(project_id: str) -> None:
+    """Terminate project-specific RealSense processes not owned by manager."""
+    for pid in _realsense_pids(project_id):
+        try:
+            # The manager starts each component in its own process group, so
+            # target the group when possible. Fall back to the process itself
+            # for processes started by an external supervisor.
+            try:
+                os.killpg(os.getpgid(pid), signal.SIGTERM)
+            except ProcessLookupError:
+                continue
+            print(f"[stop_recording] terminated orphan realsense process pid={pid}", flush=True)
+        except Exception as exc:
+            print(f"[stop_recording] WARNING: cannot stop realsense pid={pid}: {exc}", flush=True)
 
 
 # ========== VIDEO TRIMMING ==========
@@ -1235,4 +1264,5 @@ async def upload_session_video(session_id: str, file: UploadFile = File(...)):
     _save_session(session)
 
     return {"success": True, "bytes_written": len(content), "session": session}
+
 
