@@ -1,8 +1,9 @@
 {
-  "id": "calib_20260810_143326_e66417",
-  "created_at": 1786361606,
+  "id": "calib_20260810_154654_bf83fd",
+  "created_at": 1786366014,
+  "recording_started_at": 1786366014,
   "status": "trimming",
-  "video_path": "/opt/main/Trajectory/Database/projects/cc6494d4-2177-4812-b08e-e4cb4c2bd4e4/calib/calib_20260810_143326_e66417_raw.mp4",
+  "video_path": "/opt/main/Trajectory/Database/projects/cc6494d4-2177-4812-b08e-e4cb4c2bd4e4/calib/calib_20260810_154654_bf83fd_raw.mp4",
   "trimmed_video_path": null,
   "trim_segments": [],
   "project_id": "cc6494d4-2177-4812-b08e-e4cb4c2bd4e4",
@@ -12,5 +13,5 @@
   "correlation_points": [],
   "transform": null,
   "calib_gpc_path": null,
-  "recording_stopped_at": 1786361609
+  "recording_stopped_at": 1786366026
 }

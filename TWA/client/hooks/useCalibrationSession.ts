@@ -298,6 +298,12 @@ export function useCalibrationSession({
           session = await startNewCalibrationSession();
         }
       }
+      // A session loaded from the URL/localStorage may already be in trimming,
+      // processing, or another terminal state. It cannot be restarted by
+      // merely changing the React state; create a fresh recording session.
+      if (!session || session.status !== "recording") {
+        session = await startNewCalibrationSession();
+      }
       setRecordingStatus("recording");
       setCalibrationStep("recording");
       setRecordingDuration(0);
@@ -598,3 +604,4 @@ export function useCalibrationSession({
     clearUploadError,
   };
 }
+

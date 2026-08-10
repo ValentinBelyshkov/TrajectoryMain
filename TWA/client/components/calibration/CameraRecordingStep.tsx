@@ -4,8 +4,8 @@ import { ErrorBanner } from "./ErrorBanner";
 import { checkProjectHasFrames, getCalibrationRecordingStatus } from "@/lib/api";
 
 interface CameraRecordingStepProps {
-  onStart: () => void;
-  onStop: () => void;
+  onStart: () => void | Promise<void>;
+  onStop: () => void | Promise<void>;
   videoCanvasRef: RefObject<HTMLCanvasElement | null>;
   hasVideoStream: boolean;
   calibrationSessionId: string | null;
@@ -39,6 +39,11 @@ export function CameraRecordingStep({
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const timerRef = useRef<number | null>(null);
+  // A status request can outlive the click that started/stopped recording.
+  // Responses from before the latest user intent must never overwrite the
+  // optimistic button state.
+  const syncRequestRef = useRef(0);
+  const interactionEpochRef = useRef(0);
 
   const [hasExistingFrames, setHasExistingFrames] = useState(false);
   useEffect(() => {
@@ -79,9 +84,17 @@ export function CameraRecordingStep({
     let cancelled = false;
 
     const sync = async () => {
+      const requestId = ++syncRequestRef.current;
+      const interactionEpoch = interactionEpochRef.current;
       try {
         const status = await getCalibrationRecordingStatus(projectId);
-        if (cancelled) return;
+        if (
+          cancelled ||
+          requestId !== syncRequestRef.current ||
+          interactionEpoch !== interactionEpochRef.current
+        ) {
+          return;
+        }
         // The server is now authoritative. Keep the live session id in sync so
         // the Stop button always targets the recording that is actually active
         // (e.g. after a page refresh the URL may still hold a stale id).
@@ -96,8 +109,13 @@ export function CameraRecordingStep({
             // ignore storage errors
           }
         }
-        setIsRecording(status.recording);
-        if (status.recording) {
+        // `status` is authoritative when available. Accept the boolean too
+        // for compatibility with older backends, but tolerate an inconsistent
+        // response such as {status: "recording", recording: false}.
+        const recording =
+          status.status === "recording" || status.recording === true;
+        setIsRecording(recording);
+        if (recording) {
           setSeconds(status.elapsed || 0);
           startTimer();
         } else {
@@ -119,16 +137,15 @@ export function CameraRecordingStep({
       window.clearInterval(id);
       stopTimer();
     };
-  }, [projectId, calibrationSessionId, sessionStatus, setCalibrationSessionId]);
+  }, [projectId, setCalibrationSessionId]);
 
   const start = async () => {
-    if (!calibrationSessionId) {
-      try {
-        await startSession();
-      } catch (err) {
-        console.error("Failed to start calibration session:", err);
-      }
-    }
+    // Invalidate any status request that started before this click.
+    interactionEpochRef.current += 1;
+    setIsRecording(true);
+    setSeconds(0);
+    startTimer();
+
     if (projectId && onStartPublisher) {
       try {
         await onStartPublisher(projectId);
@@ -136,16 +153,26 @@ export function CameraRecordingStep({
         console.error("Failed to start camera publisher:", err);
       }
     }
-    setSeconds(0);
-    onStart();
-    setIsRecording(true);
-    startTimer();
+    try {
+      await onStart();
+    } catch (err) {
+      // The hook reports the error itself. Keep the optimistic state until a
+      // fresh server status confirms that recording did not start.
+      console.error("Failed to start recording:", err);
+    }
   };
 
-  const stop = () => {
+  const stop = async () => {
+    // Invalidate in-flight status requests so an older `recording: true`
+    // response cannot restore the Stop button after this click.
+    interactionEpochRef.current += 1;
     stopTimer();
-    onStop();
     setIsRecording(false);
+    try {
+      await onStop();
+    } catch (err) {
+      console.error("Failed to stop recording:", err);
+    }
   };
 
   const formatTime = (s: number) => {
@@ -239,3 +266,4 @@ export function CameraRecordingStep({
     </StepLayout>
   );
 }
+
