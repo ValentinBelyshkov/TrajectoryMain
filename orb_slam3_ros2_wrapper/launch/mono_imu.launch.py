@@ -28,7 +28,7 @@ def generate_launch_description():
     orb_slam3_param_file = LaunchConfiguration("orb_slam3_param_file")
     declare_orb_slam3_param_file_cmd = DeclareLaunchArgument(
         name="orb_slam3_param_file",
-        default_value="euroc_mono_imu.yaml", # gazebo_mono_imu.yaml
+        default_value="real_imu.yaml", # gazebo_mono_imu.yaml
         description="Path to the ORB-SLAM3 parameter file",
     )
 
@@ -41,9 +41,9 @@ def generate_launch_description():
 
     def all_nodes_launch(context, robot_namespace):
         params_file = LaunchConfiguration("params_file")
-        vocabulary_file_path = "/home/orb/ORB_SLAM3/Vocabulary/ORBvoc.txt"
+        vocabulary_file_path = "/opt/main/Trajectory/ORB_SLAM3/Vocabulary/ORBvoc.bin"
         # NOTE: keep settings path consistent with existing launch files. Replace as needed.
-        config_file_path = "/root/colcon_ws/src/orb_slam3_ros2_wrapper/params/orb_slam3_params/" + orb_slam3_param_file.perform(context)
+        config_file_path = "/opt/main/Trajectory/Database/" + orb_slam3_param_file.perform(context)
 
         declare_params_file_cmd = DeclareLaunchArgument(
             "params_file",

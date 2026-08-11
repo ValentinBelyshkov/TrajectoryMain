@@ -2,6 +2,15 @@
 # -*- coding: utf-8 -*-
 import os
 
+# Force the ORB-SLAM3 Pangolin viewer onto the physical X session (:0).
+# The node otherwise inherits DISPLAY from the launching terminal (often :1001),
+# where the window is created but never shown.
+os.environ["DISPLAY"] = ":0"
+os.environ["XAUTHORITY"] = "/run/user/1000/gdm/Xauthority"
+os.environ.setdefault("XDG_RUNTIME_DIR", "/tmp/runtime-root")
+os.makedirs(os.environ["XDG_RUNTIME_DIR"], exist_ok=True)
+os.chmod(os.environ["XDG_RUNTIME_DIR"], 0o700)
+
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction

@@ -4,31 +4,49 @@
 # ORB-SLAM3 SaveAtlas() writes to "./<SaveAtlasToFile>.osa" relative to the
 # SLAM process CWD (/opt/main/Trajectory), so this MUST be a path relative to
 # that directory (no leading slash, no ".osa" suffix).
-System.SaveAtlasToFile: "Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/calibrations/map"
-System.LoadAtlasFromFile: "Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/calibrations/map"
+#System.SaveAtlasToFile: "Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/calibrations/map"
+#System.LoadAtlasFromFile: "Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/calibrations/map"
 #------------------------------------------------------
 # Camera Parameters
 #-----------------------------------------------------------------------------
-
+File.version: "1.0"
 Camera.type: "PinHole"
 
-Camera.fx: 603.9605102539062
-Camera.fy: 602.82666015625
-Camera.cx: 320.6596374511719
-Camera.cy: 227.18173217773438
+Camera1.fx: 603.9605102539062
+Camera1.fy: 602.82666015625
+Camera1.cx: 320.6596374511719
+Camera1.cy: 227.18173217773438
 
-Camera.k1: 0.0
-Camera.k2: 0.0
-Camera.p1: 0.0
-Camera.p2: 0.0
-Camera.p3: 0.0
-
-Camera.fps: 15.0
-Camera.RGB: 0
-Camera.bf: 0.0
+Camera1.k1: 0.0
+Camera1.k2: 0.0
+Camera1.p1: 0.0
+Camera1.p2: 0.0
 
 Camera.width: 640
 Camera.height: 480
+
+# Опционально: если хотите ресайз
+# Camera.newWidth: 600
+# Camera.newHeight: 350
+
+Camera.fps: 30
+Camera.RGB: 0
+
+# Матрицу оставьте как в EuRoC (у вас уже такая же)
+IMU.T_b_c1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
+         0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
+        -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
+         0.0, 0.0, 0.0, 1.0]
+
+IMU.NoiseGyro: 1.7e-4
+IMU.NoiseAcc: 2.0000e-3
+IMU.GyroWalk: 1.9393e-05
+IMU.AccWalk: 3.0000e-03
+IMU.Frequency: 50.0
 
 #-----------------------------------------------------------------------------
 # ORB Parameters

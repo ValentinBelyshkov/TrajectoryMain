@@ -1,0 +1,9 @@
+{
+  "name": "crash",
+  "type": "симуляция",
+  "id": "fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4",
+  "created_at": "2026-08-11T11:09:50.822300",
+  "video_filename": "/opt/main/Trajectory/Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/videos/crash.mp4",
+  "frames_path": "/opt/main/Trajectory/Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/frames",
+  "calibration_status": "calibrated"
+}
