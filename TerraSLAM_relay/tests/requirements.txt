@@ -1,0 +1,6 @@
+# Test-only dependencies. ROS 2 packages (rclpy, cv_bridge) come from the
+# runtime image and are intentionally not installed from PyPI.
+pytest>=8.0
+numpy>=1.24
+fastapi>=0.104
+pydantic>=2.5
