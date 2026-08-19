@@ -3,6 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import maplibregl from "maplibre-gl";
 import { MapPin } from "lucide-react";
 import { procframe } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import {
+  styleFor,
+  useInternetStatus,
+  type MapLayer,
+} from "@/lib/mapBasemap";
 
 interface CorrelationStepProps {
   sessionId: string;
@@ -32,6 +38,10 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
 
+  // Connectivity + selected online layer (vector <-> satellite).
+  const online = useInternetStatus();
+  const [layer, setLayer] = useState<MapLayer>("vector");
+
   const { data: procframeData = [] } = useQuery({
     queryKey: ["procframe-frames", projectId],
     queryFn: () => procframe(projectId),
@@ -58,23 +68,11 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
     try {
       const m = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: ({
-          version: 8,
-          name: "Offline Central Russia",
-          center: [38.634, 55.492],
-          zoom: 17,
-          sources: {
-            "local-tiles": {
-              type: "vector",
-              tiles: ["http://192.168.0.1:9000/api/v1/map/tiles/{z}/{x}/{y}.pbf"],
-              maxzoom: 14,
-            },
-          },
-          layers: [
-            { id: "background", type: "background", paint: { "background-color": "#f2efe9" } },
-            { id: "road", type: "line", source: "local-tiles", "source-layer": "transportation", filter: ["has", "class"], paint: { "line-color": "#ffffff", "line-width": { base: 1.5, stops: [[5, 1], [14, 8]] }, "line-opacity": 0.9 } },
-          ],
-        }) as any,
+        // Start from the offline style when there's no internet, otherwise the
+        // chosen online layer (vector / satellite).
+        style: styleFor(online, layer) as any,
+        center: [38.634, 55.492],
+        zoom: 17,
       });
       m.addControl(new maplibregl.NavigationControl());
       m.on("click", (e: any) => {
@@ -87,6 +85,12 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
       console.error("Map init error:", e);
     }
   };
+
+  // Re-basemap when connectivity or the chosen online layer changes.
+  useEffect(() => {
+    if (!map) return;
+    map.setStyle(styleFor(online, layer) as any);
+  }, [map, online, layer]);
 
   useEffect(() => {
     if (selectedFrame !== null) {
@@ -193,7 +197,43 @@ export function CorrelationStep({ sessionId, projectId, frames, onCompute, onBac
                   )}
                 </div>
                 <div>
-                  <div ref={mapContainerRef} className="w-full h-[300px] border border-border rounded" />
+                  <div className="relative">
+                    <div ref={mapContainerRef} className="w-full h-[300px] border border-border rounded" />
+                    {online === true && (
+                      <div className="absolute top-2 left-2 z-10 flex overflow-hidden rounded-md border border-black/10 shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => setLayer("vector")}
+                          className={cn(
+                            "px-2.5 py-1 text-xs font-medium transition-colors",
+                            layer === "vector"
+                              ? "bg-primary text-white"
+                              : "bg-white/90 text-slate-700 hover:bg-white",
+                          )}
+                        >
+                          Схема
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLayer("satellite")}
+                          className={cn(
+                            "px-2.5 py-1 text-xs font-medium transition-colors border-l border-black/10",
+                            layer === "satellite"
+                              ? "bg-primary text-white"
+                              : "bg-white/90 text-slate-700 hover:bg-white",
+                          )}
+                        >
+                          Спутник
+                        </button>
+                      </div>
+                    )}
+                    {online === false && (
+                      <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50/95 px-2 py-1 text-xs font-medium text-amber-700 shadow-sm">
+                        <span className="h-2 w-2 rounded-full bg-amber-500" />
+                        Офлайн-карта
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Кликните на карте для GPS. {gpsPoint ? `${gpsPoint.lat.toFixed(6)}, ${gpsPoint.lon.toFixed(6)}` : "Не выбрано"}
                   </p>

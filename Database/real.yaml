@@ -4,8 +4,7 @@
 # ORB-SLAM3 SaveAtlas() writes to "./<SaveAtlasToFile>.osa" relative to the
 # SLAM process CWD (/opt/main/Trajectory), so this MUST be a path relative to
 # that directory (no leading slash, no ".osa" suffix).
-System.SaveAtlasToFile: "Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/calibrations/map"
-System.LoadAtlasFromFile: "Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/calibrations/map"
+System.SaveAtlasToFile: "Database/projects/dea7a45f-ec4c-474e-88fe-f9909081a9e7/calibrations/map"
 #------------------------------------------------------
 # Camera Parameters
 #-----------------------------------------------------------------------------

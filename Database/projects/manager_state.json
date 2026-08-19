@@ -9,9 +9,7 @@
     "publisher_folder": {
       "desired": false,
       "autostart": false,
-      "extra": {
-        "path": "/opt/main/Trajectory/Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/frames"
-      }
+      "extra": {}
     },
     "publisher_realsense": {
       "desired": false,
@@ -19,7 +17,7 @@
       "extra": {}
     },
     "gps_bridge": {
-      "desired": true,
+      "desired": false,
       "autostart": false,
       "extra": {}
     },
@@ -34,7 +32,7 @@
       "extra": {}
     },
     "gps_filter": {
-      "desired": true,
+      "desired": false,
       "autostart": false,
       "extra": {}
     },
@@ -46,9 +44,7 @@
     "procframe_capture": {
       "desired": false,
       "autostart": false,
-      "extra": {
-        "procframe_dir": "/opt/main/Trajectory/Database/projects/fd64f6d0-4e0c-440c-afd9-0225b6f5d2d4/procframe"
-      }
+      "extra": {}
     }
   },
   "fallback": {

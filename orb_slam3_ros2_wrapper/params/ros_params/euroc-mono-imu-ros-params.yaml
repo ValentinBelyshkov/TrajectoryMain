@@ -10,7 +10,7 @@ ORB_SLAM3_IMU_MONO_ROS2:
 
     # topics
     image_topic_name: /cam0/image_raw
-    imu_topic_name: /mavros/imu/data_raw
+    imu_topic_name: /imu
 
     # base_footprint -> camera_link (used to account for camera offset w.r.t. base)
     robot_x: 0.7

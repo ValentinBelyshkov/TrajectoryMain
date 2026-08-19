@@ -5,5 +5,5 @@
   "created_at": "2026-08-09T14:34:21.423557",
   "video_filename": "/opt/main/Trajectory/Database/projects/dea7a45f-ec4c-474e-88fe-f9909081a9e7/videos/2026_04_22_19_29_28.mp4",
   "frames_path": "/opt/main/Trajectory/Database/projects/dea7a45f-ec4c-474e-88fe-f9909081a9e7/frames",
-  "calibration_status": "not_calibrated"
+  "calibration_status": "calibrated"
 }

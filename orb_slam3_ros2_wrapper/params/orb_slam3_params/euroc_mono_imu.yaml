@@ -8,25 +8,25 @@ File.version: "1.0"
 Camera.type: "PinHole"
 
 # Camera calibration and distortion parameters (OpenCV) 
-Camera1.fx: 458.654
-Camera1.fy: 457.296
-Camera1.cx: 367.215
-Camera1.cy: 248.375
+Camera1.fx: 373.4676546605523
+Camera1.fy: 368.776994520979
+Camera1.cx: 362.620976158895
+Camera1.cy: 278.47785796053796
 
-Camera1.k1: -0.28340811
-Camera1.k2: 0.07395907
-Camera1.p1: 0.00019359
-Camera1.p2: 1.76187114e-05
+Camera1.k1: 0.21696116881582792
+Camera1.k2: -0.174466909951974
+Camera1.p1: 0.0023518722239572677
+Camera1.p2: -0.015358526177783369
 
 # Camera resolution
-Camera.width: 752
+Camera.width: 640
 Camera.height: 480
 
-Camera.newWidth: 600
-Camera.newHeight: 350
+Camera.newWidth: 640
+Camera.newHeight: 480
 
 # Camera frames per second 
-Camera.fps: 20
+Camera.fps: 30
 
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
 Camera.RGB: 1
@@ -36,18 +36,20 @@ IMU.T_b_c1: !!opencv-matrix
    rows: 4
    cols: 4
    dt: f
-   data: [0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
-         0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
-        -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
-         0.0, 0.0, 0.0, 1.0]
+   data: [-0.9761383683910576, 0.10280186795344576, -0.19127378727919722, 0.0464654900000000,
+         -0.07079834765473866, -0.9833751967451275, -0.16721488090430792, -0.0657278200000000,
+         -0.2052839003044419, -0.1496829929276049, 0.9671884624539479, 0.2079143200000000,
+          0.0, 0.0, 0.0, 1.0]
 
 # IMU noise
-IMU.NoiseGyro: 1.7e-4 #1.6968e-04
-IMU.NoiseAcc: 2.0000e-3 #2.0e-3
-IMU.GyroWalk: 1.9393e-05 
-IMU.AccWalk: 3.0000e-03 # 3e-03
-IMU.Frequency: 200.0
+IMU.NoiseGyro: 5.0000e-3
+IMU.NoiseAcc: 1.0000e-2
 
+IMU.GyroWalk: 2.0000e-5
+IMU.AccWalk: 2.0000e-4
+IMU.Frequency: 100.0
+
+Camera.TimeOffset: -0.023864
 #--------------------------------------------------------------------------------------------
 # ORB Parameters
 #--------------------------------------------------------------------------------------------
